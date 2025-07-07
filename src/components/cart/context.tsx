@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useState, useEffect } from "react"
 
 interface Product {
@@ -31,12 +30,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
 
   useEffect(() => {
-    const saved = localStorage.getItem("cart")
+    const saved = localStorage.getItem("carrinho")
     if (saved) setItems(JSON.parse(saved))
   }, [])
 
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(items))
+    localStorage.setItem("carrinho", JSON.stringify(items))
   }, [items])
 
   const addItem = (product: Product) => {
@@ -73,6 +72,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 export const useCart = () => {
   const context = useContext(CartContext)
-  if (!context) throw new Error("useCart deve ser usado dentro do CartProvider")
+  if (!context) {
+    // Durante o prerender, retorna valores padrão ao invés de erro
+    if (typeof window === "undefined") {
+      return {
+        items: [],
+        addItem: () => {},
+        removeItem: () => {},
+        updateQuantity: () => {},
+        total: 0,
+        itemCount: 0,
+      }
+    }
+    throw new Error("useCart deve ser usado dentro do CartProvider")
+  }
   return context
 }
