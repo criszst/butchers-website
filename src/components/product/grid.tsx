@@ -144,6 +144,25 @@ export default function ProductGrid() {
     }
   }
 
+  const handleAddToCart = (produto: any) => {
+    addItem(produto)
+
+    // Feedback visual no botão
+    const button = document.activeElement as HTMLButtonElement
+    if (button) {
+      const originalText = button.textContent
+      button.textContent = "✓ Adicionado!"
+      button.style.backgroundColor = "#16a34a"
+      button.disabled = true
+
+      setTimeout(() => {
+        button.textContent = originalText
+        button.style.backgroundColor = ""
+        button.disabled = false
+      }, 1500)
+    }
+  }
+
   return (
     <section id="produtos" className="py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -215,7 +234,7 @@ export default function ProductGrid() {
               </button>
 
               <CardHeader className="p-0 relative overflow-hidden">
-                <div className="relative aspect-square sm:max-h-[300px]">
+                <div className="relative aspect-square">
                   <Image
                     src={produto.image || "/placeholder.svg"}
                     alt={produto.name}
@@ -289,7 +308,7 @@ export default function ProductGrid() {
               <CardFooter className="p-4 sm:p-6 pt-0">
                 <Button
                   className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-                  onClick={() => addItem(produto)}
+                  onClick={() => handleAddToCart(produto)}
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Adicionar ao Carrinho

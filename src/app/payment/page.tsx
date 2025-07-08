@@ -36,7 +36,7 @@ export default function PagamentoPage() {
     }
   }, [])
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.preco * item.quantidade, 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const taxaEntrega = subtotal > 50 ? 0 : 8.9
   const total = subtotal + taxaEntrega
 
@@ -107,7 +107,7 @@ export default function PagamentoPage() {
         <div className="container flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
             <Beef className="h-8 w-8 text-red-600" />
-            <span className="text-2xl font-bold text-red-600">Açougue Premium</span>
+            <span className="text-2xl font-bold text-red-600">Casa de Carnes Duarte</span>
           </Link>
           <Link href="/cart">
             <Button variant="outline">
@@ -302,19 +302,19 @@ export default function PagamentoPage() {
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex items-center space-x-3">
                       <Image
-                        src={item.imagem || "/placeholder.svg"}
-                        alt={item.nome}
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
                         width={50}
                         height={50}
                         className="rounded object-cover"
                       />
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{item.nome}</p>
+                        <p className="font-medium text-sm">{item.name}</p>
                         <p className="text-xs text-gray-600">
-                          {item.quantidade}kg × R$ {item.preco.toFixed(2)}
+                          {item.quantidade}kg × R$ {item.price.toFixed(2)}
                         </p>
                       </div>
-                      <span className="font-medium">R$ {(item.preco * item.quantidade).toFixed(2)}</span>
+                      <span className="font-medium">R$ {(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>

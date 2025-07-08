@@ -22,12 +22,16 @@ interface CartContextType {
   updateQuantity: (id: number, quantity: number) => void
   total: number
   itemCount: number
+  lastAddedItem: Product | null
+  openMiniCart: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [lastAddedItem, setLastAddedItem] = useState<Product | null>(null)
+  const [miniCartOpen, setMiniCartOpen] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem("carrinho")
@@ -46,6 +50,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, { ...product, quantity: 1 }]
     })
+
+    // Trigger mini cart
+    setLastAddedItem(product)
+    setMiniCartOpen(true)
+
+    // Auto close after 5 seconds
+    setTimeout(() => {
+      setMiniCartOpen(false)
+    }, 5000)
   }
 
   const removeItem = (id: number) => {
@@ -60,11 +73,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)))
   }
 
+  const openMiniCart = () => {
+    setMiniCartOpen(true)
+  }
+
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, total, itemCount }}>
+    <CartContext.Provider
+      value={{ items, addItem, removeItem, updateQuantity, total, itemCount, lastAddedItem, openMiniCart }}
+    >
       {children}
     </CartContext.Provider>
   )
@@ -82,6 +101,8 @@ export const useCart = () => {
         updateQuantity: () => {},
         total: 0,
         itemCount: 0,
+        lastAddedItem: null,
+        openMiniCart: () => {},
       }
     }
     throw new Error("useCart deve ser usado dentro do CartProvider")
