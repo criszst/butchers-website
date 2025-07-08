@@ -30,7 +30,7 @@ export default function PagamentoPage() {
   const [pedidoFinalizado, setPedidoFinalizado] = useState(false)
 
   useEffect(() => {
-    const savedCart = localStorage.getItem("cart")
+    const savedCart = localStorage.getItem("carrinho")
     if (savedCart) {
       setCartItems(JSON.parse(savedCart))
     }
@@ -48,7 +48,7 @@ export default function PagamentoPage() {
     // Simular processamento do pedido
     setTimeout(() => {
       setPedidoFinalizado(true)
-      localStorage.removeItem("cart")
+      localStorage.removeItem("carrinho")
     }, 2000)
   }
 

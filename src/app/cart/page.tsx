@@ -10,6 +10,7 @@ import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, Beef } from "lucide-react
 import Image from "next/image"
 import Link from "next/link"
 
+
 export default function CarrinhoPage() {
   const [cartItems, setCartItems] = useState<any[]>([])
   const [cupomDesconto, setCupomDesconto] = useState("")
@@ -52,7 +53,7 @@ export default function CarrinhoPage() {
     }
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.preco * item.quantidade, 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantidade, 0)
   const valorDesconto = (subtotal * desconto) / 100
   const taxaEntrega = subtotal > 50 ? 0 : 8.9
   const total = subtotal - valorDesconto + taxaEntrega
@@ -136,7 +137,7 @@ export default function CarrinhoPage() {
                       <h3 className="font-semibold">{item.nome}</h3>
                       <p className="text-sm text-gray-600">{item.descricao}</p>
                       <div className="flex items-center space-x-2 mt-1">
-                        <span className="font-bold text-red-600">R$ {item.preco.toFixed(2)}/kg</span>
+                        <span className="font-bold text-red-600">R$ {item.price.toFixed(2)}/kg</span>
                         {item.promocao && (
                           <Badge variant="secondary" className="bg-red-100 text-red-800">
                             Promoção
