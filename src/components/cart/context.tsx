@@ -31,7 +31,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [lastAddedItem, setLastAddedItem] = useState<Product | null>(null)
-  const [miniCartOpen, setMiniCartOpen] = useState(false)
+  const [_miniCartOpen, setMiniCartOpen] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem("carrinho")
