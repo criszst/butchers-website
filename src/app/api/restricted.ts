@@ -1,18 +1,12 @@
-import {getServerSession } from "next-auth/next"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]"
 
-import { AuthOptions } from "next-auth"
-import { authOptions } from "./auth/[...nextauth]"
-
-export default async (req, res) => {
-  const session = await getServerSession(req, res, authOptions)
+export async function GET(request: Request) {
+  const session = await getServerSession(authOptions)
 
   if (session) {
-    res.send({
-      content: '404 haha /s'
-    })
+    return Response.json({ content: "404 haha /s" })
   }
 
-  res.send({
-    content: 'Você precisa estar logado.'
-  })
+  return Response.json({ content: "Você precisa estar logado." })
 }

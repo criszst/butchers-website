@@ -1,9 +1,6 @@
-import { Network } from "lucide-react"
 import NextAuth from "next-auth"
-import GithubProvider from "next-auth/providers/github"
 
 import GoogleProvider from "next-auth/providers/google"
-import { redirect } from "next/dist/server/api-utils"
 
 export const authOptions = {
   providers: [
@@ -40,4 +37,6 @@ export const authOptions = {
   }
 }
 
-export default NextAuth(authOptions)
+const handler = NextAuth(authOptions)
+
+export { handler as GET, handler as POST } 
