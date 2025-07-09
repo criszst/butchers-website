@@ -22,6 +22,7 @@ const eslintConfig = [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "@typescript-eslint/no-unused-expressions": "off",
     },
   },
 ];
