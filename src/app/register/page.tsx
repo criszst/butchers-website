@@ -26,6 +26,8 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 
+import { signIn } from "next-auth/react"
+
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -172,7 +174,8 @@ export default function RegisterPage() {
                     <h2 className="text-xl font-semibold text-white mb-4">Acesso Rápido</h2>
 
                     <Button
-                      onClick={handleGoogleLogin}
+                    // { callbackUrl: "/"})
+                      onClick={() => signIn("google")}
                       disabled={isGoogleLoading}
                       className="w-full bg-white/90 hover:bg-white text-gray-700 border-0 font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg backdrop-blur-sm"
                     >

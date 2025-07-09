@@ -3,6 +3,7 @@ import NextAuth from "next-auth"
 import GithubProvider from "next-auth/providers/github"
 
 import GoogleProvider from "next-auth/providers/google"
+import { redirect } from "next/dist/server/api-utils"
 
 export const authOptions = {
   providers: [
@@ -31,6 +32,10 @@ export const authOptions = {
       session.acessToken = token.acessToken
 
       return session
+    },
+
+    async redirect({ url, baseUrl}) {
+      return baseUrl
     }
   }
 }

@@ -10,6 +10,8 @@ import { CartProvider } from "@/components/cart/context"
 import PageLoader from "@/components/animations/loader"
 
 import "./globals.css"
+import { SessionProvider } from "next-auth/react"
+import ClientProviders from "./client-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -56,9 +58,9 @@ export default function RootLayout({
 
       </Head>
       <body className={inter.className}>
-        <CartProvider>
-           <PageLoader message="A arte de oferecer qualidade">{children}</PageLoader>
-        </CartProvider>
+        <ClientProviders>
+            <PageLoader message="A arte de oferecer qualidade">{children}</PageLoader>
+        </ClientProviders>
         <Analytics />
       </body>
     </html>
