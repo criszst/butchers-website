@@ -68,7 +68,7 @@ export default function ShaderHero() {
   }, [])
 
   return (
-    <section className="relative h-[600px] overflow-hidden bg-black">
+    <section className="relative h-[700px] sm:h-[620px] overflow-hidden bg-black">
       {/* Background Gradient Animation */}
       <div className="absolute inset-0 opacity-30">
         <div

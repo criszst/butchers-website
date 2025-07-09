@@ -27,9 +27,9 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <Beef className="h-8 w-8 text-red-600" />
-            <span className="text-2xl font-bold text-red-600">Casa de Carne Duarte</span>
+          <Link href="/" className="flex items-center space-x-1 sm:space-x-5">
+            <Beef className="h-8 w-8 text-red-600 ml-1 sm:ml-10" />
+            <span className="text-xl sm:text-2xl md:text-xl font-bold text-red-600">Casa de Carne Duarte</span>
           </Link>
 
           <nav className="hidden md:flex items-center space-x-6">
@@ -47,7 +47,7 @@ export default function Header() {
             </a>
           </nav>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-end space-x-4">
             {/* Mobile Menu */}
             <Button variant="ghost" size="icon" className="md:hidden">
               <Menu className="h-5 w-5" />
@@ -68,9 +68,21 @@ export default function Header() {
               )}
             </Button>
 
-            <Button size="sm" className="bg-red-600 hover:bg-red-700 hidden sm:inline-flex">
+              <div className="flex justify-end end">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="relative bg-amber-600 hover:bg-amber-700"
+              >
+                <Link href="/register">
+                  Criar conta
+                </Link>
+              </Button>
+          </div>
+
+            {/* <Button size="sm" className="bg-red-600 hover:bg-red-700 hidden sm:inline-flex">
               Fazer Pedido
-            </Button>
+            </Button> */}
           </div>
         </div>
       </header>

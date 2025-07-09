@@ -8,6 +8,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/components/cart/context"
 
+import { motion, AnimatePresence } from "framer-motion"
+
 interface MiniCartProps {
   isOpen: boolean
   onClose: () => void
@@ -21,7 +23,9 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
   useEffect(() => {
     if (lastAddedItem && isOpen) {
       setShowSuccess(true)
-      const timer = setTimeout(() => setShowSuccess(false), 2000)
+      const timer = setTimeout(() => {
+        setShowSuccess(false)
+      }, 2000)
       return () => clearTimeout(timer)
     }
   }, [lastAddedItem, isOpen])
@@ -38,18 +42,29 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
     }
   }, [isOpen])
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
+
 
   return (
-    <>
+    <AnimatePresence>
       {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300"
-        onClick={onClose}
-      />
+       <motion.div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          />
 
       {/* Mini Cart */}
-      <div className="fixed top-0 right-0 h-full w-full sm:w-96 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out">
+       <motion.div
+            className="fixed top-0 right-0 h-full w-full sm:w-96 bg-white shadow-2xl z-50 flex flex-col"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "0%" }}
+            transition={{ type: 'keyframes', duration: 0.2 }}
+          >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-red-600 to-orange-600 text-white">
           <div className="flex items-center space-x-2">
@@ -61,8 +76,8 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
           <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20">
             <X className="h-4 w-4" />
           </Button>
-        </div>
-
+        
+      </div>
         {/* Success Message */}
         {showSuccess && lastAddedItem && (
           <div className="p-4 bg-green-50 border-b border-green-200 animate-in slide-in-from-top duration-300">
@@ -213,7 +228,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
             </Button>
           </div>
         )}
-      </div>
-    </>
+      </motion.div>
+    </AnimatePresence>
   )
 }
