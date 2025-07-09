@@ -1,10 +1,15 @@
 import type React from "react"
 import type { Metadata } from "next"
+import Head from "next/head"
+
 import { Inter } from "next/font/google"
-import "./globals.css"
+
+import { Analytics } from '@vercel/analytics/react'
+
 import { CartProvider } from "@/components/cart/context"
 import PageLoader from "@/components/animations/loader"
-import Head from "next/head"
+
+import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -54,6 +59,7 @@ export default function RootLayout({
         <CartProvider>
            <PageLoader message="A arte de oferecer qualidade">{children}</PageLoader>
         </CartProvider>
+        <Analytics />
       </body>
     </html>
   )
