@@ -68,7 +68,7 @@ export default function ShaderHero() {
   }, [])
 
   return (
-    <section className="relative h-[700px] sm:h-[620px] overflow-hidden bg-black">
+        <section className="relative min-h-[400px] md:min-h-[400px] lg:min-h-[650px] overflow-hidden bg-black">
       {/* Background Gradient Animation */}
       <div className="absolute inset-0 opacity-30">
         <div
@@ -84,7 +84,7 @@ export default function ShaderHero() {
         {[...Array(5)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 bg-white/20 rounded-full animate-float"
+            className="absolute w-1 h-1 sm:w-2 sm:h-2 bg-white/20 rounded-full animate-float"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -96,32 +96,47 @@ export default function ShaderHero() {
       </div>
 
       {/* Main Slider Container */}
-      <div className="relative h-full flex items-center">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <div className="relative h-full flex items-center py-8 sm:py-12 lg:py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
             {/* Content Side */}
-            <div className="text-white z-10 relative">
+            <div className="text-white z-10 relative order-2 lg:order-1 text-center lg:text-left">
               <div
                 className={`transform transition-all duration-800 ${
-                  isTransitioning ? "translate-x-8 opacity-0" : "translate-x-0 opacity-100"
+                  isTransitioning ? "translate-x-4 lg:translate-x-8 opacity-0" : "translate-x-0 opacity-100"
                 }`}
               >
-                <div className="mb-4">
-                  <span className="inline-block px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
+                {/* Badge */}
+                <div className="mb-4 sm:mb-6 lg:mb-8">
+                  <span className="inline-block px-3 py-1 sm:px-4 sm:py-2 bg-white/20 backdrop-blur-sm rounded-full text-xs sm:text-sm font-medium">
                     Oferta Especial
                   </span>
                 </div>
-                <h1 className="text-4xl lg:text-7xl sm:text-2xl sm:mb-10 font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+
+                {/* Title */}
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold mb-3 sm:mb-4 lg:mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">
                   {promocoes[currentSlide].titulo}
                 </h1>
-                <p className="text-xl lg:text-2xl sm:text-4xl mb-6 text-gray-200">{promocoes[currentSlide].descricao}</p>
-                <div className="flex items-center space-x-4 mb-8">
-                  <span className="text-4xl font-bold text-green-400">{promocoes[currentSlide].preco}</span>
-                  <span className="text-xl line-through text-gray-400">{promocoes[currentSlide].precoOriginal}</span>
+
+                {/* Description */}
+                <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl mb-4 sm:mb-6 lg:mb-8 text-gray-200 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+                  {promocoes[currentSlide].descricao}
+                </p>
+
+                {/* Prices */}
+                <div className="flex items-center justify-center lg:justify-start space-x-2 sm:space-x-3 lg:space-x-4 mb-6 sm:mb-8 lg:mb-10">
+                  <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-green-400">
+                    {promocoes[currentSlide].preco}
+                  </span>
+                  <span className="text-sm sm:text-base md:text-lg lg:text-xl line-through text-gray-400">
+                    {promocoes[currentSlide].precoOriginal}
+                  </span>
                 </div>
+
+                {/* CTA Button */}
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-4 text-lg font-semibold shadow-2xl hover:shadow-red-500/25 transition-all duration-300 transform hover:scale-105"
+                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base lg:text-lg font-semibold shadow-2xl hover:shadow-red-500/25 transition-all duration-300 transform hover:scale-105"
                 >
                   Comprar Agora
                 </Button>
@@ -129,8 +144,8 @@ export default function ShaderHero() {
             </div>
 
             {/* Image Side with Shader Effects */}
-            <div className="relative">
-              <div className="relative w-full h-96 lg:h-[500px]">
+            <div className="relative order-1 lg:order-2">
+              <div className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[400px] xl:h-[500px] mx-auto max-w-sm sm:max-w-md lg:max-w-none">
                 {promocoes.map((promo, index) => (
                   <div
                     key={promo.id}
@@ -143,11 +158,13 @@ export default function ShaderHero() {
                     }`}
                   >
                     {/* Glow Effect */}
-                    <div className={`absolute inset-0 bg-gradient-to-r ${promo.cor} opacity-50 blur-3xl scale-110`} />
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-r ${promo.cor} opacity-50 blur-2xl sm:blur-3xl scale-110`}
+                    />
 
                     {/* Main Image with Clip Path Animation */}
                     <div
-                      className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl"
+                      className="relative w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl"
                       style={{
                         clipPath: isTransitioning
                           ? "polygon(0 0, 0 0, 0 100%, 0% 100%)"
@@ -161,18 +178,19 @@ export default function ShaderHero() {
                         fill
                         className="object-cover"
                         priority={index === 0}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       />
 
                       {/* Overlay Gradient */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
                       {/* Animated Border */}
-                      <div className="absolute inset-0 rounded-3xl border-2 border-white/30 animate-pulse" />
+                      <div className="absolute inset-0 rounded-2xl sm:rounded-3xl border-2 border-white/30 animate-pulse" />
                     </div>
 
                     {/* Floating Elements */}
-                    <div className="absolute -top-4 -right-4 w-8 h-8 bg-white/20 rounded-full animate-bounce" />
-                    <div className="absolute -bottom-4 -left-4 w-6 h-6 bg-white/30 rounded-full animate-bounce delay-300" />
+                    <div className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 bg-white/20 rounded-full animate-bounce" />
+                    <div className="absolute -bottom-2 -left-2 sm:-bottom-4 sm:-left-4 w-3 h-3 sm:w-4 sm:h-4 lg:w-6 lg:h-6 bg-white/30 rounded-full animate-bounce delay-300" />
                   </div>
                 ))}
               </div>
@@ -185,29 +203,29 @@ export default function ShaderHero() {
       <Button
         variant="outline"
         size="icon"
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+        className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 transition-all duration-300 w-8 h-8 sm:w-10 sm:h-10"
         onClick={prevSlide}
         disabled={isTransitioning}
       >
-        <ChevronLeft className="h-6 w-6" />
+        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
       </Button>
 
       <Button
         variant="outline"
         size="icon"
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+        className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 transition-all duration-300 w-8 h-8 sm:w-10 sm:h-10"
         onClick={nextSlide}
         disabled={isTransitioning}
       >
-        <ChevronRight className="h-6 w-6" />
+        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
       </Button>
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
+      <div className="absolute bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2 sm:space-x-3">
         {promocoes.map((_, index) => (
           <button
             key={index}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
               index === currentSlide ? "bg-white scale-125 shadow-lg" : "bg-white/40 hover:bg-white/60"
             }`}
             onClick={() => {
