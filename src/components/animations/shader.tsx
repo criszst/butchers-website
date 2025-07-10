@@ -9,6 +9,10 @@ export default function ShaderHero() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
 
+  const [dots, setDots] = useState<
+    { left: number; top: number; delay: number; duration: number }[]
+  >([])
+
   const promocoes = [
     {
       id: 1,
@@ -63,12 +67,19 @@ export default function ShaderHero() {
   }
 
   useEffect(() => {
-    const interval = setInterval(nextSlide, 5000)
-    return () => clearInterval(interval)
+    setDots(
+      Array.from({ length: 5 }).map(() => ({
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        delay: Math.random() * 3 ,
+        duration: 5 + Math.random() * 3, 
+      }))
+    )
   }, [])
 
+
   return (
-        <section className="relative min-h-[400px] md:min-h-[400px] lg:min-h-[650px] overflow-hidden bg-black">
+    <section className="relative min-h-[400px] md:min-h-[400px] lg:min-h-[650px] overflow-hidden bg-black">
       {/* Background Gradient Animation */}
       <div className="absolute inset-0 opacity-30">
         <div
@@ -81,15 +92,15 @@ export default function ShaderHero() {
 
       {/* Animated Particles */}
       <div className="absolute inset-0">
-        {[...Array(5)].map((_, i) => (
+        {dots.map((dot, i) => (
           <div
             key={i}
             className="absolute w-1 h-1 sm:w-2 sm:h-2 bg-white/20 rounded-full animate-float"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${3 + Math.random() * 2}s`,
+              left: `${dot.left}%`,
+              top: `${dot.top}%`,
+              animationDelay: `${dot.delay}s`,
+              animationDuration: `${dot.duration}s`,
             }}
           />
         ))}
@@ -102,9 +113,8 @@ export default function ShaderHero() {
             {/* Content Side */}
             <div className="text-white z-10 relative order-2 lg:order-1 text-center lg:text-left">
               <div
-                className={`transform transition-all duration-800 ${
-                  isTransitioning ? "translate-x-4 lg:translate-x-8 opacity-0" : "translate-x-0 opacity-100"
-                }`}
+                className={`transform transition-all duration-800 ${isTransitioning ? "translate-x-4 lg:translate-x-8 opacity-0" : "translate-x-0 opacity-100"
+                  }`}
               >
                 {/* Badge */}
                 <div className="mb-4 sm:mb-6 lg:mb-8">
@@ -149,13 +159,12 @@ export default function ShaderHero() {
                 {promocoes.map((promo, index) => (
                   <div
                     key={promo.id}
-                    className={`absolute inset-0 transition-all duration-800 ${
-                      index === currentSlide
+                    className={`absolute inset-0 transition-all duration-800 ${index === currentSlide
                         ? "opacity-100 scale-100 rotate-0"
                         : index === (currentSlide - 1 + promocoes.length) % promocoes.length
                           ? "opacity-0 scale-95 -rotate-12"
                           : "opacity-0 scale-105 rotate-12"
-                    }`}
+                      }`}
                   >
                     {/* Glow Effect */}
                     <div
@@ -225,9 +234,8 @@ export default function ShaderHero() {
         {promocoes.map((_, index) => (
           <button
             key={index}
-            className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
-              index === currentSlide ? "bg-white scale-125 shadow-lg" : "bg-white/40 hover:bg-white/60"
-            }`}
+            className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${index === currentSlide ? "bg-white scale-125 shadow-lg" : "bg-white/40 hover:bg-white/60"
+              }`}
             onClick={() => {
               if (!isTransitioning) {
                 setIsTransitioning(true)
@@ -241,20 +249,20 @@ export default function ShaderHero() {
 
       {/* Custom CSS for animations */}
       <style jsx>{`
-        @keyframes gradientShift {
-          0% { transform: scale(1) rotate(0deg); }
-          100% { transform: scale(1.1) rotate(2deg); }
-        }
-        
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
-        }
-        
-        .animate-float {
-          animation: float 4s ease-in-out infinite;
-        }
-      `}</style>
+  @keyframes gradientShift {
+    0% { transform: scale(1) rotate(0deg); }
+    100% { transform: scale(1.1) rotate(2deg); }
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+  }
+  
+  .animate-float {
+    animation: float 7s ease-in-out infinite; /* era 4s, agora 7s */
+  }
+`}</style>
     </section>
   )
 }

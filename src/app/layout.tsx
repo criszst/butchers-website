@@ -1,17 +1,18 @@
 import type React from "react"
+
 import type { Metadata } from "next"
 import Head from "next/head"
+import Script from "next/script"
 
 import { Inter } from "next/font/google"
 
 import { Analytics } from '@vercel/analytics/react'
 
-import { CartProvider } from "@/components/cart/context"
+import ClientProviders from "./client-provider"
+
 import PageLoader from "@/components/animations/loader"
 
 import "./globals.css"
-import { SessionProvider } from "next-auth/react"
-import ClientProviders from "./client-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -56,8 +57,27 @@ export default function RootLayout({
 
         <link rel="icon" href="/favicon.ico" />
 
+          <Script id="gtm-script" strategy="afterInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;
+            j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+            f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','GTM-P58KHRK9');`}
+
+
+
+
+
       </Head>
       <body className={inter.className}>
+
+        <noscript>
+          <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-P58KHRK9"
+            height="0" width="0" style={{ display: "none", visibility: "hidden" }}>
+          </iframe>
+        </noscript>
+
         <ClientProviders>
             <PageLoader message="A arte de oferecer qualidade">{children}</PageLoader>
         </ClientProviders>
