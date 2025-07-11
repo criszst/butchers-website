@@ -60,7 +60,7 @@ export default function ProfilePage() {
               <div className="flex items-center space-x-3">
                 {/* TODO: implement a unique logo with a beaultiful recort */}
                 <div className="w-20 h-20 rounded flex items-center justify-center shadow-lg">
-                  <img src="https://butchers-website.vercel.app/logo/logo.jpg"/>
+                  <img src="https://butchers-website.vercel.app/logo/logo-rewrite"/>
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">

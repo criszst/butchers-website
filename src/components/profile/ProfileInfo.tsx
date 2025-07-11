@@ -87,7 +87,7 @@ export default function ProfileInfo({ user, setUser }: ProfileInfoProps) {
           <div className="relative group">
             {user?.image ? (
               <img
-                src={user.image || "/placeholder.svg"}
+                src={user.image || 'A'}
                 alt="Avatar"
                 className="w-28 h-28 rounded-3xl object-cover border-4 border-white shadow-xl group-hover:shadow-2xl transition-all duration-300"
               />
