@@ -15,6 +15,8 @@ import Achievements from "@/components/profile/achievements"
 import AddressesTab from "@/components/profile/AddressesTab"
 import OrdersTab from "@/components/profile/OrdersTab"
 import SettingsTab from "@/components/profile/SettingsTab"
+import LogoClean from "@/components/ModernLogo"
+import ModernLogo from "@/components/ModernLogo"
 
 export default function ProfilePage() {
   const { data: session } = useSession()
@@ -59,8 +61,8 @@ export default function ProfilePage() {
               <div className="h-8 w-px bg-gray-200" />
               <div className="flex items-center space-x-3">
                 {/* TODO: implement a unique logo with a beaultiful recort */}
-                <div className="w-20 h-20 rounded flex items-center justify-center shadow-lg">
-                  <img src="https://butchers-website.vercel.app/logo/logo-rewrite"/>
+                <div className=" flex items-center justify-center">
+                  <ModernLogo className="mx-auto rounded-4xl" />
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">

@@ -1,39 +1,24 @@
 "use client"
 
-import { useEffect, useState } from "react"
-
-
-import Link from "next/link"
-
-import { useSession } from "next-auth/react"
-import type { Session } from "next-auth"
-
-import MiniCart from "@/components/cart/mini-cart"
-import { useCart } from "@/components/cart/context"
-
-import { ShoppingCart, Beef, Menu, ChevronDown, Settings, User, Heart, Package, LogOut, Bell } from "lucide-react"
-
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Menu, ChevronDown, Settings, User, Heart, Package, LogOut, Bell } from "lucide-react"
+import Link from "next/link"
+import { useCart } from "@/components/cart/context"
+import MiniCart from "@/components/cart/mini-cart"
+import ModernLogo from "@/components/ModernLogo"
+import EnhancedCartButton from "@/components/cart/ButtonCart"
+import type { Session } from "next-auth"
+import { useSession } from "next-auth/react"
 
 export default function Header() {
   const { itemCount } = useCart()
-  const { data: session } = useSession()
-
   const [isMiniCartOpen, setIsMiniCartOpen] = useState(false)
   const [lastAddedItem, setLastAddedItem] = useState(null)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const [user, setUser] = useState<Session | null>(null)
-
-   const handleLogout = () => {
-    // Simular logout
-    setUser(null)
-    setIsUserMenuOpen(false)
-  }
-
-  useEffect(() => {
-    setUser(session)
-  }, [session])
+  const { data: session } = useSession()
+  const [user, setUser] = useState<Session | null>(session)
 
   const openMiniCart = (item?: any) => {
     if (item) setLastAddedItem(item)
@@ -45,64 +30,88 @@ export default function Header() {
     setLastAddedItem(null)
   }
 
+  const handleLogout = () => {
+    // Simular logout
+    setUser(null)
+    setIsUserMenuOpen(false)
+  }
+
+  useEffect(() => {
+    setUser(session)
+  }, [session])
+
+  // Simulação de usuário logado - remover em produção
+  useEffect(() => {
+    if (!session) {
+      // Simular usuário logado
+      const simulatedUser = {
+        user: {
+          name: "Cristian",
+          email: "cristian@email.com",
+          image: null, // ou uma URL de imagem se quiser testar com avatar
+        },
+      }
+      setUser(simulatedUser as Session)
+    }
+  }, [session])
+
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-40 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
         <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-1 sm:space-x-5">
-            <Beef className="h-8 w-8 text-red-600 ml-1 sm:ml-10" />
-            <span className="text-xs whitespace-nowrap sm:text-2xl md:text-xl font-bold text-red-600">
-              Casa de Carne Duarte
-            </span>
+          {/* Logo Moderna */}
+          <Link href="/" className="flex items-center">
+            <ModernLogo size="md" />
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link href="/" className="text-sm font-medium hover:text-red-600 transition-colors">
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <Link
+              href="/"
+              className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
+            >
               Início
             </Link>
-            <a href="#produtos" className="text-sm font-medium hover:text-red-600 transition-colors">
+            <a
+              href="#produtos"
+              className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
+            >
               Produtos
             </a>
-            <a href="#sobre" className="text-sm font-medium hover:text-red-600 transition-colors">
+            <a
+              href="#sobre"
+              className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
+            >
               Sobre
             </a>
-            <a href="#contato" className="text-sm font-medium hover:text-red-600 transition-colors">
+            <a
+              href="#contato"
+              className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
+            >
               Contato
             </a>
           </nav>
 
-          <div className="flex items-center space-x-2 sm:space-x-4">
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="relative bg-transparent hover:bg-red-50 border-red-200"
-              onClick={() => openMiniCart()}
-            >
-              <ShoppingCart className="h-4 w-4 sm:h-4 sm:w-4" />
-              {itemCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs bg-red-600 hover:bg-red-700 animate-bounce">
-                  {itemCount}
-                </Badge>
-              )}
-
-            </Button>
-
-             {user ? (
+          {/* Right Side */}
+        
+            {/* Enhanced Cart Button */}
+            <EnhancedCartButton onClick={() => openMiniCart()} />
+            <div className="flex items-center space-x-4">
+            {user ? (
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 shadow-md border border-amber-200 transition-all duration-200 hover:shadow-lg"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-gray-200 shadow-md border border-gray-200 transition-discrete duration-300 hover:shadow-lg"
                 >
                   {/* Avatar */}
                   {user.user?.image ? (
                     <img
                       src={user.user.image || "/placeholder.svg"}
                       alt={user.user.name ?? undefined}
-                      className="w-8 h-8 rounded-full border-2 border-amber-300 object-cover"
+                      className="w-8 h-8 rounded-full border-2 border-gray-300 object-cover"
                     />
                   ) : (
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-amber-500 text-white font-bold text-sm border-2 border-amber-300">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-red-700 text-white font-bold text-sm border-2 border-gray-300">
                       {user.user?.name?.charAt(0).toUpperCase() || "U"}
                     </div>
                   )}
@@ -151,7 +160,7 @@ export default function Header() {
                       <div className="py-2">
                         <Link
                           href="/perfil"
-                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 bg-gradient-to-r to-orange-20 hover:from-amber-100 hover:to-gray-100 transition-colors duration-500"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
                           <User className="h-4 w-4 text-gray-500" />
@@ -159,8 +168,8 @@ export default function Header() {
                         </Link>
 
                         <Link
-                          href="/orders"
-                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          href="/pedidos"
+                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 bg-gradient-to-r to-orange-20 hover:from-amber-100 hover:to-gray-100  transition-colors duration-500"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
                           <Package className="h-4 w-4 text-gray-500" />
@@ -169,8 +178,8 @@ export default function Header() {
                         </Link>
 
                         <Link
-                          href="/favorites"
-                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          href="/favoritos"
+                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 bg-gradient-to-r  to-orange-20 hover:from-amber-100 hover:to-gray-100  transition-colors duration-500"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
                           <Heart className="h-4 w-4 text-gray-500" />
@@ -178,8 +187,8 @@ export default function Header() {
                         </Link>
 
                         <Link
-                          href="/notifications"
-                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          href="/notificacoes"
+                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 bg-gradient-to-r to-orange-20 hover:from-amber-100 hover:to-gray-100  transition-colors duration-500"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
                           <Bell className="h-4 w-4 text-gray-500" />
@@ -190,8 +199,8 @@ export default function Header() {
                         <div className="border-t border-gray-100 my-2"></div>
 
                         <Link
-                          href="/settings"
-                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          href="/configuracoes"
+                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 bg-gradient-to-r to-orange-20 hover:from-amber-100 hover:to-gray-100 transition-colors duration-500"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
                           <Settings className="h-4 w-4 text-gray-500" />
@@ -212,7 +221,7 @@ export default function Header() {
               </div>
             ) : (
               <>
-                <Button variant="secondary" size="sm" className="bg-amber-600 hover:bg-amber-700 px-3 py-1">
+                <Button variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2">
                   <Link href="/register" className="block w-full h-full">
                     Criar conta
                   </Link>
@@ -223,7 +232,9 @@ export default function Header() {
               </>
             )}
 
-
+            <Button size="sm" className="bg-red-600 hover:bg-red-700 hidden lg:inline-flex px-6 py-2 h-10">
+              Fazer Pedido
+            </Button>
           </div>
         </div>
       </header>
