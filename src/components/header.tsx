@@ -61,7 +61,7 @@ export default function Header() {
         <div className="container flex h-16 items-center justify-between">
           {/* Logo Moderna */}
           <Link href="/" className="flex items-center">
-            <ModernLogo size="md" />
+            <ModernLogo size="sm" />
           </Link>
 
           {/* Navigation */}
