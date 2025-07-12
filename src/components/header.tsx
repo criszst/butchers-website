@@ -37,23 +37,12 @@ export default function Header() {
   }
 
   useEffect(() => {
+    if (session) {   
     setUser(session)
-  }, [session])
-
-  // Simulação de usuário logado - remover em produção
-  useEffect(() => {
-    if (!session) {
-      // Simular usuário logado
-      const simulatedUser = {
-        user: {
-          name: "Cristian",
-          email: "cristian@email.com",
-          image: null, // ou uma URL de imagem se quiser testar com avatar
-        },
-      }
-      setUser(simulatedUser as Session)
     }
   }, [session])
+
+
 
   return (
     <>
