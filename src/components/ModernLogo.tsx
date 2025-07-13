@@ -10,26 +10,43 @@ export default function ModernLogo({
   size?: "sm" | "md" | "lg"
 }) {
   const sizes = {
-    sm: { container: "h-8", icon: "h-5 w-5", text: "text-sm" },
-    md: { container: "h-10", icon: "h-6 w-6", text: "text-xl" },
-    lg: { container: "h-12", icon: "h-7 w-7", text: "text-2xl" },
+    sm: {
+      container: "h-8 w-8",
+      icon: "h-4 w-4",
+      text: "text-sm",
+      spacing: "space-x-2",
+    },
+    md: {
+      container: "h-10 w-10",
+      icon: "h-5 w-5",
+      text: "text-base",
+      spacing: "space-x-3",
+    },
+    lg: {
+      container: "h-12 w-12",
+      icon: "h-6 w-6",
+      text: "text-lg",
+      spacing: "space-x-3",
+    },
   }
 
   const currentSize = sizes[size]
 
   return (
-    <div className={`flex items-center space-x-3 ${className}`}>
-
+    <div className={`flex items-center ${currentSize.spacing} ${className}`}>
+      {/* Logo Icon */}
       <div
-        className={`${currentSize.container} aspect-square bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-red-500/20`}
+        className={`${currentSize.container} bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-red-500/20 flex-shrink-0`}
       >
         <Beef className={`${currentSize.icon} text-white`} />
       </div>
 
-      
-      <div className="flex ">
-        <span className={`${currentSize.text} font-bold text-red-600 leading-tight`}>Casa de Carne Duarte</span>
-        
+      {/* Logo Text */}
+      <div className="flex flex-col min-w-0">
+        <span className={`${currentSize.text} font-bold text-red-600 leading-tight whitespace-nowrap`}>
+          Casa de Carne
+        </span>
+        <span className={`text-xs font-semibold text-red-500 leading-tight -mt-0.5 whitespace-nowrap`}>Duarte</span>
       </div>
     </div>
   )

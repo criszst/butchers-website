@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { User, MapPin, Package, Settings, ArrowLeft, Beef, Home } from "lucide-react"
 import Link from "next/link"
 import Image from "next"
+
 import { useSession } from "next-auth/react"
 
 
@@ -27,13 +28,7 @@ export default function ProfilePage() {
     if (session?.user) {
       setUser(session.user)
     } else {
-      // Simular usuário logado para desenvolvimento
-      const simulatedUser = {
-        name: "João Silva",
-        email: "joao@email.com",
-        image: null,
-      }
-      setUser(simulatedUser)
+      window.location.href = '/register'
     }
   }, [session])
 
