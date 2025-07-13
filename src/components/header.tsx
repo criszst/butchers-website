@@ -9,8 +9,10 @@ import { useCart } from "@/components/cart/context"
 import MiniCart from "@/components/cart/mini-cart"
 import ModernLogo from "@/components/ModernLogo"
 import EnhancedCartButton from "@/components/cart/ButtonCart"
+
 import type { Session } from "next-auth"
 import { useSession } from "next-auth/react"
+import { signOut } from "next-auth/react"
 
 export default function Header() {
   const { itemCount } = useCart()
@@ -36,24 +38,13 @@ export default function Header() {
     setIsUserMenuOpen(false)
   }
 
-  useEffect(() => {
+    useEffect(() => {
+    if (session) {   
     setUser(session)
-  }, [session])
-
-  // Simulação de usuário logado - remover em produção
-  useEffect(() => {
-    if (!session) {
-      // Simular usuário logado
-      const simulatedUser = {
-        user: {
-          name: "Cristian",
-          email: "cristian@email.com",
-          image: null, // ou uma URL de imagem se quiser testar com avatar
-        },
-      }
-      setUser(simulatedUser as Session)
     }
   }, [session])
+
+
 
   return (
     <>
@@ -208,7 +199,7 @@ export default function Header() {
                         </Link>
 
                         <button
-                          onClick={handleLogout}
+                          onClick={() => signOut({ callbackUrl: '/'})}
                           className="flex items-center space-x-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
                         >
                           <LogOut className="h-4 w-4 text-red-500" />

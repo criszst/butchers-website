@@ -23,7 +23,7 @@ interface ProfileInfoProps {
 export default function ProfileInfo({ user, setUser }: ProfileInfoProps) {
   const [isEditing, setIsEditing] = useState(false)
 
-  // Mock data for fields not in NextAuth
+
   const [mockData, setMockData] = useState({
     phone: "(11) 99999-9999",
     birthDate: "1990-01-01",
