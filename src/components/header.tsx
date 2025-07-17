@@ -258,7 +258,7 @@ export default function Header() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 text-xs sm:text-sm"
+                  className="bg-red-600 hover:bg-red-700 text-white xl:inline-flex px-4 lg:px-6 py-2 h-10 text-sm"
                 >
                   <Link href="/register" className="block w-full h-full">
                     <span className="hidden sm:inline">Criar conta</span>

@@ -1,144 +1,278 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, MapPin, Package, Settings, ArrowLeft, Beef, Home } from "lucide-react"
-import Link from "next/link"
-import Image from "next"
-
+import { useState, useEffect, useCallback } from "react"
+import { useToast } from "@/app/hooks/use-toast"
+import { Target, Crown, Sparkles, Beef } from "lucide-react"
+import ProfileHeader from "@/components/profile/Header"
+import ProfileTabs from "@/components/profile/ProfileTab"
+import ProfileTab from "@/components/profile/tabs/profile"
+import AddressesTab from "@/components/profile/tabs/AddressesTab"
+import OrdersTab from "@/components/profile/tabs/OrdersTab"
+import SettingsTab from "@/components/profile/tabs/SettingsTab"
+import OrderDetailDialog from "@/components/profile/OrderDetail"
 import { useSession } from "next-auth/react"
+import { getUserProfileDetails, updateUserProfileDetails } from "@/app/mock/user-info"
 
+// Interface que combina os campos do session com campos adicionais
+interface ExtendedUser {
+  name?: string | null
+  email?: string | null
+  image?: string | null
+  // Campos adicionais que vêm do banco de dados
+  phone?: string | null
+  bio?: string | null
+  birthDate?: string | null
+  cpf?: string | null
+}
 
-import ProfileInfo from "@/components/profile/ProfileInfo"
-import UserStats from "@/components/profile/UserStats"
-import Achievements from "@/components/profile/achievements"
-import AddressesTab from "@/components/profile/AddressesTab"
-import OrdersTab from "@/components/profile/OrdersTab"
-import SettingsTab from "@/components/profile/SettingsTab"
-import LogoClean from "@/components/ModernLogo"
-import ModernLogo from "@/components/ModernLogo"
+interface OrderItem {
+  name: string
+  quantity: number
+  price: number
+}
 
-export default function ProfilePage() {
-  const { data: session } = useSession()
+interface TrackingInfo {
+  status: string
+  estimatedDelivery: string
+  trackingNumber: string
+}
+
+interface Order {
+  id: string
+  date: string
+  total: number
+  status: string
+  items: OrderItem[]
+  trackingInfo: TrackingInfo
+}
+
+export default function ModernProfilePage() {
+  const { toast } = useToast()
+  const { data: session, status } = useSession()
+
+  const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState("perfil")
-  const [user, setUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
+
+  const [activeNumber, setActiveNumber] = useState<number>(4)
+
+  const shouldRedirect = status === "unauthenticated" || !currentUser
+  useEffect(() => {
+     let interval: NodeJS.Timeout
+    if (shouldRedirect) {
+      interval = setInterval(() => {
+        setActiveNumber((prev) => {
+          if (prev === 0) {
+            clearInterval(interval)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    // Limpar o intervalo se o componente for desmontado ou shouldRedirect mudar
+    return () => {
+      if (interval) {
+        clearInterval(interval)
+      }
+    }
+  }, [shouldRedirect])
 
   useEffect(() => {
-    if (session?.user) {
-      setUser(session.user)
-    } else {
-      window.location.href = '/register'
-    }
-  }, [session])
+    const fetchUserData = async () => {
+      setIsLoadingUser(true)
+      if (status === "authenticated" && session?.user?.email) {
 
-  if (!user) {
-    return <div>Carregando...</div>
+        const additionalDetails = await getUserProfileDetails(session.user.email)
+
+        // Combinar dados do session com dados adicionais
+        const combinedUser: ExtendedUser = {
+          name: session.user.name,
+          email: session.user.email,
+          image: session.user.image,
+          phone: additionalDetails.phone,
+          bio: additionalDetails.bio,
+          // birthDate: additionalDetails.birthDate,
+          // cpf: additionalDetails.cpf,
+        }
+        setCurrentUser(combinedUser)
+      } else if (status === "unauthenticated") {
+
+         setTimeout(() => {
+        window.location.href = "/register"
+      }, 3000)
+      }
+      setIsLoadingUser(false)
+    }
+
+    fetchUserData()
+  }, [session, status])
+
+  // Estados para o modal de detalhes do pedido
+  const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+
+  const handleUpdateProfile = useCallback(
+    async (updatedFields: Partial<ExtendedUser>) => {
+      if (!session?.user?.email) {
+        toast({
+          title: "❌ Erro",
+          description: "Email do usuário não encontrado para salvar as alterações.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      try {
+        // Extrair apenas os campos que podem ser atualizados (não os do session)
+        const { phone, bio } = updatedFields
+        const result = await updateUserProfileDetails(session.user.email, { phone, bio })
+
+        if (result.success) {
+
+          setCurrentUser((prev) => (prev ? { ...prev, ...updatedFields } : null))
+          setIsEditing(false)
+          toast({
+            title: "✅ Perfil atualizado!",
+            description: "Suas informações foram salvas com sucesso.",
+          })
+        } else {
+          toast({
+            title: "❌ Erro",
+            description: result.message || "Não foi possível salvar as alterações.",
+            variant: "destructive",
+
+          })
+        }
+      } catch (error) {
+        console.error("Failed to save profile:", error)
+        toast({
+          title: "❌ Erro",
+          description: "Ocorreu um erro ao salvar as alterações.",
+          variant: "destructive",
+        })
+      }
+    },
+    [session?.user?.email, toast],
+  )
+
+  const stats = {
+    orders: 24,
+    favorites: 12,
+    spent: 2840.5,
+    points: 340,
   }
+
+  const achievements = [
+    { title: "Primeiro Pedido", icon: Target, color: "bg-green-500", earned: true, date: "14/01/2023" },
+    { title: "Cliente Fiel", icon: Crown, color: "bg-orange-500", earned: true, date: "19/06/2023" },
+    { title: "Explorador", icon: Sparkles, color: "bg-purple-500", earned: true, date: "09/08/2023" },
+    { title: "Mestre do Churrasco", icon: Beef, color: "bg-red-500", earned: false, date: "" },
+  ]
+
+  const orders: Order[] = [
+    {
+      id: "001",
+      date: "15/01/2024",
+      total: 89.9,
+      status: "Entregue",
+      items: [
+        { name: "Picanha Maturada (500g)", quantity: 1, price: 55.0 },
+        { name: "Linguiça Artesanal (1kg)", quantity: 1, price: 34.9 },
+      ],
+      trackingInfo: {
+        status: "Entregue em 15/01/2024 às 14:30",
+        estimatedDelivery: "15/01/2024",
+        trackingNumber: "BR123456789BR",
+      },
+    },
+    {
+      id: "002",
+      date: "10/01/2024",
+      total: 156.5,
+      status: "Em transporte",
+      items: [
+        { name: "Costela Bovina (2kg)", quantity: 1, price: 120.0 },
+        { name: "Carvão Premium (5kg)", quantity: 1, price: 36.5 },
+      ],
+      trackingInfo: {
+        status: "Em transporte - Chegará hoje",
+        estimatedDelivery: "10/01/2024",
+        trackingNumber: "BR987654321BR",
+      },
+    },
+    {
+      id: "003",
+      date: "05/01/2024",
+      total: 234.8,
+      status: "Preparando",
+      items: [
+        { name: "Filé Mignon (1kg)", quantity: 1, price: 150.0 },
+        { name: "Cerveja Artesanal (6un)", quantity: 1, price: 84.8 },
+      ],
+      trackingInfo: {
+        status: "Preparando seu pedido",
+        estimatedDelivery: "05/01/2024",
+        trackingNumber: "BR112233445BR",
+      },
+    },
+  ]
+
+  const addresses = [
+    { id: 1, name: "Casa", address: "Rua das Flores, 123 - Centro", isDefault: true },
+    { id: 2, name: "Trabalho", address: "Av. Paulista, 456 - Bela Vista", isDefault: false },
+  ]
+
+  const handleViewOrderDetails = (order: Order) => {
+    setSelectedOrder(order)
+    setIsOrderDetailOpen(true)
+  }
+
+  // Renderizar loading ou estado não autenticado
+  if (status === "loading" || isLoadingUser) {
+    return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>
+  }
+
+   if (shouldRedirect) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-center text-lg font-medium text-gray-700">
+          Você precisa estar logado para acessar essa página. Será redirecionado para a página de login em {activeNumber} segundos.
+        </p>
+      </div>
+    )
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
-        {/* Header Limpo */}
-        <div className="mb-8 sm:mb-12">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button
-                  variant="outline"
-                  className="bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md text-gray-700"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  <Home className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Voltar ao Início</span>
-                </Button>
-              </Link>
-              <div className="h-8 w-px bg-gray-200" />
-              <div className="flex items-center space-x-3">
-                {/* TODO: implement a unique logo with a beaultiful recort */}
-                <div className=" flex items-center justify-center">
-                  <ModernLogo className="mx-auto rounded-4xl" />
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
-                    Meu Perfil
-                  </h1>
-                  <p className="text-gray-600 text-sm sm:text-base">Gerencie suas informações e preferências</p>
-                </div>
-              </div>
-            </div>
-            {/* Stats Neutras */}
-           
-          </div>
+      {/* Cabeçalho Modular */}
+      <ProfileHeader userName={currentUser?.name} notificationCount={3} cartItemCount={2} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navegação por Abas Modular */}
+        <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        {/* Conteúdo das Abas */}
+        <div className="space-y-6">
+          {activeTab === "perfil" && (
+            <ProfileTab
+              user={currentUser}
+              isEditing={isEditing}
+              setIsEditing={setIsEditing}
+              onSave={handleUpdateProfile}
+              stats={stats}
+              achievements={achievements}
+            />
+          )}
+          {activeTab === "enderecos" && <AddressesTab addresses={addresses} />}
+          {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
+          {activeTab === "configuracoes" && <SettingsTab />}
         </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          {/* Tabs Neutras */}
-          <div className="bg-white rounded-3xl p-2 shadow-lg border border-gray-100">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto p-1 bg-transparent">
-              <TabsTrigger
-                value="perfil"
-                className="flex items-center space-x-2 py-4 px-6 rounded-2xl data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 hover:bg-gray-50 text-gray-700 font-medium"
-              >
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Perfil</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="enderecos"
-                className="flex items-center space-x-2 py-4 px-6 rounded-2xl data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 hover:bg-gray-50 text-gray-700 font-medium"
-              >
-                <MapPin className="h-4 w-4" />
-                <span className="hidden sm:inline">Endereços</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="pedidos"
-                className="flex items-center space-x-2 py-4 px-6 rounded-2xl data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 hover:bg-gray-50 text-gray-700 font-medium"
-              >
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">Pedidos</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="configuracoes"
-                className="flex items-center space-x-2 py-4 px-6 rounded-2xl data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 hover:bg-gray-50 text-gray-700 font-medium"
-              >
-                <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline">Configurações</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* Tab: Perfil */}
-          <TabsContent value="perfil" className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Informações Pessoais */}
-              <div className="lg:col-span-2">
-                <ProfileInfo user={user} setUser={setUser} />
-              </div>
-
-              {/* Sidebar com Estatísticas e Conquistas */}
-              <div className="space-y-8">
-                <UserStats />
-                <Achievements />
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Tab: Endereços */}
-          <TabsContent value="enderecos" className="space-y-8 animate-in fade-in duration-500">
-            <AddressesTab />
-          </TabsContent>
-
-          {/* Tab: Pedidos */}
-          <TabsContent value="pedidos" className="space-y-8 animate-in fade-in duration-500">
-            <OrdersTab />
-          </TabsContent>
-
-          {/* Tab: Configurações */}
-          <TabsContent value="configuracoes" className="space-y-8 animate-in fade-in duration-500">
-            <SettingsTab />
-          </TabsContent>
-        </Tabs>
       </div>
+      {/* Modal de Detalhes do Pedido */}
+      <OrderDetailDialog order={selectedOrder} isOpen={isOrderDetailOpen} onClose={() => setIsOrderDetailOpen(false)} />
     </div>
   )
+
 }
