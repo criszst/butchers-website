@@ -137,7 +137,7 @@ export default function Header() {
                     {/* Avatar */}
                     {user.user?.image ? (
                       <img
-                        src={user.user.image || "/placeholder.svg"}
+                        src={user.user.image}
                         alt={user.user.name ?? undefined}
                         className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-gray-300 object-cover"
                       />
@@ -149,7 +149,7 @@ export default function Header() {
 
                     {/* Nome do usuário - apenas em telas maiores */}
                     <span className="hidden md:block text-sm font-semibold text-gray-800 max-w-[80px] lg:max-w-[100px] truncate">
-                      {user.user?.name || "Usuário"}
+                      {user.user?.name?.toString() || "Usuário"}
                     </span>
 
                     {/* Ícone de dropdown */}

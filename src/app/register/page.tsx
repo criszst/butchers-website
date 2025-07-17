@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Beef, Sparkles, Shield, Zap } from "lucide-react" // Re-adicionado os imports individuais dos ícones
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Beef, Sparkles, Shield, Zap } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { signIn } from "next-auth/react"
@@ -15,10 +15,10 @@ import { useActionState } from "react"
 import { registerUser } from "@/app/actions/auth"
 import { useToast } from "@/app/hooks/use-toast"
 
-
 export default function RegisterPage() {
-  const { toast } = useToast()
+  const { data: session, status } = useSession()
   const router = useRouter()
+  const { toast } = useToast()
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -35,30 +35,14 @@ export default function RegisterPage() {
     acceptTerms: false,
   })
 
-   useEffect(() => {
-      const trySignIn = async () => {
-        if (state?.success) {
-          const result = await signIn("credentials", {
-            email: formData.email,
-            password: formData.password,
-            redirect: true,
-          })
-  
-          if (result?.ok) {
-            router.push("/perfil")
-          } else {
-            toast({
-              title: "Erro ao entrar",
-              description: result?.error || "Credenciais inválidas",
-              variant: "destructive",
-            })
-          }
-        }
-      }
-  
-      trySignIn()
-    }, [formData, router, toast])
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.push("/profile")
+    }
+  }, [session, status, router])
 
+  // Lidar com o resultado do registro
   useEffect(() => {
     if (state) {
       if (state.success) {
@@ -66,6 +50,13 @@ export default function RegisterPage() {
           title: "✅ Sucesso!",
           description: state.message,
         })
+
+        // Redirecionar para login após registro bem-sucedido
+        if (state.redirectTo) {
+          setTimeout(() => {
+            router.push(state.redirectTo ?? "/login")
+          }, 2000)
+        }
       } else {
         if (state.errors) {
           Object.entries(state.errors).forEach(([field, message]) => {
@@ -84,19 +75,36 @@ export default function RegisterPage() {
         }
       }
     }
-  }, [state, toast])
+  }, [state, toast, router])
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData((registerUserWrapper) => ({
-      ...registerUserWrapper,
+    setFormData((prev) => ({
+      ...prev,
       [field]: value,
-    }));
-  };
+    }))
+  }
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
     try {
-      await signIn("google", { callbackUrl: "/perfil" })
+      const result = await signIn("google", {
+        callbackUrl: "/perfil", // Usar callbackUrl, não redirectTo
+        redirect: false,
+      })
+
+      if (result?.error) {
+        toast({
+          title: "❌ Erro no Login com Google",
+          description: "Não foi possível conectar com o Google. Tente novamente.",
+          variant: "destructive",
+        })
+      } else if (result?.ok) {
+        toast({
+          title: "✅ Login realizado!",
+          description: "Login com Google realizado com sucesso!",
+        })
+        router.push("/perfil") // Usar router.push, não window.location
+      }
     } catch (error) {
       console.error("Google sign-in error:", error)
       toast({
@@ -107,6 +115,15 @@ export default function RegisterPage() {
     } finally {
       setIsGoogleLoading(false)
     }
+  }
+
+  // Mostrar loading se estiver verificando sessão
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-red-900 to-slate-900">
+        <div className="text-white text-xl">Carregando...</div>
+      </div>
+    )
   }
 
   return (
@@ -136,9 +153,7 @@ export default function RegisterPage() {
                 </div>
               </div>
               <div className="text-center space-y-1">
-                <div className="text-2xl font-bold text-white">Casa de Carnes Duarte
-                </div>
-               
+                <div className="text-2xl font-bold text-white">Casa de Carnes Duarte</div>
               </div>
             </Link>
             <h1 className="text-3xl font-bold mb-2 text-white">Criar Conta</h1>
@@ -341,7 +356,6 @@ export default function RegisterPage() {
                         )}
                       </div>
                     </div>
-                    {/* Terms */}
                     {/* Submit Button */}
                     <Button
                       type="submit"

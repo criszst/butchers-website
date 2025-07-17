@@ -3,18 +3,34 @@
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { signIn } from "next-auth/react"
-import { redirect } from "next/navigation"
+
+
+
 
 export interface RegisterResult {
+  user?: {
+    id: string
+    name: string
+    email: string
+  }
+
   success: boolean
   message: string
   errors?: { [key: string]: string }
+  redirectTo?: string
 }
 
 export interface LoginResult {
+  user?: {
+    id: string
+    name: string
+    email: string
+  }
+
   success: boolean
   message: string
   errors?: { [key: string]: string }
+  redirectTo?: string
 }
 
 export async function registerUser(prevState: RegisterResult | null, formData: FormData): Promise<RegisterResult> {
@@ -79,7 +95,8 @@ export async function registerUser(prevState: RegisterResult | null, formData: F
 
     console.log("Usuário registrado com sucesso:", newUser.email)
 
-
+    
+ 
     return { success: true, message: "Conta criada e login realizado com sucesso!" }
   } catch (error) {
     console.error("Erro ao registrar usuário:", error)
@@ -132,7 +149,7 @@ export async function loginUser(prevState: LoginResult | null, formData: FormDat
 
     console.log(user.password, "Senha do usuário:", user.password)
 
-    // Verificar se o usuário tem senha (não é usuário do Google)
+    
     if (!user.password || user.password === null) {
       errors.email = "Esta conta foi criada com Google. Use 'Continuar com Google' para fazer login."
       return { success: false, message: "Método de login incorreto.", errors }
@@ -146,13 +163,11 @@ export async function loginUser(prevState: LoginResult | null, formData: FormDat
       return { success: false, message: "Credenciais inválidas.", errors }
     }
 
-
-
     console.log("Login realizado com sucesso para:", email)
 
 
 
-    return { success: true, message: "Login realizado com sucesso!" }
+    return { success: true, message: "Login realizado com sucesso!", redirectTo: "/perfil" }
   } catch (error) {
     console.error("Erro ao fazer login:", error)
     return { success: false, message: "Ocorreu um erro interno. Tente novamente." }

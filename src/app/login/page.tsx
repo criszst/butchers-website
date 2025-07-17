@@ -1,6 +1,5 @@
 "use client"
 import { useState, useEffect } from "react"
-import type React from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,45 +31,44 @@ export default function LoginPage() {
     rememberMe: false,
   })
 
-   useEffect(() => {
-    const trySignIn = async () => {
-      if (state?.success) {
-        const result = await signIn("credentials", {
-          email: formData.email,
-          password: formData.password,
-          redirect: true,
-        })
-
-        if (result?.ok) {
-          router.push("/perfil")
-        } else {
-          toast({
-            title: "Erro ao entrar",
-            description: result?.error || "Credenciais inválidas",
-            variant: "destructive",
-          })
-        }
-      }
-    }
-
-    trySignIn()
-  }, [formData, router, toast])
-
+  // Redirecionar se já estiver logado
   useEffect(() => {
     if (status === "authenticated" && session) {
       router.push("/perfil")
     }
   }, [session, status, router])
 
+  // Lidar com o resultado do login
   useEffect(() => {
-    if (state) {
-      if (state.success) {
+    const handleLoginSuccess = async () => {
+      if (state?.success) {
         toast({
-          title: "✅ Login realizado!",
-          description: state.message,
+          title: "✅ Dados validados!",
+          description: "Fazendo login...",
         })
-        // O redirecionamento será feito pela Server Action
-      } else {
+
+        // Fazer login via NextAuth
+        const result = await signIn("credentials", {
+          email: formData.email,
+          password: formData.password,
+          callbackUrl: "/perfil",
+          redirect: false,
+        })
+
+        if (result?.ok) {
+          toast({
+            title: "✅ Login realizado!",
+            description: "Redirecionando...",
+          })
+          router.push("/perfil")
+        } else {
+          toast({
+            title: "❌ Erro no Login",
+            description: result?.error || "Credenciais inválidas.",
+            variant: "destructive",
+          })
+        }
+      } else if (state && !state.success) {
         if (state.errors) {
           Object.entries(state.errors).forEach(([field, message]) => {
             toast({
@@ -87,9 +85,10 @@ export default function LoginPage() {
           })
         }
       }
-      
     }
-  }, [state, toast])
+
+    handleLoginSuccess()
+  }, [state, toast, router, formData.email, formData.password])
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -99,7 +98,7 @@ export default function LoginPage() {
     setIsGoogleLoading(true)
     try {
       const result = await signIn("google", {
-        callbackUrl: "/profile",
+        callbackUrl: "/perfil", // Usar callbackUrl, não redirectTo
         redirect: false,
       })
 
@@ -114,7 +113,7 @@ export default function LoginPage() {
           title: "✅ Login realizado!",
           description: "Login com Google realizado com sucesso!",
         })
-        router.push("/profile")
+        router.push("/perfil") // Usar router.push, não window.location
       }
     } catch (error) {
       console.error("Google sign-in error:", error)
@@ -125,15 +124,6 @@ export default function LoginPage() {
       })
     } finally {
       setIsGoogleLoading(false)
-    }
-  }
-
-  // Adicionar handler onSubmit para depuração
-  const handleFormSubmitDebug = (event: React.FormEvent<HTMLFormElement>) => {
-    const debugFormData = new FormData(event.currentTarget)
-    console.log("DEBUG: FormData no cliente antes de enviar para a Server Action:")
-    for (const [key, value] of debugFormData.entries()) {
-      console.log(`  ${key}: ${value}`)
     }
   }
 
@@ -245,7 +235,7 @@ export default function LoginPage() {
                       <span className="bg-red-300 px-2 rounded-sm text-sm text-red/70">ou faça login</span>
                     </div>
                   </div>
-                  <form action={formAction} onSubmit={handleFormSubmitDebug} className="space-y-4">
+                  <form action={formAction} className="space-y-4">
                     {/* Email */}
                     <div className="space-y-2">
                       <Label htmlFor="email" className="text-sm font-medium text-white">

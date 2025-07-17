@@ -11,7 +11,7 @@ import OrdersTab from "@/components/profile/tabs/OrdersTab"
 import SettingsTab from "@/components/profile/tabs/SettingsTab"
 import OrderDetailDialog from "@/components/profile/OrderDetail"
 import { useSession } from "next-auth/react"
-import { getUserProfileDetails, updateUserProfileDetails } from "@/app/mock/user-info"
+import { getUserProfileDetails, updateUserProfileDetails, checkUserExistsInDatabase } from "@/app/mock/user-info"
 
 // Interface que combina os campos do session com campos adicionais
 interface ExtendedUser {
@@ -54,17 +54,19 @@ export default function ModernProfilePage() {
   const [activeTab, setActiveTab] = useState("perfil")
   const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null)
   const [isLoadingUser, setIsLoadingUser] = useState(true)
-
+  const [userExistsInDB, setUserExistsInDB] = useState<boolean | null>(null)
   const [activeNumber, setActiveNumber] = useState<number>(4)
 
-  const shouldRedirect = status === "unauthenticated" || !currentUser
+  const shouldRedirect = status === "unauthenticated" || !currentUser || userExistsInDB === false
+
   useEffect(() => {
-     let interval: NodeJS.Timeout
-    if (shouldRedirect) {
+    let interval: NodeJS.Timeout
+    if (shouldRedirect && status !== "loading") {
       interval = setInterval(() => {
         setActiveNumber((prev) => {
           if (prev === 0) {
             clearInterval(interval)
+            window.location.href = "/register"
             return 0
           }
           return prev - 1
@@ -72,38 +74,46 @@ export default function ModernProfilePage() {
       }, 1000)
     }
 
-    // Limpar o intervalo se o componente for desmontado ou shouldRedirect mudar
     return () => {
       if (interval) {
         clearInterval(interval)
       }
     }
-  }, [shouldRedirect])
+  }, [shouldRedirect, status])
 
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoadingUser(true)
+
       if (status === "authenticated" && session?.user?.email) {
+        // Primeiro, verificar se o usuário existe no banco de dados
+        const userExists = await checkUserExistsInDatabase(session.user.email)
+        setUserExistsInDB(userExists)
 
-        const additionalDetails = await getUserProfileDetails(session.user.email)
+        if (userExists) {
+          // Se existe, buscar os detalhes adicionais
+          const additionalDetails = await getUserProfileDetails(session.user.email)
 
-        // Combinar dados do session com dados adicionais
-        const combinedUser: ExtendedUser = {
-          name: session.user.name,
-          email: session.user.email,
-          image: session.user.image,
-          phone: additionalDetails.phone,
-          bio: additionalDetails.bio,
-          // birthDate: additionalDetails.birthDate,
-          // cpf: additionalDetails.cpf,
+          // Combinar dados do session com dados adicionais
+          const combinedUser: ExtendedUser = {
+            name: session.user.name,
+            email: session.user.email,
+            image: session.user.image,
+            phone: additionalDetails.phone,
+            bio: additionalDetails.bio,
+            birthDate: additionalDetails.birthDate,
+            cpf: additionalDetails.cpf,
+          }
+          setCurrentUser(combinedUser)
+        } else {
+          console.log("Usuário não encontrado no banco de dados")
+          setCurrentUser(null)
         }
-        setCurrentUser(combinedUser)
       } else if (status === "unauthenticated") {
-
-         setTimeout(() => {
-        window.location.href = "/register"
-      }, 3000)
+        setUserExistsInDB(false)
+        setCurrentUser(null)
       }
+
       setIsLoadingUser(false)
     }
 
@@ -127,11 +137,10 @@ export default function ModernProfilePage() {
 
       try {
         // Extrair apenas os campos que podem ser atualizados (não os do session)
-        const { phone, bio } = updatedFields
-        const result = await updateUserProfileDetails(session.user.email, { phone, bio })
+        const { phone, bio, birthDate, cpf } = updatedFields
+        const result = await updateUserProfileDetails(session.user.email, { phone, bio, birthDate, cpf })
 
         if (result.success) {
-
           setCurrentUser((prev) => (prev ? { ...prev, ...updatedFields } : null))
           setIsEditing(false)
           toast({
@@ -143,7 +152,6 @@ export default function ModernProfilePage() {
             title: "❌ Erro",
             description: result.message || "Não foi possível salvar as alterações.",
             variant: "destructive",
-
           })
         }
       } catch (error) {
@@ -235,16 +243,24 @@ export default function ModernProfilePage() {
     return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>
   }
 
-   if (shouldRedirect) {
+  if (shouldRedirect) {
+    let message = "Você precisa estar logado para acessar essa página."
+
+    if (status === "authenticated" && userExistsInDB === false) {
+      message = "Usuário não encontrado no banco de dados. Você precisa se registrar."
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-center text-lg font-medium text-gray-700">
-          Você precisa estar logado para acessar essa página. Será redirecionado para a página de login em {activeNumber} segundos.
-        </p>
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-700 mb-4">{message}</p>
+          <p className="text-sm text-gray-500">
+            Será redirecionado para a página de registro em {activeNumber} segundos.
+          </p>
+        </div>
       </div>
     )
   }
-
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -274,5 +290,4 @@ export default function ModernProfilePage() {
       <OrderDetailDialog order={selectedOrder} isOpen={isOrderDetailOpen} onClose={() => setIsOrderDetailOpen(false)} />
     </div>
   )
-
 }
