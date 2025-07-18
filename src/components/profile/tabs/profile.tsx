@@ -2,6 +2,9 @@
 
 import type React from "react"
 import { useState, useEffect, useTransition } from "react"
+
+import { parseDate } from "@/app/utils/parseDate"
+
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -11,12 +14,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { User, Edit, Save, Camera, Crown, Package, Heart, Award, TrendingUp, CheckCircle } from "lucide-react"
 
-// Interface que combina os campos do session com campos adicionais
+
 interface ExtendedUser {
   name?: string | null
   email?: string | null
   image?: string | null
-  // Campos adicionais que vêm do banco de dados
   phone?: string | null
   bio?: string | null
   birthDate?: string | null
@@ -49,6 +51,10 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
   const [formFields, setFormFields] = useState<Partial<ExtendedUser>>({})
   const [isPending, startTransition] = useTransition()
 
+  useEffect(() => {
+  console.log(user?.image)
+  }, [user?.image])
+
   // Inicializar formFields quando o user prop mudar
   useEffect(() => {
     if (user) {
@@ -75,14 +81,14 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
     })
   }
 
-  // Lidar com o caso onde user pode ser null
+
   if (!user) {
     return null
   }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* Coluna Esquerda - Informações do Perfil */}
+
       <div className="lg:col-span-1">
         <Card className="border-gray-200 bg-slate-800 text-white rounded-xl shadow-md">
           <CardHeader className="border-b border-slate-700">
@@ -105,7 +111,9 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
             <div className="text-center space-y-4 mb-6">
               <div className="relative inline-block">
                 <Avatar className="w-20 h-20 border-4 border-orange-500/30 transition-transform hover:scale-105">
-                  <AvatarImage src={user.image || "/placeholder.svg"} alt={user.name || "User Avatar"} />
+                {user.image ? (
+                  <AvatarImage src={user.image} alt={user.name || "User Avatar"} />
+                ) : (
                   <AvatarFallback className="text-xl font-bold bg-orange-600 text-white">
                     {user.name
                       ? user.name
@@ -114,6 +122,8 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
                           .join("")
                       : "UN"}
                   </AvatarFallback>
+                )
+                }
                 </Avatar>
                 {isEditing && (
                   <Button
@@ -142,7 +152,7 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Data de Nascimento:</span>
-                <span className="text-white">{user.birthDate || "N/A"}</span>
+                <span className="text-white">{parseDate(String(user.birthDate), { year: "numeric", month: "long", day: "numeric" }) || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">CPF:</span>

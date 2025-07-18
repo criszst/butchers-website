@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
+import { Account, User } from "@/generated/prisma"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -28,17 +29,16 @@ export const authOptions: NextAuthOptions = {
               id: true,
               email: true,
               name: true,
-              password: true, // Certifique-se de selecionar o campo password
+              password: true,
               image: true,
             },
           })
 
-          // Se o usuário não existe ou não tem senha (password é null), não pode logar com credenciais
+
           if (!user || user.password === null) {
             return null
           }
 
-          // Agora que sabemos que user.password não é null, podemos usá-lo com segurança
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
           if (!isPasswordValid) {
@@ -58,28 +58,73 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account?.provider === "google") {
-        try {
-          const existingUser = await prisma.user.findUnique({
-            where: { email: user.email! },
-          })
+      if (!user.email) return false
 
-          if (!existingUser) {
-            await prisma.user.create({
-              data: {
-                email: user.email!,
-                name: user.name!,
-                image: user.image,
-                password: null, // Garante que password é null para usuários do Google
+
+      const existingUserProvider = await prisma.user.findUnique({
+        where: { email: user.email! },
+        include: { accounts: true },
+      }) as (User & { accounts: Account[] }) | null
+
+      if (account?.provider === "google") {
+        if (!existingUserProvider) {
+          await prisma.user.create({
+            data: {
+              email: user.email!,
+              name: user.name!,
+              image: user.image,
+              password: null,
+              accounts: {
+                create: {
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token,
+                  refresh_token: account.refresh_token,
+                },
               },
+            },
+          })
+        } else {
+
+          const updateImage: Record<string, any> = {}
+
+          if (!existingUserProvider.image && user.image) {
+            updateImage.image = user.image
+          }
+
+          if (!existingUserProvider.name && user.name) {
+            updateImage.name = user.name
+          }
+
+          if (Object.keys(updateImage).length > 0) {
+            await prisma.user.update({
+              where: { email: user.email! },
+              data: updateImage,
             })
           }
-        } catch (error) {
-          console.error("Error creating user:", error)
-          return false
+
+          const alreadyLinked = existingUserProvider.accounts?.some(
+            (acc) => acc.provider === account.provider && acc.providerAccountId === account.providerAccountId
+          )
+
+          if (!alreadyLinked) {
+            await prisma.account.create({
+              data: {
+                userId: existingUserProvider.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                refresh_token: account.refresh_token,
+              }
+            })
+          }
         }
+
       }
       return true
     },
@@ -96,7 +141,7 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (dbUser) {
-          token.id = dbUser.id // Corrigir: era token.id = dbUser.id
+          token.id = dbUser.id
         }
       }
       return session
@@ -108,20 +153,23 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async redirect({ url, baseUrl }) {
-      // Permite redirecionar para URLs dentro do seu domínio
+
       if (url.startsWith(baseUrl)) {
         return url
       }
-      // Permite redirecionar para URLs externas seguras (se necessário, mas geralmente não para login/registro)
+  
       else if (url.startsWith("/")) {
         return new URL(url, baseUrl).toString()
       }
-      // Caso contrário, redireciona para a base
+ 
       return baseUrl
     },
   },
   pages: {
     signIn: "/login",
+    error: "/",
+    signOut: "/",
+    newUser: "/perfil", 
   },
   session: {
     strategy: "jwt",

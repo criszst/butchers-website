@@ -1,10 +1,11 @@
+/**
+ * @fileoverview (server-action) authentication actions like registration and login.
+ */
+
 "use server"
 
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
-import { signIn } from "next-auth/react"
-
-
 
 
 export interface RegisterResult {
@@ -97,7 +98,7 @@ export async function registerUser(prevState: RegisterResult | null, formData: F
 
     
  
-    return { success: true, message: "Conta criada e login realizado com sucesso!" }
+    return { success: true, message: "Conta criada e login realizado com sucesso!", redirectTo: "/perfil", user: { id: newUser.id, name: newUser.name, email: newUser.email } }
   } catch (error) {
     console.error("Erro ao registrar usuário:", error)
     return { success: false, message: "Ocorreu um erro ao criar a conta. Tente novamente." }

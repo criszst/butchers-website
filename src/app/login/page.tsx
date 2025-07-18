@@ -38,7 +38,6 @@ export default function LoginPage() {
     }
   }, [session, status, router])
 
-  // Lidar com o resultado do login
   useEffect(() => {
     const handleLoginSuccess = async () => {
       if (state?.success) {
@@ -47,7 +46,7 @@ export default function LoginPage() {
           description: "Fazendo login...",
         })
 
-        // Fazer login via NextAuth
+        
         const result = await signIn("credentials", {
           email: formData.email,
           password: formData.password,

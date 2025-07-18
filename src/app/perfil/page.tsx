@@ -136,7 +136,7 @@ export default function ModernProfilePage() {
       }
 
       try {
-        // Extrair apenas os campos que podem ser atualizados (não os do session)
+
         const { phone, bio, birthDate, cpf } = updatedFields
         const result = await updateUserProfileDetails(session.user.email, { phone, bio, birthDate, cpf })
 
@@ -238,10 +238,6 @@ export default function ModernProfilePage() {
     setIsOrderDetailOpen(true)
   }
 
-  // Renderizar loading ou estado não autenticado
-  if (status === "loading" || isLoadingUser) {
-    return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>
-  }
 
   if (shouldRedirect) {
     let message = "Você precisa estar logado para acessar essa página."

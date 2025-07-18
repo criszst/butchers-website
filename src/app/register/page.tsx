@@ -35,14 +35,13 @@ export default function RegisterPage() {
     acceptTerms: false,
   })
 
-  // Redirecionar se já estiver logado
   useEffect(() => {
     if (status === "authenticated" && session) {
-      router.push("/profile")
+      router.push("/perfil")
     }
   }, [session, status, router])
 
-  // Lidar com o resultado do registro
+
   useEffect(() => {
     if (state) {
       if (state.success) {
@@ -51,10 +50,10 @@ export default function RegisterPage() {
           description: state.message,
         })
 
-        // Redirecionar para login após registro bem-sucedido
+
         if (state.redirectTo) {
           setTimeout(() => {
-            router.push(state.redirectTo ?? "/login")
+            router.push(state.redirectTo ?? "/perfil")
           }, 2000)
         }
       } else {
@@ -88,7 +87,7 @@ export default function RegisterPage() {
     setIsGoogleLoading(true)
     try {
       const result = await signIn("google", {
-        callbackUrl: "/perfil", // Usar callbackUrl, não redirectTo
+        callbackUrl: "/perfil", 
         redirect: false,
       })
 
@@ -103,7 +102,7 @@ export default function RegisterPage() {
           title: "✅ Login realizado!",
           description: "Login com Google realizado com sucesso!",
         })
-        router.push("/perfil") // Usar router.push, não window.location
+        router.push("/perfil")
       }
     } catch (error) {
       console.error("Google sign-in error:", error)
@@ -117,7 +116,7 @@ export default function RegisterPage() {
     }
   }
 
-  // Mostrar loading se estiver verificando sessão
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-red-900 to-slate-900">
