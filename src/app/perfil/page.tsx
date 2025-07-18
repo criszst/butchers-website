@@ -242,7 +242,7 @@ export default function ModernProfilePage() {
   if (shouldRedirect) {
     let message = "Você precisa estar logado para acessar essa página."
 
-    if (status === "authenticated" && userExistsInDB === false) {
+    if (status === "authenticated" && userExistsInDB === false || session?.user?.email === null) {
       message = "Usuário não encontrado no banco de dados. Você precisa se registrar."
     }
 
