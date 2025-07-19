@@ -61,10 +61,12 @@ export default function ModernProfilePage() {
 
   const shouldRedirect =
   status !== "loading" &&
+  userExistsInDB !== null &&
   (
     status === "unauthenticated" ||
     (status === "authenticated" && (!session?.user?.email || userExistsInDB === false))
   )
+
 
   console.log("Status da sessão:", status)
   console.log("Usuário existe no banco de dados:", userExistsInDB)

@@ -129,26 +129,19 @@ export const authOptions: NextAuthOptions = {
       return true
     },
     async session({ session, token }) {
-      if (session.user?.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: session.user.email },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            image: true,
-          },
-        })
-
-        if (dbUser) {
-          token.id = dbUser.id
-        }
+      if (token && session.user) {
+        session.user.email = token.email as string
+        session.user.name = token.name as string
+        session.user.image = token.picture as string
       }
       return session
     },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.email = user.email
+        token.name = user.name
+        token.picture = user.image
       }
       return token
     },
@@ -157,11 +150,11 @@ export const authOptions: NextAuthOptions = {
       if (url.startsWith(baseUrl)) {
         return url
       }
-  
+
       else if (url.startsWith("/")) {
         return new URL(url, baseUrl).toString()
       }
- 
+
       return baseUrl
     },
   },
@@ -169,7 +162,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/",
     signOut: "/",
-    newUser: "/perfil", 
+    newUser: "/perfil",
   },
   session: {
     strategy: "jwt",

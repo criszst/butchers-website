@@ -1,4 +1,15 @@
 import type { NextConfig } from "next";
+const path = require("path");
+
+module.exports = {
+  experimental: {
+    serverActions: true,
+  },
+  webpack(config) {
+    config.resolve.alias['@prisma/client'] = path.resolve(__dirname, 'node_modules/@prisma/client');
+    return config;
+  },
+};
 
 const nextConfig: NextConfig = {
   images: {
