@@ -58,7 +58,7 @@ export default function ModernProfilePage() {
   const [activeNumber, setActiveNumber] = useState<number>(4)
   
 
-  console.log
+
   const shouldRedirect =
   status !== "loading" &&
   (
