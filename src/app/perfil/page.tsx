@@ -56,6 +56,7 @@ export default function ModernProfilePage() {
   const [isLoadingUser, setIsLoadingUser] = useState(true)
   const [userExistsInDB, setUserExistsInDB] = useState<boolean | null>(null)
   const [activeNumber, setActiveNumber] = useState<number>(4)
+  
 
   const shouldRedirect =
   status !== "loading" &&
@@ -67,7 +68,8 @@ export default function ModernProfilePage() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout
-    if (shouldRedirect && status !== "loading") {
+    
+    if (shouldRedirect) {
       interval = setInterval(() => {
         setActiveNumber((prev) => {
           if (prev === 0) {
