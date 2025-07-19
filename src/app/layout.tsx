@@ -6,6 +6,7 @@ import Script from "next/script"
 
 import { Inter } from "next/font/google"
 
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from '@vercel/analytics/react'
 
 import ClientProviders from "./client-provider"
@@ -81,6 +82,7 @@ export default function RootLayout({
             <PageLoader message="A arte de oferecer qualidade">{children}</PageLoader>
         </ClientProviders>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

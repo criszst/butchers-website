@@ -7,12 +7,13 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Beef, LogOut, Search, Bell, ShoppingCart, Menu, X } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
+import { signOut } from "next-auth/react"
 
 interface ProfileHeaderProps {
   userName: string | null | undefined
   notificationCount?: number
   cartItemCount?: number
-  onSignOut?: () => void
+  onSignOut?: (() => void) |Promise<void>
 }
 
 export default function ProfileHeader({
@@ -143,7 +144,7 @@ export default function ProfileHeader({
             <Button
               variant="outline"
               className="hidden sm:flex text-gray-600 border-gray-300 hover:bg-gray-50 bg-transparent transition-colors"
-              onClick={onSignOut}
+              onClick={() => signOut()}
             >
               <LogOut className="h-4 w-4 mr-2" />
               Sair
@@ -167,7 +168,7 @@ export default function ProfileHeader({
             <Button
               variant="outline"
               className="w-full text-gray-600 border-gray-300 hover:bg-gray-50 bg-transparent transition-colors justify-center"
-              onClick={onSignOut}
+              onClick={() => signOut()}
             >
               <LogOut className="h-4 w-4 mr-2" />
               Sair

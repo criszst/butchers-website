@@ -1,8 +1,14 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { signOut, useSession } from "next-auth/react"
+
 import { useToast } from "@/app/hooks/use-toast"
+
+import { getUserProfileDetails, updateUserProfileDetails, checkUserExistsInDatabase } from "@/app/mock/user-info"
+
 import { Target, Crown, Sparkles, Beef } from "lucide-react"
+
 import ProfileHeader from "@/components/profile/Header"
 import ProfileTabs from "@/components/profile/ProfileTab"
 import ProfileTab from "@/components/profile/tabs/profile"
@@ -10,71 +16,74 @@ import AddressesTab from "@/components/profile/tabs/AddressesTab"
 import OrdersTab from "@/components/profile/tabs/OrdersTab"
 import SettingsTab from "@/components/profile/tabs/SettingsTab"
 import OrderDetailDialog from "@/components/profile/OrderDetail"
-import { useSession } from "next-auth/react"
-import { getUserProfileDetails, updateUserProfileDetails, checkUserExistsInDatabase } from "@/app/mock/user-info"
+
+import prisma from "@/lib/prisma"
+import { Order, OrderItem } from "@/generated/prisma"
 
 // Interface que combina os campos do session com campos adicionais
 interface ExtendedUser {
   name?: string | null
   email?: string | null
   image?: string | null
-  // Campos adicionais que vêm do banco de dados
   phone?: string | null
   bio?: string | null
   birthDate?: string | null
   cpf?: string | null
 }
 
-interface OrderItem {
-  name: string
-  quantity: number
-  price: number
-}
-
-interface TrackingInfo {
-  status: string
-  estimatedDelivery: string
-  trackingNumber: string
-}
-
-interface Order {
-  id: string
-  date: string
-  total: number
-  status: string
-  items: OrderItem[]
-  trackingInfo: TrackingInfo
-}
-
-export default function ModernProfilePage() {
+export default function ProfilePage() {
   const { toast } = useToast()
   const { data: session, status } = useSession()
 
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState("perfil")
+
   const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null)
   const [isLoadingUser, setIsLoadingUser] = useState(true)
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+
+  const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | OrderItem>()
+
   const [userExistsInDB, setUserExistsInDB] = useState<boolean | null>(null)
   const [activeNumber, setActiveNumber] = useState<number>(4)
-  
-
 
   const shouldRedirect =
-  status !== "loading" &&
-  userExistsInDB !== null &&
-  (
-    status === "unauthenticated" ||
-    (status === "authenticated" && (!session?.user?.email || userExistsInDB === false))
-  )
+    status !== "loading" &&
+    userExistsInDB !== null &&
+    (
+      status === "unauthenticated" ||
+      (status === "authenticated" && (!session?.user?.email || userExistsInDB === false))
+    )
+  
+  const getOrders = useCallback(async () => {
+    if (session?.user?.email) {
+      const orders = await prisma.order.findMany({
+        where: { user: { email: session.user.email } },
+        include: { items: true },
+      })
+      return orders
+    }
+    }, [session, prisma, setOrders])
+
+  
+
+  const getOrdersItems = useCallback(async () => {
+    if (orders.length > 0) {
+      const orderItems = await prisma.orderItem.findMany({
+        where: { orderId: { in: orders.map(order => order.id) } },
+      })
+      return orderItems
+    }
+    }, [session, prisma, orders, setOrderItems])
 
 
-  console.log("Status da sessão:", status)
-  console.log("Usuário existe no banco de dados:", userExistsInDB)
-  console.log("Dados do usuário atual:", currentUser)
-
+  // INTERVAL USE EFFECT
   useEffect(() => {
     let interval: NodeJS.Timeout
-    
+
     if (shouldRedirect) {
       interval = setInterval(() => {
         setActiveNumber((prev) => {
@@ -95,6 +104,8 @@ export default function ModernProfilePage() {
     }
   }, [shouldRedirect, status])
 
+
+  // USER DATA USE EFFECT
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoadingUser(true)
@@ -105,10 +116,10 @@ export default function ModernProfilePage() {
         setUserExistsInDB(userExists)
 
         if (userExists) {
-          // Se existe, buscar os detalhes adicionais
+
           const additionalDetails = await getUserProfileDetails(session.user.email)
 
-          // Combinar dados do session com dados adicionais
+
           const combinedUser: ExtendedUser = {
             name: session.user.name,
             email: session.user.email,
@@ -134,9 +145,24 @@ export default function ModernProfilePage() {
     fetchUserData()
   }, [session, status])
 
-  // Estados para o modal de detalhes do pedido
-  const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false)
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+
+  // ORDERS USE EFFECT
+  useEffect(() => {
+  const fetchOrders = async () => {
+    const orders = await getOrders();
+    setOrders(orders || []);
+  };
+  fetchOrders();
+}, [session?.user?.email]);
+
+useEffect(() => {
+  const fetchOrderItems = async () => {
+    const orderItems = await getOrdersItems();
+    setOrderItems(orderItems || []);
+  };
+  fetchOrderItems();
+}, [orders]);
+
 
   const handleUpdateProfile = useCallback(
     async (updatedFields: Partial<ExtendedUser>) => {
@@ -194,54 +220,6 @@ export default function ModernProfilePage() {
     { title: "Mestre do Churrasco", icon: Beef, color: "bg-red-500", earned: false, date: "" },
   ]
 
-  const orders: Order[] = [
-    {
-      id: "001",
-      date: "15/01/2024",
-      total: 89.9,
-      status: "Entregue",
-      items: [
-        { name: "Picanha Maturada (500g)", quantity: 1, price: 55.0 },
-        { name: "Linguiça Artesanal (1kg)", quantity: 1, price: 34.9 },
-      ],
-      trackingInfo: {
-        status: "Entregue em 15/01/2024 às 14:30",
-        estimatedDelivery: "15/01/2024",
-        trackingNumber: "BR123456789BR",
-      },
-    },
-    {
-      id: "002",
-      date: "10/01/2024",
-      total: 156.5,
-      status: "Em transporte",
-      items: [
-        { name: "Costela Bovina (2kg)", quantity: 1, price: 120.0 },
-        { name: "Carvão Premium (5kg)", quantity: 1, price: 36.5 },
-      ],
-      trackingInfo: {
-        status: "Em transporte - Chegará hoje",
-        estimatedDelivery: "10/01/2024",
-        trackingNumber: "BR987654321BR",
-      },
-    },
-    {
-      id: "003",
-      date: "05/01/2024",
-      total: 234.8,
-      status: "Preparando",
-      items: [
-        { name: "Filé Mignon (1kg)", quantity: 1, price: 150.0 },
-        { name: "Cerveja Artesanal (6un)", quantity: 1, price: 84.8 },
-      ],
-      trackingInfo: {
-        status: "Preparando seu pedido",
-        estimatedDelivery: "05/01/2024",
-        trackingNumber: "BR112233445BR",
-      },
-    },
-  ]
-
   const addresses = [
     { id: 1, name: "Casa", address: "Rua das Flores, 123 - Centro", isDefault: true },
     { id: 2, name: "Trabalho", address: "Av. Paulista, 456 - Bela Vista", isDefault: false },
@@ -275,7 +253,7 @@ export default function ModernProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Cabeçalho Modular */}
-      <ProfileHeader userName={currentUser?.name} notificationCount={3} cartItemCount={2} />
+      <ProfileHeader userName={currentUser?.name} notificationCount={3} cartItemCount={1}  />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navegação por Abas Modular */}
         <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -297,7 +275,7 @@ export default function ModernProfilePage() {
         </div>
       </div>
       {/* Modal de Detalhes do Pedido */}
-      <OrderDetailDialog order={selectedOrder} isOpen={isOrderDetailOpen} onClose={() => setIsOrderDetailOpen(false)} />
+      <OrderDetailDialog order={selectedOrder as Order | null} items={orderItems} isOpen={isOrderDetailOpen} onClose={() => setIsOrderDetailOpen(false)} />
     </div>
   )
 }

@@ -7,11 +7,9 @@ import { Separator } from "@/components/ui/separator"
 import { Package, Calendar, DollarSign, ListOrdered, Truck, MapPin, CheckCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
-interface OrderItem {
-  name: string
-  quantity: number
-  price: number
-}
+
+import { Order, OrderItem } from "@/generated/prisma"
+import { useState } from "react"
 
 interface TrackingInfo {
   status: string
@@ -19,23 +17,44 @@ interface TrackingInfo {
   trackingNumber: string
 }
 
-interface Order {
-  id: string
-  date: string
-  total: number
-  status: string
-  items: OrderItem[]
-  trackingInfo: TrackingInfo
-}
-
 interface OrderDetailDialogProps {
   order: Order | null
+  items: OrderItem[]
   isOpen: boolean
   onClose: () => void
 }
 
-export default function OrderDetailDialog({ order, isOpen, onClose }: OrderDetailDialogProps) {
-  if (!order) return null
+const orderNotFound = () => {
+  return (
+    <Dialog open={true} onOpenChange={() => {}}>
+      <DialogContent className="sm:max-w-[600px] bg-white text-gray-900 rounded-xl shadow-lg">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-gray-900">Pedido não encontrado</DialogTitle>
+          <DialogDescription className="text-gray-600">
+            Não foi possível encontrar o pedido solicitado.
+          </DialogDescription>
+        </DialogHeader>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
+export default function OrderDetailDialog({ order, items, isOpen, onClose }: OrderDetailDialogProps) {
+
+  if (!order && !isOpen) return null;
+
+  if (!order) return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      {orderNotFound()}
+    </Dialog>
+  )
+  
+  if (!items || items.length === 0) {
+      <Dialog open={isOpen} onOpenChange={onClose}>
+      {orderNotFound()}
+    </Dialog>
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -43,7 +62,7 @@ export default function OrderDetailDialog({ order, isOpen, onClose }: OrderDetai
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center">
             <Package className="h-6 w-6 mr-2 text-orange-600" />
-            Detalhes do Pedido #{order.id}
+            Detalhes do Pedido #{order?.id}
           </DialogTitle>
           <DialogDescription className="text-gray-600">
             Informações completas sobre seu pedido e status de entrega.
@@ -57,7 +76,7 @@ export default function OrderDetailDialog({ order, isOpen, onClose }: OrderDetai
               <Calendar className="h-5 w-5 text-gray-500" />
               <div>
                 <p className="text-sm text-gray-500">Data do Pedido</p>
-                <p className="font-medium">{order.date}</p>
+                <p className="font-medium">{order.createdAt.toString()}</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -85,7 +104,7 @@ export default function OrderDetailDialog({ order, isOpen, onClose }: OrderDetai
               Itens
             </h3>
             <div className="space-y-2">
-              {order.items.map((item, index) => (
+              {items.map((item, index) => (
                 <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <p className="font-medium">{item.name}</p>
                   <p className="text-gray-600">
@@ -107,15 +126,11 @@ export default function OrderDetailDialog({ order, isOpen, onClose }: OrderDetai
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <p className="text-gray-600">Status:</p>
-                <Badge className="bg-blue-100 text-blue-800 border-blue-200">{order.trackingInfo.status}</Badge>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200">{order.status}</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <p className="text-gray-600">Previsão de Entrega:</p>
-                <p className="font-medium">{order.trackingInfo.estimatedDelivery}</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <p className="text-gray-600">Código de Rastreamento:</p>
-                <p className="font-medium">{order.trackingInfo.trackingNumber}</p>
+                <p className="font-medium">{order.date.toString()}</p>
               </div>
               <Button
                 variant="outline"

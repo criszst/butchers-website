@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect, useTransition } from "react"
 
 import { parseDate } from "@/app/utils/parseDate"
+import { getOrders } from "@/app/utils/db/orders"
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -13,6 +14,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { User, Edit, Save, Camera, Crown, Package, Heart, Award, TrendingUp, CheckCircle } from "lucide-react"
+import { Order } from "@/generated/prisma"
+
 
 
 interface ExtendedUser {
@@ -51,11 +54,26 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
   const [formFields, setFormFields] = useState<Partial<ExtendedUser>>({})
   const [isPending, startTransition] = useTransition()
 
+  const [orders, setOrders] = useState<Order[]>([])
+
   useEffect(() => {
   console.log(user?.image)
   }, [user?.image])
 
-  // Inicializar formFields quando o user prop mudar
+  useEffect(() => {
+    if (user?.email) {
+      getOrders(user?.email ?? "")
+        .then((orders) => {
+          setOrders(orders)
+        })
+        .catch((error) => {
+          console.error("Error fetching orders:", error)
+        })
+      }
+    }, [user?.email])
+
+
+
   useEffect(() => {
     if (user) {
       setFormFields({
@@ -137,10 +155,10 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
               <div>
                 <h2 className="text-xl font-bold text-white">{user.name}</h2>
                 <p className="text-slate-300 text-sm">{user.email}</p>
-                <div className="flex justify-center mt-2">
-                  <Badge className="bg-orange-600 text-white border-0">
-                    <Crown className="h-3 w-3 mr-1" />
-                    Cliente Premium
+                <div className="mt-2">
+                  <Badge className="bg-orange-600 text-white border-orange-500">
+                    <User className="h-4 w-4 mr-2" />
+                    Cliente
                   </Badge>
                 </div>
               </div>
@@ -170,24 +188,22 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
       <div className="lg:col-span-2 space-y-6 relative overflow-hidden">
         {/* Conteúdo do Modo de Visualização */}
         <div
-          className={`space-y-6 transition-all duration-500 ease-in-out ${
+          className={`absolute top-0 left-0 w-full space-y-6 transition-all duration-500 ease-in-out ${
             isEditing ? "opacity-0 max-h-0 pointer-events-none" : "opacity-100 max-h-screen pointer-events-auto"
           }`}
         >
-          {/* Seção de Estatísticas */}
-          <Card className="border-gray-200 bg-white rounded-xl shadow-md transition-all duration-300 hover:shadow-lg">
-            <CardHeader className="border-b border-gray-200 bg-slate-800 text-white rounded-t-xl">
+          <Card className="border-gray-200 bg-white rounded-xl shadow-md">
+            <CardHeader className="border-b border-gray-200">
               <div className="flex items-center space-x-3">
-                <TrendingUp className="h-5 w-5 text-orange-600" />
+                <Package className="h-5 w-5 text-gray-600" />
                 <h3 className="text-lg font-semibold">Estatísticas</h3>
-                <span className="text-sm text-slate-300">Seu desempenho</span>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-5">
               <div className="grid grid-cols-2 gap-6">
                 <div className="text-center">
                   <Package className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-gray-900">{stats.orders}</div>
+                  <div className="text-2xl font-bold text-gray-900">{orders.map((order) => order.total).reduce((a, b) => a + b, 0)}</div>
                   <div className="text-sm text-gray-500">Pedidos</div>
                 </div>
                 <div className="text-center">

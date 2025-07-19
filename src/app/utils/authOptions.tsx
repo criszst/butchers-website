@@ -86,6 +86,11 @@ export const authOptions: NextAuthOptions = {
                   refresh_token: account.refresh_token,
                 },
               },
+              // Order: {
+              //   create: {
+              //     userId: user.id,
+              //   },
+              // }
             },
           })
         } else {

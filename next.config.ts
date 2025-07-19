@@ -2,6 +2,15 @@ import type { NextConfig } from "next";
 
 const { PrismaPlugin } = require('@prisma/nextjs-monorepo-workaround-plugin')
 
+// obs: this PrismaPlugin and module.exports fix error about 
+/* 
+[Server Action] Erro ao verificar usuário adrian.cristian.st@gmail.com: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Prisma Client could not locate the Query Engine for runtime "rhel-openssl-3.0.x".
+*/
+
 module.exports = {
   webpack: (config, { isServer }) => {
     if (isServer) {
@@ -10,10 +19,10 @@ module.exports = {
 
     return config
   },
-}
-const nextConfig: NextConfig = {
+
+  output: 'standalone', // Necessário para o Prisma funcionar corretamente no Vercel
   images: {
-    remotePatterns: [
+   remotePatterns: [
       {
         hostname: 'images.unsplash.com',
         pathname: '**'
@@ -28,8 +37,7 @@ const nextConfig: NextConfig = {
         hostname: 'developers.google.com',
         pathname: '**'
       }
-    ],
-  },
-};
 
-export default nextConfig;
+    ],
+}
+} satisfies NextConfig;
