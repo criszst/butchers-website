@@ -66,6 +66,9 @@ export default function ModernProfilePage() {
     (status === "authenticated" && (!session?.user?.email || userExistsInDB === false))
   )
 
+  console.log("Status da sessão:", status)
+  console.log("Usuário existe no banco de dados:", userExistsInDB)
+  console.log("Dados do usuário atual:", currentUser)
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -94,8 +97,8 @@ export default function ModernProfilePage() {
     const fetchUserData = async () => {
       setIsLoadingUser(true)
 
-      if (status === "authenticated" && session?.user?.email) {
-        // Primeiro, verificar se o usuário existe no banco de dados
+      if (status === "authenticated" && session.user?.email) {
+
         const userExists = await checkUserExistsInDatabase(session.user.email)
         setUserExistsInDB(userExists)
 
