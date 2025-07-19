@@ -57,7 +57,13 @@ export default function ModernProfilePage() {
   const [userExistsInDB, setUserExistsInDB] = useState<boolean | null>(null)
   const [activeNumber, setActiveNumber] = useState<number>(4)
 
-  const shouldRedirect = session?.user?.email === null && !currentUser || userExistsInDB === false
+  const shouldRedirect =
+  status !== "loading" &&
+  (
+    status === "unauthenticated" ||
+    (status === "authenticated" && (!session?.user?.email || userExistsInDB === false))
+  )
+
 
   useEffect(() => {
     let interval: NodeJS.Timeout
