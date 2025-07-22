@@ -1,13 +1,13 @@
 import Header from "@/components/header"
 import ShaderHero from "@/components/animations/shader"
-import ProductGrid from "@/components/product/grid"
+import ProductGridWrapper from "@/components/product/GridWrapper"
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Header key={"header"}/>
       <ShaderHero />
-      <ProductGrid />
+      <ProductGridWrapper />
     </div>
   )
 }

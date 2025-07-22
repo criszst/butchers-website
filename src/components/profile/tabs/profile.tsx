@@ -188,15 +188,21 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
       <div className="lg:col-span-2 space-y-6 relative overflow-hidden">
         {/* Conteúdo do Modo de Visualização */}
         <div
-          className={`absolute top-0 left-0 w-full space-y-6 transition-all duration-500 ease-in-out ${
+          className={`relative w-full space-y-6 transition-all duration-500 ease-in-out ${
             isEditing ? "opacity-0 max-h-0 pointer-events-none" : "opacity-100 max-h-screen pointer-events-auto"
           }`}
         >
-          <Card className="border-gray-200 bg-white rounded-xl shadow-md">
+          <Card className="border-gray-200 bg-white rounded-xl shadow-md
+          hover:border-orange-400 ease-in-out transition-all duration-300">
             <CardHeader className="border-b border-gray-200">
-              <div className="flex items-center space-x-3">
-                <Package className="h-5 w-5 text-gray-600" />
-                <h3 className="text-lg font-semibold">Estatísticas</h3>
+                <div className="bg-slate-800 text-white p-4 rounded-lg shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <Award className="h-6 w-6" />
+                  <div>
+                    <h4 className="font-semibold">Estatisticas</h4>
+                    <p className="text-sm opacity-90">Acompanhe suas estatísticas</p>
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-5">
@@ -215,16 +221,10 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
             </CardContent>
           </Card>
           {/* Conquistas */}
-          <Card className="border-gray-200 bg-white rounded-xl shadow-md transition-all duration-300 hover:shadow-lg">
+          <Card className="border-gray-200 bg-white rounded-xl shadow-md transition-all duration-300
+          hover:border-orange-400 ease-in-out">
             <CardHeader className="border-b border-gray-200">
-              <div className="flex items-center space-x-3">
-                <Award className="h-5 w-5 text-orange-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Conquistas</h3>
-                <span className="text-sm text-gray-500">Seus marcos</span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="bg-orange-600 text-white p-4 rounded-lg mb-4 shadow-sm">
+                <div className="bg-orange-600 text-white p-4 rounded-lg shadow-sm">
                 <div className="flex items-center space-x-3">
                   <Award className="h-6 w-6" />
                   <div>
@@ -233,6 +233,9 @@ export default function ProfileTab({ user, isEditing, setIsEditing, onSave, stat
                   </div>
                 </div>
               </div>
+            </CardHeader>
+            <CardContent className="p-2">
+            
               <div className="space-y-3">
                 {achievements
                   .filter((a) => a.earned)
