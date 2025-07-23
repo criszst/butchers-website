@@ -34,7 +34,7 @@ export default function AdminHeader() {
                 </div>
               </div>
               <div className="hidden sm:block min-w-0">
-                <h1 className="text-lg lg:text-xl font-bold text-gray-900 truncate">Admin Panel</h1>
+                <h1 className="text-lg lg:text-xl font-bold text-gray-900 truncate">Painel Admin</h1>
                 <p className="text-xs lg:text-sm text-gray-600 truncate">Casa de Carnes Duarte</p>
               </div>
             </div>

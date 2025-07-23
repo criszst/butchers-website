@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Menu, ChevronDown, Settings, User, Heart, Package, LogOut, Bell, X } from "lucide-react"
+import { Menu, ChevronDown, Settings, User, Heart, Package, LogOut, Bell, X, Crown } from "lucide-react"
 import Link from "next/link"
 import { useCart } from "@/components/cart/context"
 import MiniCart from "@/components/cart/mini-cart"
@@ -12,6 +12,7 @@ import EnhancedCartButton from "@/components/cart/ButtonCart"
 import type { Session } from "next-auth"
 import { useSession } from "next-auth/react"
 import { signOut } from "next-auth/react"
+import { getUserProfile } from "@/app/actions/user-profile"
 
 export default function Header() {
   const { itemCount } = useCart()
@@ -21,6 +22,19 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { data: session } = useSession()
   const [user, setUser] = useState<Session | null>(session)
+  const [isAdmin, setAdmin] = useState(false)
+  
+  useEffect(() => {
+    const fetchUser = async() => {
+      getUserProfile(session?.user?.email as string).then((user) => {
+        if (user?.isAdmin) {
+          setAdmin(true)
+        }
+      })
+    }
+
+    fetchUser()
+  }, [session?.user?.email])	
 
   const openMiniCart = (item?: any) => {
     if (item) setLastAddedItem(item)
@@ -241,6 +255,21 @@ export default function Header() {
                             <Settings className="h-4 w-4 text-gray-500" />
                             <span>Configurações</span>
                           </Link>
+
+                          {isAdmin ?
+                           (
+                            <Link
+                              href="/admin"
+                              className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                              onClick={() => setIsUserMenuOpen(false)}
+                            >
+                              <Crown className="h-4 w-4 text-gray-500" />
+                              <span>Admin</span>
+                            </Link>
+                            ) : (
+                              <></>
+                            )
+                          }
 
                           <button
                             onClick={() => signOut({ callbackUrl: "/" })}

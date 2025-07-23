@@ -19,7 +19,7 @@ export default function ModernLogo({
     md: {
       container: "h-10 w-10",
       icon: "h-5 w-5",
-      text: "text-base",
+      text: "text-center",
       spacing: "space-x-3",
     },
     lg: {

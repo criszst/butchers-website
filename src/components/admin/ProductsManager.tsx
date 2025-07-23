@@ -27,7 +27,9 @@ import {
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { createProduct, getProductsAction, getProductCategoriesAction } from "@/app/actions/product"
+
+import { createProduct, getProductsAction, getProductCategoriesAction, deleteProduct } from "@/app/actions/product"
+import { ConfirmDeleteDialog } from "../product/DeleteDialog"
 
 interface Product {
   id: number
@@ -45,11 +47,15 @@ interface Product {
 export default function ProductsManager() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<string[]>([])
+
   const [searchQuery, setSearchQuery] = useState("")
+
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
+
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -61,6 +67,8 @@ export default function ProductsManager() {
     stock: "",
     image: "",
   })
+
+
 
   const fetchProductsAndCategories = useCallback(async () => {
     try {
@@ -88,6 +96,23 @@ export default function ProductsManager() {
   useEffect(() => {
     fetchProductsAndCategories()
   }, [fetchProductsAndCategories])
+
+
+  const handleDeleteProduct = useCallback(async (id: number) => {
+    if (!id) return
+
+    const confirmed = <DialogTrigger asChild><Button variant="destructive" size="sm">Deletar</Button></DialogTrigger>
+    if (!confirmed) return
+
+    const result = await deleteProduct(id)
+    if (result) {
+      setSuccess("Produto deletado com sucesso!")
+      fetchProductsAndCategories()
+    } else {
+      setError("Erro ao deletar o produto.")
+    }
+  }, [fetchProductsAndCategories])
+
 
   const handleInputChange = (field: string, value: string) => {
     setNewProduct((prev) => ({ ...prev, [field]: value }))
@@ -203,10 +228,22 @@ export default function ProductsManager() {
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
+                    <DropdownMenuItem
+                      onSelect={(e) => e.preventDefault()} // Impede o fechamento automático do menu
+                      className="p-0" // Remove padding para aplicar no botão interno
+                    >
+                      <ConfirmDeleteDialog
+                        message={`Tem certeza que deseja excluir o produto "${product.name}"?`}
+                        onConfirm={() => handleDeleteProduct(product.id)}
+                        trigger={
+                          <div className="flex items-center w-full px-2 py-1.5 text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </div>
+                        }
+                      />
                     </DropdownMenuItem>
+
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -465,6 +502,7 @@ export default function ProductsManager() {
                     {filteredProducts.map((product) => {
                       const stockStatus = getStockStatus(product.stock)
                       return (
+
                         <TableRow key={product.id} className="hover:bg-gray-50">
                           <TableCell>
                             <div className="flex items-center space-x-3">
@@ -510,12 +548,24 @@ export default function ProductsManager() {
                               <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700">
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+
+
+                              <ConfirmDeleteDialog
+                                message={`Tem certeza que deseja excluir o produto "${product.name}"?`}
+                                onConfirm={() => handleDeleteProduct(product.id)}
+                                trigger={
+                                  <div className="flex items-center w-full px-2 py-1.5 text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+
+                                  </div>
+                                }
+                              />
+
+
                             </div>
                           </TableCell>
                         </TableRow>
+
                       )
                     })}
                   </TableBody>

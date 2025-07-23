@@ -16,7 +16,7 @@ import PromotionsManager from "@/components/admin/PromotionsManager"
 import SettingsManager from "@/components/admin/SettingsManager"
 import { useSession } from "next-auth/react"
 import { getUserProfile } from "@/app/actions/user-profile"
-import { checkUserExistsInDatabase } from "@/app/mock/user-info"
+import { checkUserExistsInDatabase } from "@/app/actions/user-info"
 
 interface ExtendedUser {
   name?: string | null

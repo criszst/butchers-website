@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
+import { Prisma, Product } from "@/generated/prisma"
 
-interface CreateProductData {
+interface ProductData {
   name: string
   description: string
   price: number
@@ -12,7 +13,7 @@ interface CreateProductData {
   image?: string
 }
 
-export async function createProduct(data: CreateProductData) {
+export async function createProduct(data: ProductData) {
   try {
     // Validate required fields
     if (!data.name || !data.description || !data.category) {
@@ -66,6 +67,47 @@ export async function createProduct(data: CreateProductData) {
     }
   }
 }
+
+export async function updateProduct(id: number, data: Prisma.ProductUpdateInput) {
+  if (!data.name || !data.description || !data.category) {
+    return {
+      success: false,
+      message: "Nome, descrição e categoria são obrigatórios",
+    }
+  }
+
+  if (Number(data.price) <= 0) {
+    return {
+      success: false,
+      message: "O preço deve ser maior que zero",
+    }
+  }
+  
+  try {
+    return await prisma.product.update({
+      where: {id},
+      data,
+    })    
+  } catch (error) {
+    console.error("Erro ao atualizar produto:", error)
+    return {
+      success: false,
+      message: "Erro ao atualizar produto \n\n" + error
+  }
+  }
+}
+
+export async function deleteProduct(id: number) {
+  try {
+    return await prisma.product.delete({
+      where: { id },
+    })
+  } catch (error) {
+    console.error("Erro ao deletar produto:", error)
+    return null
+  }
+}
+
 
 export async function getProductsAction(filters?: {
   search?: string

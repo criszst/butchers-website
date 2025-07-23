@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DollarSign, ShoppingCart, Package, Users, TrendingUp, Eye, Star, AlertTriangle } from "lucide-react"
+import { useEffect, useState } from "react"
+import getProducts from "@/app/utils/db/products"
 
 interface DashboardStats {
   totalRevenue: number
@@ -21,6 +23,20 @@ interface DashboardOverviewProps {
 }
 
 export default function DashboardOverview({ stats }: DashboardOverviewProps) {
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({} as DashboardStats)
+
+  // useEffect(() => {
+  //   const updateDashboard = () => {
+  //     getProducts().then((products) => {
+  //       setDashboardStats({
+  //         ...stats,
+  //         productsGrowth: products.length,
+  //       })
+  //     })
+  //   }
+
+  //   updateDashboard()
+  // })
   const recentOrders = [
     { id: "#1247", customer: "João Silva", total: 89.9, status: "Preparando", time: "2 min atrás" },
     { id: "#1246", customer: "Maria Santos", total: 156.5, status: "Entregue", time: "15 min atrás" },
@@ -67,7 +83,8 @@ export default function DashboardOverview({ stats }: DashboardOverviewProps) {
     <div className="space-y-4 lg:space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-        <Card className="bg-gradient-to-r from-red-600 to-orange-600 text-white border-0">
+        <Card className="bg-gradient-to-r from-red-600 to-orange-600 text-white border-0 
+        hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium opacity-90">Receita Total</CardTitle>
             <DollarSign className="h-3 w-3 lg:h-4 lg:w-4 opacity-90" />

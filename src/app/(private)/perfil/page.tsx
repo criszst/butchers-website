@@ -5,7 +5,7 @@ import { signOut, useSession } from "next-auth/react"
 
 import { useToast } from "@/app/hooks/use-toast"
 
-import { getUserProfileDetails, updateUserProfileDetails, checkUserExistsInDatabase } from "@/app/mock/user-info"
+import { getUserProfileDetails, updateUserProfileDetails, checkUserExistsInDatabase } from "@/app/actions/user-info"
 
 import { Target, Crown, Sparkles, Beef } from "lucide-react"
 
