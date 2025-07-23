@@ -26,9 +26,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { createProduct, getProductsAction, getProductCategoriesAction, deleteProduct } from "@/app/actions/product"
-import { ConfirmDeleteDialog } from "../product/dialog/DeleteProductDialog"
-import { AddProductDialog } from "../product/dialog/AddProductDialog"
-import { UpdateProductDialog } from "../product/dialog/UpdateProductDialog"
+
+import { ConfirmDeleteDialog } from "@/components/product/dialog/DeleteProductDialog"
+import { AddProductDialog } from "@/components/product/dialog/AddProductDialog"
+import { UpdateProductDialog } from "@/components/product/dialog/UpdateProductDialog"
+import { ViewProductDialog } from "@/components/product/dialog/ViewProductDialog"
 
 interface Product {
   id: number
@@ -45,6 +47,8 @@ interface Product {
 
 export default function ProductsManager() {
   const [products, setProducts] = useState<Product[]>([])
+  const [productToView, setProductToView] = useState<Product | null>(null)
+
   const [categories, setCategories] = useState<string[]>([])
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -213,23 +217,35 @@ export default function ProductsManager() {
                   </div>
                 </div>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger asChild >
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Ver
+                    <DropdownMenuItem
+                    onSelect={(e) => e.preventDefault()}
+                      className="p-0">
+                      <ViewProductDialog
+                        product={product}
+                        trigger={
+                          <div className="flex items-center w-full text-sm cursor-pointer rounded-sm">
+                          <Button variant="ghost" size="lg" className="text-green-600 hover:text-green-700">
+                            <Eye className="h-4 w-4" />
+                            Ver Preview
+                          </Button>
+                          </div>
+                        }
+                      />
+
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                    onSelect={(e) => e.preventDefault()} 
+                      onSelect={(e) => e.preventDefault()}
                       className="p-0">
                       <UpdateProductDialog product={product} onSuccess={fetchProductsAndCategories} />
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onSelect={(e) => e.preventDefault()} 
+                      onSelect={(e) => e.preventDefault()}
                       className="p-0"
                     >
                       <ConfirmDeleteDialog
@@ -237,10 +253,10 @@ export default function ProductsManager() {
                         onConfirm={() => handleDeleteProduct(product.id)}
                         trigger={
                           <div className="flex items-center w-full text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
-                           <Button variant="ghost" size="lg" className="text-red-600 hover:text-red-700">
-                                     <Trash2 className="h-7 w-7" />
-                                     Excluir
-                                   </Button>
+                            <Button variant="ghost" size="lg" className="text-red-600 hover:text-red-700">
+                              <Trash2 className="h-7 w-7" />
+                              Excluir
+                            </Button>
                           </div>
                         }
                       />
@@ -297,7 +313,7 @@ export default function ProductsManager() {
           <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Gerenciar Produtos</h2>
           <p className="text-sm lg:text-base text-gray-600">Adicione, edite e gerencie o catálogo de produtos</p>
         </div>
-      <AddProductDialog onSuccess={fetchProductsAndCategories} />
+        <AddProductDialog onSuccess={fetchProductsAndCategories} />
       </div>
 
       {/* Filters */}
@@ -423,13 +439,18 @@ export default function ProductsManager() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
-                              <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                             
-    
-                      <UpdateProductDialog product={product} onSuccess={fetchProductsAndCategories} />
-            
+                              <ViewProductDialog
+                                product={product}
+                                trigger={
+                                  <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
+                                    <Eye className="h-4 w-4" />
+                                    Ver
+                                  </Button>
+                                }
+                              />
+
+                              <UpdateProductDialog product={product} onSuccess={fetchProductsAndCategories} />
+
 
                               <ConfirmDeleteDialog
                                 message={`Tem certeza que deseja excluir o produto "${product.name}"?`}
@@ -437,7 +458,7 @@ export default function ProductsManager() {
                                 trigger={
                                   <div className="flex items-center w-full px-2 py-1.5 text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
                                     <Trash2 className="mr-2 h-4 w-4" />
-                                      Excluir
+                                    Excluir
                                   </div>
                                 }
                               />
@@ -454,6 +475,7 @@ export default function ProductsManager() {
               </div>
             </>
           )}
+
         </CardContent>
       </Card>
     </div>
