@@ -6,14 +6,11 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
-  Plus,
   Edit,
   Trash2,
   Search,
@@ -29,7 +26,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { createProduct, getProductsAction, getProductCategoriesAction, deleteProduct } from "@/app/actions/product"
-import { ConfirmDeleteDialog } from "../product/DeleteDialog"
+import { ConfirmDeleteDialog } from "../product/dialog/DeleteProductDialog"
+import { AddProductDialog } from "../product/dialog/AddProductDialog"
+import { UpdateProductDialog } from "../product/dialog/UpdateProductDialog"
 
 interface Product {
   id: number
@@ -224,21 +223,24 @@ export default function ProductsManager() {
                       <Eye className="mr-2 h-4 w-4" />
                       Ver
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
+                    <DropdownMenuItem
+                    onSelect={(e) => e.preventDefault()} 
+                      className="p-0">
+                      <UpdateProductDialog product={product} onSuccess={fetchProductsAndCategories} />
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onSelect={(e) => e.preventDefault()} // Impede o fechamento automático do menu
-                      className="p-0" // Remove padding para aplicar no botão interno
+                      onSelect={(e) => e.preventDefault()} 
+                      className="p-0"
                     >
                       <ConfirmDeleteDialog
                         message={`Tem certeza que deseja excluir o produto "${product.name}"?`}
                         onConfirm={() => handleDeleteProduct(product.id)}
                         trigger={
-                          <div className="flex items-center w-full px-2 py-1.5 text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
+                          <div className="flex items-center w-full text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
+                           <Button variant="ghost" size="lg" className="text-red-600 hover:text-red-700">
+                                     <Trash2 className="h-7 w-7" />
+                                     Excluir
+                                   </Button>
                           </div>
                         }
                       />
@@ -295,128 +297,7 @@ export default function ProductsManager() {
           <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Gerenciar Produtos</h2>
           <p className="text-sm lg:text-base text-gray-600">Adicione, edite e gerencie o catálogo de produtos</p>
         </div>
-        <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 w-full lg:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="lg:hidden">Adicionar</span>
-              <span className="hidden lg:inline">Novo Produto</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl mx-4">
-            <DialogHeader>
-              <DialogTitle>Adicionar Novo Produto</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6 py-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Nome do Produto *</Label>
-                    <Input
-                      id="name"
-                      value={newProduct.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder="Ex: Picanha Premium"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Categoria *</Label>
-                    <Select value={newProduct.category} onValueChange={(value) => handleInputChange("category", value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Bovinos">Bovinos</SelectItem>
-                        <SelectItem value="Suínos">Suínos</SelectItem>
-                        <SelectItem value="Aves">Aves</SelectItem>
-                        <SelectItem value="Peixes">Peixes</SelectItem>
-                        <SelectItem value="Embutidos">Embutidos</SelectItem>
-                        <SelectItem value="Especiais">Especiais</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="price">Preço (R$) *</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        value={newProduct.price}
-                        onChange={(e) => handleInputChange("price", e.target.value)}
-                        placeholder="0.00"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="stock">Estoque *</Label>
-                      <Input
-                        id="stock"
-                        type="number"
-                        value={newProduct.stock}
-                        onChange={(e) => handleInputChange("stock", e.target.value)}
-                        placeholder="0"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="description">Descrição *</Label>
-                    <Textarea
-                      id="description"
-                      value={newProduct.description}
-                      onChange={(e) => handleInputChange("description", e.target.value)}
-                      placeholder="Descrição detalhada do produto..."
-                      rows={4}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="image">URL da Imagem</Label>
-                    <Input
-                      id="image"
-                      value={newProduct.image}
-                      onChange={(e) => handleInputChange("image", e.target.value)}
-                      placeholder="https://exemplo.com/imagem.jpg"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Deixe em branco para usar uma imagem aleatória</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col lg:flex-row justify-end space-y-2 lg:space-y-0 lg:space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddProductOpen(false)}
-                  className="w-full lg:w-auto"
-                  disabled={isSubmitting}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 w-full lg:w-auto"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Criando...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Produto
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <AddProductDialog onSuccess={fetchProductsAndCategories} />
       </div>
 
       {/* Filters */}
@@ -545,10 +426,10 @@ export default function ProductsManager() {
                               <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-
+                             
+    
+                      <UpdateProductDialog product={product} onSuccess={fetchProductsAndCategories} />
+            
 
                               <ConfirmDeleteDialog
                                 message={`Tem certeza que deseja excluir o produto "${product.name}"?`}
@@ -556,7 +437,7 @@ export default function ProductsManager() {
                                 trigger={
                                   <div className="flex items-center w-full px-2 py-1.5 text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
                                     <Trash2 className="mr-2 h-4 w-4" />
-
+                                      Excluir
                                   </div>
                                 }
                               />

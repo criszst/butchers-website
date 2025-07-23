@@ -4,18 +4,7 @@ import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma, Product } from "@/generated/prisma"
 
-interface ProductData {
-  name: string
-  description: string
-  price: number
-  category: string
-  stock: number
-  image?: string
-}
-
 export async function createProduct(data: ProductData) {
-  try {
-    // Validate required fields
     if (!data.name || !data.description || !data.category) {
       return {
         success: false,
@@ -59,16 +48,12 @@ export async function createProduct(data: ProductData) {
       message: "Produto criado com sucesso!",
       product,
     }
-  } catch (error) {
-    console.error("Erro ao criar produto:", error)
-    return {
-      success: false,
-      message: "Erro interno do servidor",
-    }
-  }
 }
 
-export async function updateProduct(id: number, data: Prisma.ProductUpdateInput) {
+export async function updateProduct(id: number, data: Prisma.ProductUpdateInput): 
+    Promise<{ success: boolean; message: string }> {
+
+
   if (!data.name || !data.description || !data.category) {
     return {
       success: false,
@@ -76,36 +61,46 @@ export async function updateProduct(id: number, data: Prisma.ProductUpdateInput)
     }
   }
 
-  if (Number(data.price) <= 0) {
-    return {
-      success: false,
-      message: "O preço deve ser maior que zero",
+
+  if (data.price !== undefined && data.price !== null) {
+    const priceNumber = Number(data.price)
+    if (isNaN(priceNumber) || priceNumber <= 0) {
+      return {
+        success: false,
+        message: "O preço deve ser um número maior que zero",
+      }
     }
   }
-  
-  try {
-    return await prisma.product.update({
-      where: {id},
-      data,
-    })    
-  } catch (error) {
-    console.error("Erro ao atualizar produto:", error)
-    return {
-      success: false,
-      message: "Erro ao atualizar produto \n\n" + error
-  }
-  }
-}
 
+  if (data.stock !== undefined && data.stock !== null) {
+    const stockNumber = Number(data.stock)
+    if (isNaN(stockNumber) || stockNumber < 0) {
+      return {
+        success: false,
+        message: "O estoque deve ser um número maior ou igual a zero",
+      }
+    }
+  }
+    await prisma.product.update({
+      where: { id },
+      data,
+    })
+
+    return {
+      success: true,
+      message: "Produto atualizado com sucesso",
+    }
+
+}
 export async function deleteProduct(id: number) {
-  try {
-    return await prisma.product.delete({
+  if (!id) return {
+      success: false,
+      message: "Nome, descrição e categoria são obrigatórios",
+  }
+
+  return await prisma.product.delete({
       where: { id },
     })
-  } catch (error) {
-    console.error("Erro ao deletar produto:", error)
-    return null
-  }
 }
 
 
@@ -113,7 +108,13 @@ export async function getProductsAction(filters?: {
   search?: string
   category?: string
 }) {
-  try {
+
+  if(!filters) return {
+      success: false,
+      products: [],
+      message: 'Filtros faltando...',
+  }
+
     const where: any = {}
 
     if (filters?.search) {
@@ -146,13 +147,6 @@ export async function getProductsAction(filters?: {
       success: true,
       products,
     }
-  } catch (error) {
-    console.error("Erro ao buscar produtos:", error)
-    return {
-      success: false,
-      products: [],
-    }
-  }
 }
 
 export async function getProductCategoriesAction() {

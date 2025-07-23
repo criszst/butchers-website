@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Search, Star, ShoppingCart, Heart, Eye, Zap, TrendingUp } from "lucide-react"
-import Image from "next/image"
+import { Search, ShoppingCart, Heart, Eye, Zap } from "lucide-react"
+
 import { useCart } from "@/components/cart/context"
 
 import { Product } from "@/generated/prisma"

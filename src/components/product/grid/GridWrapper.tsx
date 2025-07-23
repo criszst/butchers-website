@@ -1,5 +1,5 @@
 // app/components/product/ProductGridWrapper.tsx
-import ProductGrid from "./grid"
+import ProductGrid from "@/components/product/grid/grid"
 import { getProductsAction } from "@/app/actions/product"
 
 interface Props {

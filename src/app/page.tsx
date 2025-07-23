@@ -1,6 +1,6 @@
 import Header from "@/components/header"
 import ShaderHero from "@/components/animations/shader"
-import ProductGridWrapper from "@/components/product/GridWrapper"
+import ProductGridWrapper from "@/components/product/grid/GridWrapper"
 
 export default function Home() {
   return (

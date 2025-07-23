@@ -28,7 +28,7 @@ export function ConfirmDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* O botão que dispara o diálogo */}
+
       <div onClick={() => setOpen(true)}>
         {trigger}
       </div>

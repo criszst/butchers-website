@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
-import type { UpdateProfileData } from "@/types/user"
-import { User } from "@/generated/prisma"
+import type { UpdateProfileData } from "@/interfaces/user"
+
 
 function removeUndefinedFields<T extends object>(obj: T): { [k: string]: any; } {
   return Object.fromEntries(
