@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Loader2, Plus } from "lucide-react"
-
 import { createProduct } from "@/app/actions/product"
 
 interface AddProductDialogProps {
@@ -37,6 +36,8 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
     name: "",
     description: "",
     price: "",
+    weightAmount: "",
+    weightUnit: "",
     category: "",
     stock: "",
     image: "",
@@ -60,6 +61,9 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
         category: newProduct.category,
         stock: Number.parseInt(newProduct.stock),
         image: newProduct.image || undefined,
+        weightPrice: Number.parseFloat(newProduct.weightAmount),
+        priceWeightAmount: Number.parseInt(newProduct.weightAmount) || null,
+        priceWeightUnit: newProduct.weightUnit || null,
       })
 
       if (result.success) {
@@ -68,6 +72,8 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
           name: "",
           description: "",
           price: "",
+          weightAmount: "",
+          weightUnit: "",
           category: "",
           stock: "",
           image: "",
@@ -77,7 +83,7 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
       } else {
         setError(result.message)
       }
-    } catch (error) {
+    } catch {
       setError("Erro ao criar produto")
     } finally {
       setIsSubmitting(false)
@@ -93,24 +99,21 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
           <span className="hidden lg:inline">Novo Produto</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl mx-4">
+
+      <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Produto</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">Adicionar Novo Produto</DialogTitle>
         </DialogHeader>
-        {error && (
-          <div className="mb-4 text-red-600 font-medium">{error}</div>
-        )}
-        {success && (
-          <div className="mb-4 text-green-600 font-medium">{success}</div>
-        )}
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6 py-4 max-h-[70vh] overflow-y-auto"
-        >
+
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {success && <p className="text-green-600 text-sm">{success}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* COLUNA 1 */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">Nome do Produto *</Label>
+                <Label htmlFor="name">Nome do Produto</Label>
                 <Input
                   id="name"
                   value={newProduct.name}
@@ -119,8 +122,9 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                   required
                 />
               </div>
-              <div>
-                <Label htmlFor="category">Categoria *</Label>
+
+              <div className="w-full ">
+                <Label htmlFor="category">Categoria</Label>
                 <Select
                   value={newProduct.category}
                   onValueChange={(value) => handleInputChange("category", value)}
@@ -138,9 +142,10 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="price">Preço (R$) *</Label>
+
+              <div>
+                <Label htmlFor="price">Preço</Label>
+                <div className="flex flex-wrap items-center gap-2">
                   <Input
                     id="price"
                     type="number"
@@ -148,34 +153,63 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                     value={newProduct.price}
                     onChange={(e) => handleInputChange("price", e.target.value)}
                     placeholder="0.00"
+                    className="w-32"
                     required
                   />
-                </div>
-                <div>
-                  <Label htmlFor="stock">Estoque *</Label>
+                  <span className="text-sm">reais a cada</span>
                   <Input
-                    id="stock"
+                    id="weight_amount"
                     type="number"
-                    value={newProduct.stock}
-                    onChange={(e) => handleInputChange("stock", e.target.value)}
-                    placeholder="0"
+                    step="1"
+                    min="1"
+                    value={newProduct.weightAmount}
+                    onChange={(e) => handleInputChange("weightAmount", e.target.value)}
+                    placeholder="1"
+                    className="w-20"
                     required
                   />
+                  <Select
+                    value={newProduct.weightUnit}
+                    onValueChange={(value) => handleInputChange("weightUnit", value)}
+                  >
+                    <SelectTrigger className="w-26">
+                      <SelectValue placeholder="Kg" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Grama">Gramas</SelectItem>
+                      <SelectItem value="Kilo">Kilos</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+
+              <div>
+                <Label htmlFor="stock">Estoque</Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  value={newProduct.stock}
+                  onChange={(e) => handleInputChange("stock", e.target.value)}
+                  placeholder="0"
+                  required
+                />
+              </div>
             </div>
+
+            {/* COLUNA 2 */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="description">Descrição *</Label>
+                <Label htmlFor="description">Descrição</Label>
                 <Textarea
                   id="description"
                   value={newProduct.description}
                   onChange={(e) => handleInputChange("description", e.target.value)}
                   placeholder="Descrição detalhada do produto..."
-                  rows={4}
+                  rows={6}
                   required
                 />
               </div>
+
               <div>
                 <Label htmlFor="image">URL da Imagem</Label>
                 <Input
@@ -184,25 +218,27 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                   onChange={(e) => handleInputChange("image", e.target.value)}
                   placeholder="https://exemplo.com/imagem.jpg"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Deixe em branco para usar uma imagem aleatória
+                <p className="text-xs text-muted-foreground mt-1">
+                  Deixe em branco para deixar a IA gerar uma imagem (beta)
                 </p>
               </div>
             </div>
           </div>
-          <div className="flex flex-col lg:flex-row justify-end space-y-2 lg:space-y-0 lg:space-x-2">
+
+          {/* BOTÕES */}
+          <div className="flex flex-col md:flex-row justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setIsOpen(false)}
-              className="w-full lg:w-auto"
               disabled={isSubmitting}
+              className="w-full md:w-auto"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 w-full lg:w-auto"
+              className="w-full md:w-auto bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

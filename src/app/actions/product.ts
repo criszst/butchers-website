@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma, Product } from "@/generated/prisma"
 
+import ProductData from "@/interfaces/product"
+
 export async function createProduct(data: ProductData) {
     if (!data.name || !data.description || !data.category) {
       return {
@@ -12,6 +14,8 @@ export async function createProduct(data: ProductData) {
       }
     }
 
+    
+  
     if (data.price <= 0) {
       return {
         success: false,
@@ -26,7 +30,7 @@ export async function createProduct(data: ProductData) {
       }
     }
 
-    // Create the product
+    // TODO: Price Per Kilo equals to 1 (kg) usually
     const product = await prisma.product.create({
       data: {
         name: data.name,
@@ -36,10 +40,11 @@ export async function createProduct(data: ProductData) {
         stock: data.stock,
         image: data.image || null,
         available: true,
+        priceWeightAmount: data.priceWeightAmount,
+        priceWeightUnit: data.priceWeightUnit
       },
     })
 
-    // Revalidate the admin and home pages
     revalidatePath("/admin")
     revalidatePath("/")
 

@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-
 import {
   Dialog,
   DialogContent,
@@ -21,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Loader2, Edit } from "lucide-react"
-
 import { updateProduct } from "@/app/actions/product"
 
 interface Product {
@@ -29,6 +27,8 @@ interface Product {
   name: string
   description: string
   price: number
+  priceWeightAmount: number | null
+  priceWeightUnit: string | null
   category: string
   stock: number
   image?: string | null
@@ -52,11 +52,12 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
     category: "",
     stock: "",
     image: "",
+    priceWeightAmount: "",
+    priceWeightUnit: "",
   })
 
-  // Preenche os campos quando o diálogo abrir, com dados do produto passado
   useEffect(() => {
-    if (isOpen && product) {
+    if (isOpen) {
       setUpdatedProduct({
         name: product.name,
         description: product.description,
@@ -64,6 +65,8 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
         category: product.category,
         stock: product.stock.toString(),
         image: product.image || "",
+        priceWeightAmount: product.priceWeightAmount?.toString() || "",
+        priceWeightUnit: product.priceWeightUnit || "",
       })
       setError("")
       setSuccess("")
@@ -88,6 +91,8 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
         category: updatedProduct.category,
         stock: Number.parseInt(updatedProduct.stock),
         image: updatedProduct.image || undefined,
+        priceWeightAmount: Number.parseInt(updatedProduct.priceWeightAmount) || null,
+        priceWeightUnit: updatedProduct.priceWeightUnit || null,
       })
 
       if (result.success) {
@@ -108,40 +113,33 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="lg" className="text-blue-500 hover:text-blue-700">
-          <Edit className="h-7 w-7" />
+          <Edit className="h-6 w-6" />
           Editar
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl mx-4">
+      <DialogContent className="max-w-3xl w-full mx-4">
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
         </DialogHeader>
 
-        {error && (
-          <div className="mb-4 text-red-600 font-medium">{error}</div>
-        )}
-        {success && (
-          <div className="mb-4 text-green-600 font-medium">{success}</div>
-        )}
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {success && <p className="text-green-600 text-sm">{success}</p>}
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6 py-4 max-h-[70vh] overflow-y-auto"
-        >
+        <form onSubmit={handleSubmit} className="space-y-6 py-4 max-h-[75vh] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               <div>
-                <Label htmlFor="name">Nome do Produto *</Label>
+                <Label htmlFor="name">Nome do Produto</Label>
                 <Input
                   id="name"
                   value={updatedProduct.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Ex: Picanha Premium"
                   required
                 />
               </div>
+
               <div>
-                <Label htmlFor="category">Categoria *</Label>
+                <Label htmlFor="category">Categoria</Label>
                 <Select
                   value={updatedProduct.category}
                   onValueChange={(value) => handleInputChange("category", value)}
@@ -159,41 +157,64 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="price">Preço (R$) *</Label>
+
+              <div>
+                <Label htmlFor="price">Preço</Label>
+                <div className="flex items-center gap-2">
                   <Input
                     id="price"
                     type="number"
                     step="0.01"
                     value={updatedProduct.price}
                     onChange={(e) => handleInputChange("price", e.target.value)}
-                    placeholder="0.00"
                     required
                   />
-                </div>
-                <div>
-                  <Label htmlFor="stock">Estoque *</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    value={updatedProduct.stock}
-                    onChange={(e) => handleInputChange("stock", e.target.value)}
-                    placeholder="0"
-                    required
-                  />
+                  <Select
+                    value={updatedProduct.priceWeightUnit}
+                    onValueChange={(value) => handleInputChange("priceWeightUnit", value)}
+                  >
+                    <SelectTrigger className="w-28">
+                      <SelectValue placeholder="Unidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Kilo">Kg</SelectItem>
+                      <SelectItem value="Grama">Gr</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </div>
-            <div className="space-y-4">
+
               <div>
-                <Label htmlFor="description">Descrição *</Label>
+                <Label htmlFor="priceWeightAmount">Preço por unidade (ex: 500g)</Label>
+                <Input
+                  id="priceWeightAmount"
+                  type="number"
+                  value={updatedProduct.priceWeightAmount}
+                  onChange={(e) => handleInputChange("priceWeightAmount", e.target.value)}
+                  placeholder="Ex: 500"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="stock">Estoque</Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  value={updatedProduct.stock}
+                  onChange={(e) => handleInputChange("stock", e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div>
+                <Label htmlFor="description">Descrição</Label>
                 <Textarea
                   id="description"
                   value={updatedProduct.description}
                   onChange={(e) => handleInputChange("description", e.target.value)}
-                  placeholder="Descrição detalhada do produto..."
-                  rows={4}
+                  rows={6}
                   required
                 />
               </div>
@@ -205,25 +226,26 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                   onChange={(e) => handleInputChange("image", e.target.value)}
                   placeholder="https://exemplo.com/imagem.jpg"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Deixe em branco para usar uma imagem aleatória
+                <p className="text-xs text-muted-foreground mt-1">
+                  Deixe em branco para manter a imagem atual
                 </p>
               </div>
             </div>
           </div>
-          <div className="flex flex-col lg:flex-row justify-end space-y-2 lg:space-y-0 lg:space-x-2">
+
+          <div className="flex flex-col lg:flex-row justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setIsOpen(false)}
-              className="w-full lg:w-auto"
               disabled={isSubmitting}
+              className="w-full lg:w-auto"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 w-full lg:w-auto"
+              className="w-full lg:w-auto bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

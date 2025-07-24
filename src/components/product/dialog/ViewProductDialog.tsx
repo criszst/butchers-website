@@ -10,19 +10,26 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
-interface Product {
-  id: number
-  name: string
-  description: string
-  price: number
-  category: string
-  stock: number
-  image?: string | null
-}
-
+import { Product } from "@/generated/prisma"
 interface ViewProductDialogProps {
-  product: Product
-  trigger: React.ReactNode
+  product: {
+    name: string;
+    description: string;
+    
+    price: number;
+    priceWeightAmount: number | null,
+    priceWeightUnit: string | null,
+
+    category: string;
+    stock: number;
+    image?: string | null | undefined;
+    
+    id: number;
+    createdAt: Date;
+    discount?: number | null | undefined;
+    available: boolean;
+  };
+  trigger: React.ReactNode;
 }
 
 export function ViewProductDialog({ product, trigger }: ViewProductDialogProps) {
@@ -72,10 +79,10 @@ export function ViewProductDialog({ product, trigger }: ViewProductDialogProps) 
             </div>
             <div>
               <p className="text-gray-500">Preço</p>
-              <p className="font-semibold text-green-600">{formatPrice(product.price)}</p>
+              <p className="font-semibold text-green-600">{formatPrice(product.price)} a cada {product.priceWeightAmount} {product.priceWeightUnit}</p>
             </div>
             <div>
-              <p className="text-gray-500">Código</p>
+              <p className="text-gray-500">Id do produto (Código)</p>
               <p className="text-gray-900">{product.id}</p>
             </div>
           </div>

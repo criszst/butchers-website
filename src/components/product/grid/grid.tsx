@@ -211,8 +211,10 @@ export default function ProductGrid({ products }: ProductGridProps) {
                 {/* Price */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
-                    <span className="text-2xl font-bold text-red-600">R$ {product.price.toFixed(2)}</span>
-                    <span className="text-sm text-gray-500">/kg</span>
+                    <span className="text-2xl font-bold text-red-600">
+                      R$ {product.price.toFixed(2)}
+                      </span>
+                    <span className="text-sm text-gray-500">a cada {product.priceWeightAmount} {product.priceWeightUnit}</span>
                   </div>
                   {product.price && (
                     <span className="text-sm line-through text-gray-400">

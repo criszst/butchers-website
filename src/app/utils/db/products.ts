@@ -116,3 +116,12 @@ export async function getProductCategories() {
   }
 }
 
+export async function getALLProducts() {
+  try {
+    return await prisma.product.findMany({})
+  } catch (error) {
+    console.error("Erro ao buscar produtos:", error)
+    return []
+  }
+}
+

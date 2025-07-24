@@ -62,13 +62,18 @@ model Product {
   id          Int      @id @default(autoincrement())
   name        String
   description String
+  
   price       Float
+  priceWeightAmount Int?    //  500
+  priceWeightUnit   String? // "g" ou "kg" 
+
   image       String?
   category    String
   discount    Float?   @default(0)
   stock       Int      @default(0)
   available   Boolean  @default(true)
   createdAt   DateTime @default(now())
+  
 }
 
 model VerificationToken {

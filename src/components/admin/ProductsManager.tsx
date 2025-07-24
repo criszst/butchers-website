@@ -36,13 +36,18 @@ interface Product {
   id: number
   name: string
   description: string
+
   price: number
+  priceWeightAmount: number | null,
+  priceWeightUnit: string | null,
+
   image?: string | null
   category: string
   discount?: number | null
   stock: number
   available: boolean
   createdAt: Date
+  
 }
 
 export default function ProductsManager() {
@@ -69,6 +74,8 @@ export default function ProductsManager() {
     category: "",
     stock: "",
     image: "",
+    priceWeightAmount: "",
+    priceWeightUnit: "",
   })
 
 
@@ -135,6 +142,9 @@ export default function ProductsManager() {
         category: newProduct.category,
         stock: Number.parseInt(newProduct.stock),
         image: newProduct.image || undefined,
+
+        priceWeightAmount: Number.parseInt(newProduct.priceWeightAmount) || null,
+        priceWeightUnit: newProduct.priceWeightUnit || null,
       })
 
       if (result.success) {
@@ -146,6 +156,8 @@ export default function ProductsManager() {
           category: "",
           stock: "",
           image: "",
+          priceWeightAmount: "",
+          priceWeightUnit: "",
         })
         setIsAddProductOpen(false)
         await fetchProductsAndCategories()
