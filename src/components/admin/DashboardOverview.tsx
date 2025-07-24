@@ -25,16 +25,16 @@ interface DashboardOverviewProps {
 
 export default function DashboardOverview({ stats }: DashboardOverviewProps) {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({} as DashboardStats)
-  const [products, setProducts] = useState<Product[]>([])
- const updateDashboard = async() => {
-      await getALLProducts().then((products) => {
-      setProducts(products)
-    })
-    }
+//   const [products, setProducts] = useState<Product[]>([])
+//  const updateDashboard = async() => {
+//       await getALLProducts().then((products) => {
+//       setProducts(products)
+//     })
+//     }
 
-  useEffect(() => {
-    updateDashboard()
-  })
+//   useEffect(() => {
+//     updateDashboard()
+//   })
 
   // useEffect(() => {
   //   const updateDashboard = () => {
@@ -129,7 +129,7 @@ export default function DashboardOverview({ stats }: DashboardOverviewProps) {
             <Package className="h-3 w-3 lg:h-4 lg:w-4 text-gray-400" />
           </CardHeader>
           <CardContent className="pb-3">
-            <div className="text-lg lg:text-2xl font-bold text-gray-900">{products.length}</div>
+            <div className="text-lg lg:text-2xl font-bold text-gray-900">0</div>
             <div className="flex items-center space-x-1 text-xs text-green-600">
               <TrendingUp className="h-2 w-2 lg:h-3 lg:w-3" />
               <span>+{stats.productsGrowth}%</span>
