@@ -18,7 +18,8 @@ import SettingsTab from "@/components/profile/tabs/SettingsTab"
 import OrderDetailDialog from "@/components/profile/OrderDetail"
 
 import prisma from "@/lib/prisma"
-import { Order, OrderItem } from "@/generated/prisma"
+import { Address, Order, OrderItem } from "@/generated/prisma"
+import { getAddresses } from "@/app/actions/address"
 
 // Interface que combina os campos do session com campos adicionais
 interface ExtendedUser {
@@ -29,6 +30,13 @@ interface ExtendedUser {
   bio?: string | null
   birthDate?: string | null
   cpf?: string | null
+}
+
+interface Adrss {
+  id: string
+  name: string
+  address: string
+  isDefault: boolean
 }
 
 export default function ProfilePage() {
@@ -221,8 +229,8 @@ useEffect(() => {
   ]
 
   const addresses = [
-    { id: 1, name: "Casa", address: "Rua das Flores, 123 - Centro", isDefault: true },
-    { id: 2, name: "Trabalho", address: "Av. Paulista, 456 - Bela Vista", isDefault: false },
+    { id: '1', name: "Casa", address: "Rua das Flores, 123 - Centro", isDefault: true },
+    { id: '2', name: "Trabalho", address: "Av. Paulista, 456 - Bela Vista", isDefault: false },
   ]
 
   const handleViewOrderDetails = (order: Order) => {
@@ -269,8 +277,12 @@ useEffect(() => {
               achievements={achievements}
             />
           )}
-          {activeTab === "enderecos" && <AddressesTab addresses={addresses} />}
+          {activeTab === "enderecos" && <AddressesTab address={addresses} />}
+
+          <div id="pedidos">
           {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
+          </div>
+
           {activeTab === "configuracoes" && <SettingsTab />}
         </div>
       </div>

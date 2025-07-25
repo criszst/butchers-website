@@ -124,9 +124,6 @@ export default function ProductsManager() {
   }, [fetchProductsAndCategories])
 
 
-  const handleInputChange = (field: string, value: string) => {
-    setNewProduct((prev) => ({ ...prev, [field]: value }))
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

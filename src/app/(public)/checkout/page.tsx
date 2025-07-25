@@ -1,4 +1,5 @@
 "use client"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,18 +9,38 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, MapPin, Clock, User, QrCode, Banknote, CheckCircle } from "lucide-react"
+import { CreditCard, MapPin, Clock, User, QrCode, Banknote, CheckCircle, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/components/cart/context"
+import { useSession } from "next-auth/react"
+import { createOrder } from "@/app/actions/order/createOrder"
+import { toast } from "sonner"
+
+interface OrderData {
+  nome: string
+  telefone: string
+  email: string
+  endereco: string
+  numero: string
+  complemento: string
+  bairro: string
+  cep: string
+  observacoes: string
+}
 
 export default function CheckoutPage() {
-  const { items, total, removeItem } = useCart()
+  const { items, total, clearCart, isLoading } = useCart()
+  const { data: session } = useSession()
   const [formaPagamento, setFormaPagamento] = useState("pix")
-  const [dadosCliente, setDadosCliente] = useState({
-    nome: "",
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [pedidoFinalizado, setPedidoFinalizado] = useState(false)
+  const [numerosPedido, setNumeroPedido] = useState("")
+
+  const [dadosCliente, setDadosCliente] = useState<OrderData>({
+    nome: session?.user?.name || "",
     telefone: "",
-    email: "",
+    email: session?.user?.email || "",
     endereco: "",
     numero: "",
     complemento: "",
@@ -27,28 +48,79 @@ export default function CheckoutPage() {
     cep: "",
     observacoes: "",
   })
-  const [pedidoFinalizado, setPedidoFinalizado] = useState(false)
 
   const subtotal = total
   const taxaEntrega = subtotal > 50 ? 0 : 8.9
-  const totalFinal = subtotal + taxaEntrega
+  const descontoPix = formaPagamento === "pix" ? subtotal * 0.05 : 0
+  const totalFinal = subtotal + taxaEntrega - descontoPix
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof OrderData, value: string) => {
     setDadosCliente((prev) => ({ ...prev, [field]: value }))
   }
 
-  const finalizarPedido = () => {
-    // Simular processamento do pedido
-    setTimeout(() => {
-      setPedidoFinalizado(true)
-      // Limpar carrinho após finalizar
-      items.forEach((item) => removeItem(item.id))
-    }, 2000)
+  const isFormValid = () => {
+    return (
+      dadosCliente.nome.trim() !== "" &&
+      dadosCliente.telefone.trim() !== "" &&
+      dadosCliente.endereco.trim() !== "" &&
+      dadosCliente.numero.trim() !== "" &&
+      dadosCliente.bairro.trim() !== "" &&
+      dadosCliente.cep.trim() !== ""
+    )
+  }
+
+  const finalizarPedido = async () => {
+    if (!session?.user) {
+      toast.error("Você precisa estar logado para finalizar o pedido")
+      return
+    }
+
+    if (!isFormValid()) {
+      toast.error("Preencha todos os campos obrigatórios")
+      return
+    }
+
+    setIsProcessing(true)
+
+    try {
+      const orderItems = items.map((item) => ({
+        productId: item.product.id,
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price,
+        category: item.product.category,
+      }))
+
+      const orderData = {
+        items: orderItems,
+        total: totalFinal,
+        paymentMethod: formaPagamento,
+        customerData: dadosCliente,
+        deliveryFee: taxaEntrega,
+        discount: descontoPix,
+      }
+
+      const result = await createOrder(orderData)
+
+      if (result.success) {
+        setNumeroPedido(result.orderId!)
+        setPedidoFinalizado(true)
+        await clearCart()
+        toast.success("Pedido criado com sucesso!")
+      } else {
+        toast.error(result.message || "Erro ao criar pedido")
+      }
+    } catch (error) {
+      console.error("Erro ao finalizar pedido:", error)
+      toast.error("Erro interno do servidor")
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   if (pedidoFinalizado) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="text-center p-8">
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
@@ -56,14 +128,29 @@ export default function CheckoutPage() {
             <p className="text-gray-600 mb-6">
               Seu pedido foi recebido e está sendo preparado. Você receberá atualizações via WhatsApp.
             </p>
-            <div className="space-y-2 mb-6">
+            <div className="space-y-2 mb-6 p-4 bg-gray-50 rounded-lg">
               <p>
-                <strong>Número do Pedido:</strong> #AC{Math.floor(Math.random() * 10000)}
+                <strong>Número do Pedido:</strong> #{numerosPedido}
+              </p>
+              <p>
+                <strong>Total:</strong> R$ {totalFinal.toFixed(2)}
+              </p>
+              <p>
+                <strong>Pagamento:</strong> {formaPagamento === "pix" ? "PIX" : "Na entrega"}
               </p>
               <p>
                 <strong>Tempo estimado:</strong> 45-60 minutos
               </p>
             </div>
+
+            {formaPagamento === "pix" && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800 mb-2">
+                  📱 Você receberá o QR Code do PIX via WhatsApp em instantes
+                </p>
+              </div>
+            )}
+
             <Link href="/">
               <Button className="w-full bg-red-600 hover:bg-red-700">Fazer Novo Pedido</Button>
             </Link>
@@ -73,13 +160,28 @@ export default function CheckoutPage() {
     )
   }
 
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        </div>
+      </div>
+    )
+  }
+
   if (items.length === 0) {
     return (
       <div className="container py-16 text-center">
-        <h2 className="text-2xl font-bold mb-4">Carrinho vazio</h2>
-        <Link href="/">
-          <Button className="bg-red-600 hover:bg-red-700">Voltar às Compras</Button>
-        </Link>
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-bold mb-4">Carrinho vazio</h2>
+            <p className="text-gray-600 mb-6">Adicione produtos ao carrinho para continuar com o checkout.</p>
+            <Link href="/">
+              <Button className="bg-red-600 hover:bg-red-700">Voltar às Compras</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -106,6 +208,7 @@ export default function CheckoutPage() {
                     value={dadosCliente.nome}
                     onChange={(e) => handleInputChange("nome", e.target.value)}
                     placeholder="Seu nome completo"
+                    required
                   />
                 </div>
                 <div>
@@ -115,6 +218,7 @@ export default function CheckoutPage() {
                     value={dadosCliente.telefone}
                     onChange={(e) => handleInputChange("telefone", e.target.value)}
                     placeholder="(11) 99999-9999"
+                    required
                   />
                 </div>
               </div>
@@ -148,6 +252,7 @@ export default function CheckoutPage() {
                     value={dadosCliente.endereco}
                     onChange={(e) => handleInputChange("endereco", e.target.value)}
                     placeholder="Rua, Avenida..."
+                    required
                   />
                 </div>
                 <div>
@@ -157,6 +262,7 @@ export default function CheckoutPage() {
                     value={dadosCliente.numero}
                     onChange={(e) => handleInputChange("numero", e.target.value)}
                     placeholder="123"
+                    required
                   />
                 </div>
               </div>
@@ -177,6 +283,7 @@ export default function CheckoutPage() {
                     value={dadosCliente.bairro}
                     onChange={(e) => handleInputChange("bairro", e.target.value)}
                     placeholder="Nome do bairro"
+                    required
                   />
                 </div>
               </div>
@@ -187,6 +294,7 @@ export default function CheckoutPage() {
                   value={dadosCliente.cep}
                   onChange={(e) => handleInputChange("cep", e.target.value)}
                   placeholder="00000-000"
+                  required
                 />
               </div>
               <div>
@@ -225,7 +333,6 @@ export default function CheckoutPage() {
                     5% desconto
                   </Badge>
                 </div>
-
                 <div className="flex items-center space-x-2 p-4 border rounded-lg">
                   <RadioGroupItem value="entrega" id="entrega" />
                   <Banknote className="h-5 w-5 text-blue-600" />
@@ -263,23 +370,23 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Produtos */}
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-60 overflow-y-auto">
                 {items.map((item) => (
                   <div key={item.id} className="flex items-center space-x-3">
                     <Image
-                      src={item.image || "/placeholder.svg"}
-                      alt={item.name}
+                      src={item.product.image || "/placeholder.svg?height=50&width=50"}
+                      alt={item.product.name}
                       width={50}
                       height={50}
                       className="rounded object-cover"
                     />
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{item.name}</p>
+                      <p className="font-medium text-sm">{item.product.name}</p>
                       <p className="text-xs text-gray-600">
-                        {item.quantity}kg × R$ {item.price.toFixed(2)}
+                        {item.quantity}kg × R$ {item.product.price.toFixed(2)}
                       </p>
                     </div>
-                    <span className="font-medium">R$ {(item.price * item.quantity).toFixed(2)}</span>
+                    <span className="font-medium">R$ {(item.product.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -296,13 +403,15 @@ export default function CheckoutPage() {
                 {formaPagamento === "pix" && (
                   <div className="flex justify-between text-green-600">
                     <span>Desconto PIX (5%)</span>
-                    <span>-R$ {(subtotal * 0.05).toFixed(2)}</span>
+                    <span>-R$ {descontoPix.toFixed(2)}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between">
                   <span>Taxa de Entrega</span>
-                  <span>{taxaEntrega === 0 ? "Grátis" : `R$ ${taxaEntrega.toFixed(2)}`}</span>
+                  <span className={taxaEntrega === 0 ? "text-green-600" : ""}>
+                    {taxaEntrega === 0 ? "Grátis" : `R$ ${taxaEntrega.toFixed(2)}`}
+                  </span>
                 </div>
               </div>
 
@@ -310,9 +419,7 @@ export default function CheckoutPage() {
 
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span className="text-red-600">
-                  R$ {formaPagamento === "pix" ? (totalFinal - subtotal * 0.05).toFixed(2) : totalFinal.toFixed(2)}
-                </span>
+                <span className="text-red-600">R$ {totalFinal.toFixed(2)}</span>
               </div>
 
               {/* Tempo de Entrega */}
@@ -325,9 +432,16 @@ export default function CheckoutPage() {
                 className="w-full bg-red-600 hover:bg-red-700"
                 size="lg"
                 onClick={finalizarPedido}
-                disabled={!dadosCliente.nome || !dadosCliente.telefone || !dadosCliente.endereco}
+                disabled={!isFormValid() || isProcessing}
               >
-                Confirmar Pedido
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  "Confirmar Pedido"
+                )}
               </Button>
 
               <div className="text-center text-xs text-gray-600">

@@ -190,7 +190,7 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                   id="priceWeightAmount"
                   type="number"
                   value={updatedProduct.priceWeightAmount}
-                  onChange={(e) => handleInputChange("priceWeightAmount", e.target.value)}
+                  onChange={(e) => handleInputChange("priceWeightAmount", e.target.value.replace(/[^0-9]/g, ""))}
                   placeholder="Ex: 500"
                 />
               </div>

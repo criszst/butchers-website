@@ -3,11 +3,15 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingCart, Plus } from "lucide-react"
+import { ShoppingCart, Plus, Loader2 } from "lucide-react"
 import { useCart } from "./context"
 
-export default function EnhancedCartButton({ onClick }: { onClick?: () => void }) {
-  const { itemCount, total } = useCart()
+interface EnhancedCartButtonProps {
+  onClick?: () => void
+}
+
+export default function EnhancedCartButton({ onClick }: EnhancedCartButtonProps) {
+  const { itemCount, total, isLoading } = useCart()
   const [isHovered, setIsHovered] = useState(false)
 
   return (
@@ -18,15 +22,22 @@ export default function EnhancedCartButton({ onClick }: { onClick?: () => void }
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      disabled={isLoading}
     >
+      {/* Loading Spinner */}
+      {isLoading && <Loader2 className="h-4 w-4 animate-spin text-red-600 mr-2" />}
+
       {/* Cart Icon with Animation */}
       <div className="relative">
         <ShoppingCart
-          className={`h-5 w-4 sm:h-5 sm:w-5 text-red-600 transition-transform duration-300 ${isHovered ? "scale-110" : ""}`}
+          className={`h-5 w-4 sm:h-5 sm:w-5 text-red-600 transition-transform duration-300 ${
+            isHovered ? "scale-110" : ""
+          }`}
         />
-
         {/* Animated Plus Icon when hovering */}
-        {isHovered && <Plus className="absolute -top-1 -right-1 h-2 w-4 sm:h-3 sm:w-3 text-red-600 animate-bounce" />}
+        {isHovered && !isLoading && (
+          <Plus className="absolute -top-1 -right-1 h-2 w-4 sm:h-3 sm:w-3 text-red-600 animate-bounce" />
+        )}
       </div>
 
       {/* Item Count Badge */}

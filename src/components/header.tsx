@@ -185,7 +185,7 @@ export default function Header() {
                           <div className="flex items-center space-x-3">
                             {user.user?.image ? (
                               <img
-                                src={user.user.image || "/placeholder.svg"}
+                                src={user.user.image}
                                 alt={user.user.name ?? undefined}
                                 className="w-10 h-10 rounded-full border-2 border-red-200 object-cover"
                               />
@@ -217,7 +217,7 @@ export default function Header() {
                           </Link>
 
                           <Link
-                            href="/pedidos"
+                            href="/perfil"
                             className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                             onClick={() => setIsUserMenuOpen(false)}
                           >

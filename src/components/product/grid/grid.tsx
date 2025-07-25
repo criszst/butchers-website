@@ -2,16 +2,15 @@
 
 import { useState } from "react"
 import Image from "next/image"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Search, ShoppingCart, Heart, Eye, Zap } from "lucide-react"
-
+import { Badge } from "@/components/ui/badge"
+import { Search, ShoppingCart, Heart, Eye, Zap, Star, Loader2 } from "lucide-react"
 import { useCart } from "@/components/cart/context"
-
-import { Product } from "@/generated/prisma"
+import type { Product } from "@/generated/prisma"
+import { toast } from "sonner"
 
 interface ProductGridProps {
   products: Product[]
@@ -21,63 +20,61 @@ export default function ProductGrid({ products }: ProductGridProps) {
   const [termoBusca, setTermoBusca] = useState("")
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("todas")
   const [favoritos, setFavoritos] = useState<number[]>([])
-  const { addItem } = useCart()
+  
+  const [loadingProducts, setLoadingProducts] = useState<number[]>([])
+
+  const { addItem, isLoading } = useCart()
 
   const productsFiltrados = products.filter((product) => {
     const correspondeNome = product.name.toLowerCase().includes(termoBusca.toLowerCase())
     const correspondeCategoria = categoriaSelecionada === "todas" || product.category === categoriaSelecionada
-    return correspondeNome && correspondeCategoria
+    return correspondeNome && correspondeCategoria && product.available
   })
 
-   const getRandomImage = () => {
+  const getRandomImage = () => {
     const meatImages = [
       "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=400&fit=crop",
-       "https://images.unsplash.com/photo-1603048297172-c92544798d5a?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1603048297172-c92544798d5a?w=400&h=400&fit=crop",
       "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop",
-       "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop",
       "https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=400&fit=crop",
     ]
     return meatImages[Math.floor(Math.random() * meatImages.length)]
   }
 
-
   const toggleFavorito = (id: number) => {
     setFavoritos((prev) => (prev.includes(id) ? prev.filter((fav) => fav !== id) : [...prev, id]))
+    toast.success(favoritos.includes(id) ? "Removido dos favoritos" : "Adicionado aos favoritos")
   }
 
-  const getBadgeColor = (badge: string) => {
-    switch (badge) {
-      case "Mais Vendido":
-        return "bg-red-600 text-white"
-      case "Oferta Especial":
-        return "bg-green-600 text-white"
-      case "Exclusivo":
-        return "bg-purple-600 text-white"
-      case "Artesanal":
-        return "bg-amber-600 text-white"
-      default:
-        return "bg-blue-600 text-white"
+  const handleAddToCart = async (product: Product) => {
+    if (!product.available) {
+      toast.error("Produto não disponível")
+      return
+    }
+
+    setLoadingProducts((prev) => [...prev, product.id])
+
+    try {
+      await addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        available: product.available,
+        priceWeightAmount: product.priceWeightAmount,
+        priceWeightUnit: product.priceWeightUnit,
+      })
+    } catch (error) {
+      toast.error("Erro ao adicionar produto ao carrinho")
+    } finally {
+      setLoadingProducts((prev) => prev.filter((id) => id !== product.id))
     }
   }
 
-
-  const handleAddToCart = (product: any) => {
-    addItem(product)
-
-    // Feedback visual no botão
-    const button = document.activeElement as HTMLButtonElement
-    if (button) {
-      const originalText = button.textContent
-      button.textContent = "✓ Adicionado!"
-      button.style.backgroundColor = "#16a34a"
-      button.disabled = true
-
-      setTimeout(() => {
-        button.textContent = originalText
-        button.style.backgroundColor = ""
-        button.disabled = false
-      }, 1500)
-    }
+  const isProductLoading = (productId: number) => {
+    return loadingProducts.includes(productId) || isLoading
   }
 
   return (
@@ -87,7 +84,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
         <div className="text-center mb-8 sm:mb-12 lg:mb-16">
           <div className="inline-flex items-center space-x-2 bg-red-100 text-red-800 px-4 py-2 rounded-full text-sm font-medium mb-4">
             <Zap className="h-4 w-4" />
-            <span>products Premium</span>
+            <span>Produtos Premium</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
             Cortes Selecionados
@@ -102,7 +99,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Buscar products..."
+              placeholder="Buscar produtos..."
               className="pl-10 h-12 text-base border-2 border-gray-200 focus:border-red-500 transition-colors"
               value={termoBusca}
               onChange={(e) => setTermoBusca(e.target.value)}
@@ -130,14 +127,6 @@ export default function ProductGrid({ products }: ProductGridProps) {
               key={product.id}
               className="group overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border-0 shadow-lg bg-white relative"
             >
-              {/* Popular Badge */}
-              {/* {product.popular && (
-                <div className="absolute top-3 left-3 z-20 bg-gradient-to-r from-red-600 to-pink-600 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>Popular</span>
-                </div>
-              )} */}
-
               {/* Favorite Button */}
               <button
                 onClick={() => toggleFavorito(product.id)}
@@ -150,13 +139,25 @@ export default function ProductGrid({ products }: ProductGridProps) {
                 />
               </button>
 
+              {/* Stock Badge */}
+              {product.stock <= 5 && product.stock > 0 && (
+                <Badge className="absolute top-3 left-3 z-20 bg-orange-600 text-white">Últimas unidades</Badge>
+              )}
+
+              {/* Out of Stock Badge */}
+              {product.stock === 0 && (
+                <Badge className="absolute top-3 left-3 z-20 bg-gray-600 text-white">Esgotado</Badge>
+              )}
+
               <CardHeader className="p-0 relative overflow-hidden">
                 <div className="relative aspect-square">
                   <Image
                     src={product.image || getRandomImage()}
                     alt={product.name}
                     fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    className={`object-cover transition-transform duration-700 group-hover:scale-110 ${
+                      product.stock === 0 ? "grayscale" : ""
+                    }`}
                   />
 
                   {/* Hover Overlay */}
@@ -174,63 +175,78 @@ export default function ProductGrid({ products }: ProductGridProps) {
                     </Button>
                   </div>
 
-                  {/* Sale Badge */}
-                  {product.discount && (
+                  {/* Discount Badge */}
+                  {product.discount && product.discount > 0 && (
                     <div className="absolute bottom-3 left-3 bg-green-600 text-white px-2 py-1 rounded-full text-xs font-bold">
-                      -{product.discount}%
+                      -{product.discount}% OFF
                     </div>
                   )}
                 </div>
               </CardHeader>
 
               <CardContent className="p-4 sm:p-6">
-                {/* Category Badge */}
-                {/* <Badge className={`${getBadgeColor(product.badge)} mb-3 text-xs font-medium`}>{product.badge}</Badge> */}
-
-                <h3 className="font-bold text-lg sm:text-xl mb-2 group-hover:text-red-600 transition-colors">
+                <h3 className="font-bold text-lg sm:text-xl mb-2 group-hover:text-red-600 transition-colors line-clamp-2">
                   {product.name}
                 </h3>
-
                 <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
 
-                {/* Rating */}
-                {/* <div className="flex items-center mb-4">
+                {/* Rating Placeholder */}
+                <div className="flex items-center mb-4">
                   <div className="flex items-center">
                     {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i < Math.floor(product.rating) ? "text-yellow-400 fill-current" : "text-gray-300"
-                        }`}
-                      />
+                      <Star key={i} className={`h-4 w-4 ${i < 4 ? "text-yellow-400 fill-current" : "text-gray-300"}`} />
                     ))}
-                    <span className="ml-2 text-sm text-gray-600 font-medium">({product.rating})</span>
+                    <span className="ml-2 text-sm text-gray-600 font-medium">(4.5)</span>
                   </div>
-                </div> */}
+                </div>
 
                 {/* Price */}
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-2xl font-bold text-red-600">
-                      R$ {product.price.toFixed(2)}
-                      </span>
-                    <span className="text-sm text-gray-500">a cada {product.priceWeightAmount} {product.priceWeightUnit}</span>
-                  </div>
-                  {product.price && (
-                    <span className="text-sm line-through text-gray-400">
-                      R$ {(product.price * (1 + product.discount! / 100)).toFixed(2)}
+                  <div className="flex flex-col">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl font-bold text-red-600">R$ {product.price.toFixed(2)}</span>
+                      {product.discount && product.discount >= 0 && (
+                        <span className="text-sm line-through text-gray-400">
+                          R$ {(product.price / (1 - product.discount / 100)).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-500">
+                      por {product.priceWeightAmount} {product.priceWeightUnit}
                     </span>
-                  )}
+                  </div>
                 </div>
+
+                {/* Stock Info */}
+                {product.stock <= 10 && product.stock > 0 && (
+                  <p className="text-xs text-orange-600">Apenas {product.stock} unidades restantes</p>
+                )}
               </CardContent>
 
               <CardFooter className="p-4 sm:p-6 pt-0">
                 <Button
-                  className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                  variant="outline"
+                  className={`w-full font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                    product.stock === 0
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                  }`}
                   onClick={() => handleAddToCart(product)}
+                  disabled={product.stock === 0 ||loadingProducts.includes(product.id)}
                 >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Adicionar ao Carrinho
+                  {loadingProducts.includes(product.id) ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Adicionando...
+                    </>
+                  ) : product.stock === 0 ? (
+                    "Produto Esgotado"
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Adicionar ao Carrinho
+                    </>
+                  )}
                 </Button>
               </CardFooter>
 
@@ -246,7 +262,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
             <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
               <Search className="h-8 w-8 text-gray-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Nenhum product encontrado</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Nenhum produto encontrado</h3>
             <p className="text-gray-600">Tente ajustar os filtros ou buscar por outros termos.</p>
           </div>
         )}

@@ -118,8 +118,8 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                 >
                   <div className="relative">
                     <Image
-                      src={item.image || "/placeholder.svg"}
-                      alt={item.name}
+                      src={item.product.image || "/placeholder.svg"}
+                      alt={item.product.name}
                       width={60}
                       height={60}
                       className="rounded-lg object-cover"
@@ -132,11 +132,11 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm truncate">{item.name}</h4>
-                    <p className="text-xs text-gray-600 capitalize">{item.category}</p>
+                    <h4 className="font-medium text-sm truncate">{item.product.name}</h4>
+                    <p className="text-xs text-gray-600 capitalize">{item.product.category}</p>
                     <div className="flex items-center justify-between mt-1">
-                      <span className="font-bold text-red-600 text-sm">R$ {item.price.toFixed(2)}/kg</span>
-                      <span className="font-semibold text-gray-800">R$ {(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="font-bold text-red-600 text-sm">R$ {item.product.price.toFixed(2)}/kg</span>
+                      <span className="font-semibold text-gray-800">R$ {(item.product.price * item.quantity).toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -146,7 +146,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                         variant="outline"
                         size="icon"
                         className="h-6 w-6 bg-transparent"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
@@ -155,7 +155,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                         variant="outline"
                         size="icon"
                         className="h-6 w-6 bg-transparent"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
@@ -163,7 +163,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item.product.id)}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 px-2 text-xs"
                     >
                       Remover

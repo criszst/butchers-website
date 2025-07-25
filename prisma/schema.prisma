@@ -56,6 +56,8 @@ model User {
   Order Order[]
 
   Address Address[]
+
+  CartItem CartItem[]
 }
 
 model Product {
@@ -74,6 +76,8 @@ model Product {
   available   Boolean  @default(true)
   createdAt   DateTime @default(now())
   
+
+  CartItem CartItem[]
 }
 
 model VerificationToken {
@@ -109,6 +113,20 @@ model OrderItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model CartItem {
+  id         String @id @default(cuid())
+  userId     String
+  productId  Int
+  quantity   Int
+  product    Product  @relation(fields: [productId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, productId])
+}
+
 
 model Address {
   id        String  @id @default(cuid())

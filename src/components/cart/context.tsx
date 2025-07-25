@@ -1,111 +1,209 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
+import { addToCart, removeFromCart, getCartItems, updateCartItemQuantity } from "@/app/actions/cart/cart"
+import { useSession } from "next-auth/react"
+import { toast } from "sonner"
 
 interface Product {
   id: number
   name: string
   price: number
-  image: string
+  image: string | null
   category: string
+  available: boolean
+  priceWeightAmount: number | null
+  priceWeightUnit: string | null
 }
 
-interface CartItem extends Product {
+interface CartItem {
+  id: string
   quantity: number
+  product: Product
 }
 
 interface CartContextType {
   items: CartItem[]
-  addItem: (product: Product) => void
-  removeItem: (id: number) => void
-  updateQuantity: (id: number, quantity: number) => void
+  addItem: (product: Product, quantity?: number) => Promise<void>
+    removeItem: (productId: number) => Promise<void> 
+    updateQuantity: (productId: number, quantity: number) => Promise<void>
+  clearCart: () => Promise<void>
   total: number
   itemCount: number
+  isLoading: boolean
   lastAddedItem: Product | null
-  openMiniCart: () => void
+  refreshCart: () => Promise<void>
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [total, setTotal] = useState(0)
+  const [itemCount, setItemCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
   const [lastAddedItem, setLastAddedItem] = useState<Product | null>(null)
-  const [_miniCartOpen, setMiniCartOpen] = useState(false)
+  const { data: session, status } = useSession()
 
-  useEffect(() => {
-    const saved = localStorage.getItem("carrinho")
-    if (saved) setItems(JSON.parse(saved))
+  // Função para atualizar o resumo do carrinho
+  const updateCartSummary = useCallback((cartItems: CartItem[]) => {
+    const newTotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+    const newItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+
+    setTotal(newTotal)
+    setItemCount(newItemCount)
   }, [])
 
-  useEffect(() => {
-    localStorage.setItem("carrinho", JSON.stringify(items))
-  }, [items])
+  // Função para carregar itens do carrinho
+  const refreshCart = useCallback(async () => {
+    if (status === "loading" || !session?.user) return
 
-  const addItem = (product: Product) => {
-    setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id)
-      if (existing) {
-        return prev.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item))
-      }
-      return [...prev, { ...product, quantity: 1 }]
-    })
-
-    // Trigger mini cart
-    setLastAddedItem(product)
-    setMiniCartOpen(true)
-
-    // Auto close after 5 seconds
-    setTimeout(() => {
-      setMiniCartOpen(false)
-    }, 5000)
-  }
-
-  const removeItem = (id: number) => {
-    setItems((prev) => prev.filter((item) => item.id !== id))
-  }
-
-  const updateQuantity = (id: number, quantity: number) => {
-    if (quantity <= 0) {
-      removeItem(id)
-      return
+    setIsLoading(true)
+    try {
+      const cartItems = await getCartItems()
+      setItems(cartItems)
+      updateCartSummary(cartItems)
+    } catch (error) {
+      console.error("Erro ao carregar carrinho:", error)
+      toast.error("Erro ao carregar carrinho")
+    } finally {
+      setIsLoading(false)
     }
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)))
-  }
+  }, [session, status, updateCartSummary])
 
-  const openMiniCart = () => {
-    setMiniCartOpen(true)
-  }
+  // Carregar carrinho quando o usuário estiver autenticado
+  useEffect(() => {
+    refreshCart()
+  }, [refreshCart])
 
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+  // Adicionar item ao carrinho
+  const addItem = useCallback(
+    async (product: Product, quantity = 1) => {
+      if (!session?.user) {
+        toast.error("Faça login para adicionar itens ao carrinho")
+        return
+      }
 
-  return (
-    <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, total, itemCount, lastAddedItem, openMiniCart }}
-    >
-      {children}
-    </CartContext.Provider>
+      setIsLoading(true)
+      try {
+        const result = await addToCart(product.id, quantity)
+
+        if (result.success) {
+          await refreshCart()
+          setLastAddedItem(product)
+          toast.success(result.message)
+
+          // Limpar lastAddedItem após 3 segundos
+          setTimeout(() => setLastAddedItem(null), 3000)
+        } else {
+          toast.error(result.message)
+        }
+      } catch (error) {
+        console.error("Erro ao adicionar item:", error)
+        toast.error("Erro ao adicionar item ao carrinho")
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [session, refreshCart],
   )
+
+  // Remover item do carrinho
+  const removeItem = useCallback(
+    async (productId: number) => {
+      if (!session?.user) return
+
+      setIsLoading(true)
+      try {
+        const result = await removeFromCart(productId)
+
+        if (result.success) {
+          await refreshCart()
+          toast.success(result.message)
+        } else {
+          toast.error(result.message)
+        }
+      } catch (error) {
+        console.error("Erro ao remover item:", error)
+        toast.error("Erro ao remover item do carrinho")
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [session, refreshCart],
+  )
+
+  // Atualizar quantidade
+  const updateQuantity = useCallback(
+    async (productId: number, quantity: number) => {
+      if (!session?.user) return
+
+      setIsLoading(true)
+      try {
+        const result = await updateCartItemQuantity(productId, quantity)
+
+        if (result.success) {
+          await refreshCart()
+        } else {
+          toast.error(result.message)
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar quantidade:", error)
+        toast.error("Erro ao atualizar quantidade")
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [session, refreshCart],
+  )
+
+  // Limpar carrinho
+  const clearCartHandler = useCallback(async () => {
+    if (!session?.user) return
+
+    setIsLoading(true)
+    try {
+      const { clearCart } = await import("@/app/actions/cart/cart")
+      const result = await clearCart()
+
+      if (result.success) {
+        setItems([])
+        setTotal(0)
+        setItemCount(0)
+        toast.success(result.message)
+      } else {
+        toast.error(result.message)
+      }
+    } catch (error) {
+      console.error("Erro ao limpar carrinho:", error)
+      toast.error("Erro ao limpar carrinho")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [session])
+
+  const value: CartContextType = {
+    items,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart: clearCartHandler,
+    total,
+    itemCount,
+    isLoading,
+    lastAddedItem,
+    refreshCart,
+  }
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }
 
 export const useCart = () => {
   const context = useContext(CartContext)
   if (!context) {
-    // Durante o prerender, retorna valores padrão ao invés de erro
-    if (typeof window === "undefined") {
-      return {
-        items: [],
-        addItem: () => {},
-        removeItem: () => {},
-        updateQuantity: () => {},
-        total: 0,
-        itemCount: 0,
-        lastAddedItem: null,
-        openMiniCart: () => {},
-      }
-    }
-    throw new Error("useCart deve ser usado dentro do CartProvider")
+    throw new Error("useCart deve ser usado dentro de CartProvider")
   }
   return context
 }
