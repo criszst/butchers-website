@@ -23,18 +23,17 @@ export default function Header() {
   const { data: session } = useSession()
   const [user, setUser] = useState<Session | null>(session)
   const [isAdmin, setAdmin] = useState(false)
-  
+
   useEffect(() => {
-    const fetchUser = async() => {
+    const fetchUser = async () => {
       getUserProfile(session?.user?.email as string).then((user) => {
         if (user?.isAdmin) {
           setAdmin(true)
         }
       })
     }
-
     fetchUser()
-  }, [session?.user?.email])	
+  }, [session?.user?.email])
 
   const openMiniCart = (item?: any) => {
     if (item) setLastAddedItem(item)
@@ -151,7 +150,7 @@ export default function Header() {
                     {/* Avatar */}
                     {user.user?.image ? (
                       <img
-                        src={user.user.image}
+                        src={user.user.image || "/placeholder.svg"}
                         alt={user.user.name ?? undefined}
                         className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-gray-300 object-cover"
                       />
@@ -160,12 +159,10 @@ export default function Header() {
                         {user.user?.name?.charAt(0).toUpperCase() || "U"}
                       </div>
                     )}
-
                     {/* Nome do usuário - apenas em telas maiores */}
                     <span className="hidden md:block text-sm font-semibold text-gray-800 max-w-[80px] lg:max-w-[100px] truncate">
                       {user.user?.name?.toString() || "Usuário"}
                     </span>
-
                     {/* Ícone de dropdown */}
                     <ChevronDown
                       className={`h-3 w-3 sm:h-4 sm:w-4 text-gray-600 transition-transform duration-200 ${isUserMenuOpen ? "rotate-180" : ""}`}
@@ -177,7 +174,6 @@ export default function Header() {
                     <>
                       {/* Overlay */}
                       <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
-
                       {/* Menu */}
                       <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 animate-in slide-in-from-top-2 duration-200">
                         {/* Header do Menu */}
@@ -185,7 +181,7 @@ export default function Header() {
                           <div className="flex items-center space-x-3">
                             {user.user?.image ? (
                               <img
-                                src={user.user.image}
+                                src={user.user.image || "/placeholder.svg"}
                                 alt={user.user.name ?? undefined}
                                 className="w-10 h-10 rounded-full border-2 border-red-200 object-cover"
                               />
@@ -215,7 +211,6 @@ export default function Header() {
                             <User className="h-4 w-4 text-gray-500" />
                             <span>Meu Perfil</span>
                           </Link>
-
                           <Link
                             href="/perfil"
                             className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -225,7 +220,6 @@ export default function Header() {
                             <span>Meus Pedidos</span>
                             <Badge className="ml-auto bg-red-100 text-red-800 text-xs">3</Badge>
                           </Link>
-
                           <Link
                             href="/favoritos"
                             className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -234,7 +228,6 @@ export default function Header() {
                             <Heart className="h-4 w-4 text-gray-500" />
                             <span>Favoritos</span>
                           </Link>
-
                           <Link
                             href="/notificacoes"
                             className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -244,9 +237,7 @@ export default function Header() {
                             <span>Notificações</span>
                             <div className="ml-auto w-2 h-2 bg-red-500 rounded-full"></div>
                           </Link>
-
                           <div className="border-t border-gray-100 my-2"></div>
-
                           <Link
                             href="/configuracoes"
                             className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -255,9 +246,7 @@ export default function Header() {
                             <Settings className="h-4 w-4 text-gray-500" />
                             <span>Configurações</span>
                           </Link>
-
-                          {isAdmin ?
-                           (
+                          {isAdmin ? (
                             <Link
                               href="/admin"
                               className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -266,11 +255,9 @@ export default function Header() {
                               <Crown className="h-4 w-4 text-gray-500" />
                               <span>Admin</span>
                             </Link>
-                            ) : (
-                              <></>
-                            )
-                          }
-
+                          ) : (
+                            <></>
+                          )}
                           <button
                             onClick={() => signOut({ callbackUrl: "/" })}
                             className="flex items-center space-x-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
@@ -363,7 +350,6 @@ export default function Header() {
                   Contato
                 </a>
               </nav>
-
               <div className="border-t pt-4">
                 <Button
                   className="w-full bg-red-600 hover:bg-red-700 text-white py-3"
