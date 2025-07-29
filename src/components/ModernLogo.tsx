@@ -42,12 +42,12 @@ export default function ModernLogo({
       </div>
 
       {/* Logo Text */}
-      <div className="flex flex-wrap min-w-0">
-        <span className={`${currentSize.text} font-bold text-red-600 leading-tight whitespace-nowrap`}>
-          Casa de Carne 
-        </span>
-        <span className={`text-xs font-semibold text-red-500 space-x-1 ${currentSize.text}`}>Duarte</span>
-      </div>
+      <div className="flex flex-wrap min-w-0 items-center">
+  <span className={`${currentSize.text} font-bold text-red-600 leading-tight whitespace-nowrap`}>
+    Casa de Carne 
+  </span>
+  <span className={`text-sm font-semibold ml-1 text-red-500 ${currentSize.text}`}>Duarte</span>
+</div>
     </div>
   )
 }
