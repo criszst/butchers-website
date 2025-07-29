@@ -338,7 +338,7 @@ export default function CartPage() {
                     <Button
                       className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                       size="lg"
-                      onClick={() => router.push("/checkout")}
+                      onClick={() => router.push("/payment")}
                     >
                       <div className="flex items-center justify-center space-x-2">
                         <Shield className="h-5 w-5" />
