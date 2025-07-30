@@ -19,7 +19,7 @@ import OrderDetailDialog from "@/components/profile/OrderDetail"
 
 import prisma from "@/lib/prisma"
 import { Address, Order, OrderItem } from "@/generated/prisma"
-import { getAddresses } from "@/app/actions/address"
+import { getUserAddresses } from "@/app/actions/address"
 
 // Interface que combina os campos do session com campos adicionais
 interface ExtendedUser {
@@ -229,10 +229,41 @@ useEffect(() => {
   ]
 
   const addresses = [
-    { id: '1', name: "Casa", address: "Rua das Flores, 123 - Centro", isDefault: true },
-    { id: '2', name: "Trabalho", address: "Av. Paulista, 456 - Bela Vista", isDefault: false },
-  ]
-
+  {
+    id: '1',
+    name: "Casa",
+    address: "Rua das Flores, 123 - Centro",
+    isDefault: true,
+    number: '123',
+    userId: '1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    street: 'Rua das Flores',
+    complement: null,
+    neighborhood: 'Centro',
+    city: 'São Paulo',
+    state: 'SP',
+    country: 'Brasil',
+    cep: '12345-678',
+  },
+  {
+    id: '2',
+    name: "Trabalho",
+    address: "Av. Paulista, 456 - Bela Vista",
+    isDefault: false,
+    number: '456',
+    userId: '1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    street: 'Av. Paulista',
+    complement: null,
+    neighborhood: 'Bela Vista',
+    city: 'São Paulo',
+    state: 'SP',
+    country: 'Brasil',
+    cep: '12345-678',
+  },
+];
   const handleViewOrderDetails = (order: Order) => {
     setSelectedOrder(order)
     setIsOrderDetailOpen(true)
