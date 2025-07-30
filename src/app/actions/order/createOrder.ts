@@ -100,8 +100,18 @@ export async function createOrder(orderData: CreateOrderData) {
     // Salvar endereço se não existir
     const existingAddress = await prisma.address.findFirst({
       where: {
-        userId: user.id,
-        address: `${orderData.customerData.endereco}, ${orderData.customerData.numero}`,
+         userId: user.id,
+          name: "Endereço Principal",
+          cep: orderData.customerData.cep,
+          street: orderData.customerData.endereco,
+          number: orderData.customerData.numero,
+          complement: orderData.customerData.complemento,
+          neighborhood: orderData.customerData.bairro,
+
+          isDefault: true,
+      },
+      include: {
+        user: true,
       },
     })
 
@@ -110,7 +120,12 @@ export async function createOrder(orderData: CreateOrderData) {
         data: {
           userId: user.id,
           name: "Endereço Principal",
-          address: `${orderData.customerData.endereco}, ${orderData.customerData.numero}, ${orderData.customerData.bairro} - CEP: ${orderData.customerData.cep}`,
+          cep: orderData.customerData.cep,
+          street: orderData.customerData.endereco,
+          number: orderData.customerData.numero,
+          complement: orderData.customerData.complemento,
+          neighborhood: orderData.customerData.bairro,
+
           isDefault: true,
         },
       })
