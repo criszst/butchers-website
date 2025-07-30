@@ -28,9 +28,9 @@ export default function EnhancedCartButton({ onClick }: EnhancedCartButtonProps)
       {isLoading && <Loader2 className="h-4 w-4 animate-spin text-red-600 mr-2" />}
 
       {/* Cart Icon with Animation */}
-      <div className="relative">
+      <div className="relative h-full">
         <ShoppingCart
-          className={`h-5 w-4 sm:h-5 sm:w-5 text-red-600 transition-transform duration-300 ${
+          className={`h-20 w-20 sm:h-5 sm:w-5 text-red-600 transition-transform duration-300 ${
             isHovered ? "scale-110" : ""
           }`}
         />

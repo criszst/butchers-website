@@ -1,58 +1,49 @@
 "use client"
-
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Plus } from "lucide-react"
+import { MapPin } from "lucide-react"
 import { AddAddressDialog } from "@/components/address/AddAddressDialog"
 import { useCallback, useEffect, useState } from "react"
-import { getAddresses } from "@/app/actions/address"
+import { getUserAddresses } from "@/app/actions/address"
 import { EditAddressDialog } from "@/components/address/EditAddressDialog"
 import { ConfirmDeleteAddressDialog } from "@/components/address/DeleteAddressDilaog"
 import { Skeleton } from "@/components/ui/skeleton"
-
-interface Address {
-  id: string
-  name: string
-  address: string
-  isDefault: boolean
-}
+import type { Address } from "@/generated/prisma"
 
 interface AddressesTabProps {
   address: Address[]
 }
 
-
 export default function AddressesTab({ address }: AddressesTabProps) {
   const [addresses, setAddresses] = useState<Address[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const refetchEnderecos = () => getAddresses().then((data) => {
-    if (Array.isArray(data)) {
-      setAddresses(data)
-      setIsLoading(false)
+  const refetchEnderecos = useCallback(async () => {
+    setIsLoading(true)
+    const result = await getUserAddresses()
+    if (result.success && result.addresses) {
+      setAddresses(result.addresses)
     }
-  })
+    setIsLoading(false)
+  }, [])
 
   useEffect(() => {
     refetchEnderecos()
-  }, [address])
+  }, [refetchEnderecos])
 
   if (isLoading) {
     return (
       <div className="space-y-4">
         {[...Array(2)].map((_, i) => (
-          <div
-            key={i}
-            className="p-4 border border-gray-200 rounded-lg shadow-sm"
-          >
+          <div key={i} className="p-4 border border-gray-200 rounded-lg shadow-sm">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-10 w-64" /> 
+                <Skeleton className="h-10 w-64" />
                 <Skeleton className="h-10 w-128" />
               </div>
               <div className="flex space-x-2">
-                <Skeleton className="h-10 w-16" /> 
+                <Skeleton className="h-10 w-16" />
                 <Skeleton className="h-10 w-16" />
               </div>
             </div>
@@ -63,9 +54,14 @@ export default function AddressesTab({ address }: AddressesTabProps) {
   }
 
   if (addresses.length === 0) {
-    return <p className="text-gray-500">Nenhum endereço cadastrado.</p>
+    return (
+      <div className="text-center py-8">
+        <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-600 mb-4">Nenhum endereço cadastrado.</p>
+        <AddAddressDialog onSuccess={refetchEnderecos} />
+      </div>
+    )
   }
-
 
   return (
     <Card className="border-gray-200 bg-white rounded-xl shadow-md">
@@ -79,17 +75,12 @@ export default function AddressesTab({ address }: AddressesTabProps) {
             </div>
           </div>
           <Button className="bg-orange-600 hover:bg-orange-700 text-white transition-colors">
-
             <AddAddressDialog onSuccess={refetchEnderecos} />
           </Button>
-
-
         </div>
       </CardHeader>
       <CardContent className="p-6">
         <div className="space-y-4">
-
-
           <div className="space-y-4">
             {addresses
               .sort((a: any, b: any) => b.isDefault - a.isDefault)
@@ -103,14 +94,19 @@ export default function AddressesTab({ address }: AddressesTabProps) {
                       <div className="flex items-center space-x-2 mb-2">
                         <h4 className="font-medium text-gray-900">{address.name}</h4>
                         {address.isDefault && (
-                          <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-                            Padrão
-                          </Badge>
+                          <Badge className="bg-orange-100 text-orange-800 border-orange-200">Padrão</Badge>
                         )}
                       </div>
-                      <p className="text-gray-600 text-sm">{address.address}</p>
+                      <p className="text-gray-600 text-sm">
+                        {address.street}, {address.number}
+                        {address.complement && `, ${address.complement}`}
+                      </p>
+                      <p className="text-gray-600 text-sm">
+                        {address.neighborhood}, {address.city} - {address.state}
+                      </p>
+                      <p className="text-gray-600 text-sm">CEP: {address.cep}</p>
+                      <p className="text-gray-600 text-sm">{address.country}</p>
                     </div>
-
                     <div className="flex space-x-2">
                       <EditAddressDialog
                         address={address}

@@ -225,8 +225,8 @@ export default function Header() {
               </nav>
 
               {/* Cart Button */}
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <EnhancedCartButton onClick={() => openMiniCart()} />
+              <motion.div  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <EnhancedCartButton  onClick={() => openMiniCart()} />
               </motion.div>
 
               {/* User Menu */}
@@ -427,7 +427,7 @@ export default function Header() {
                     placeholder="Buscar produtos..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full rounded-lg border-2 border-gray-200 focus:border-red-500 transition-all duration-300"
+                    className="pl-10 pr-4 py-2  rounded-lg border-2 border-gray-200 focus:border-red-500 transition-all duration-300"
                   />
                 </div>
               </motion.div>

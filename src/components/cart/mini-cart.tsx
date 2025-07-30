@@ -88,7 +88,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
             >
               <div className="flex items-center space-x-3">
                 <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 0.5, delay: 0.2 }}>
-                  <ShoppingCart className="h-5 w-5" />
+                  <ShoppingCart className="h-10 w-10" />
                 </motion.div>
                 <div>
                   <h3 className="font-bold text-lg">Meu Carrinho</h3>
@@ -257,7 +257,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                                 <Minus className="h-3 w-3" />
                               </Button>
                             </motion.div>
-                            <span className="text-sm font-bold w-8 text-center">{item.quantity}kg</span>
+                            <span className="text-xs font-bold w-8 text-center">{item.quantity} {item.product.priceWeightUnit}</span>
                             <motion.div whileTap={{ scale: 0.9 }}>
                               <Button
                                 variant="ghost"
@@ -301,7 +301,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                 <div className="text-center">
                   {total >= 50 ? (
                     <motion.div
-                      className="flex items-center justify-center space-x-2 text-green-600 p-3 bg-green-50 rounded-lg"
+                      className="flex max-h-max mh-auto items-center justify-center space-x-2 text-green-600 p-3 bg-green-50 rounded-lg"
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -355,10 +355,10 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                 </motion.div>
 
                 {/* Action Buttons */}
-                <div className="space-y-3">
+                <div className="space-y-3 ">
                   <Link href="/cart" onClick={onClose}>
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                      <Button className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                    <motion.div whileHover={{ scale: 1.02 }} className="pb-2" whileTap={{ scale: 0.98 }}>
+                      <Button className="w-full  bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
                         Ver Carrinho Completo
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>

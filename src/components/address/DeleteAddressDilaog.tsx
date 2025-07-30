@@ -1,17 +1,12 @@
 "use client"
-
 import { useState } from "react"
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import type React from "react"
+
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Trash2, Loader2 } from "lucide-react"
 import { deleteAddress } from "@/app/actions/address"
+import { toast } from "sonner"
 
 interface ConfirmDeleteAddressDialogProps {
   addressId: string
@@ -32,11 +27,17 @@ export function ConfirmDeleteAddressDialog({
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      await deleteAddress(addressId)
-      onSuccess()
-      setIsOpen(false)
+      const result = await deleteAddress(addressId)
+      if (result.success) {
+        toast.success("Endereço removido com sucesso!")
+        onSuccess()
+        setIsOpen(false)
+      } else {
+        toast.error(result.message || "Erro ao remover endereço.")
+      }
     } catch (err) {
       console.error("Erro ao deletar endereço:", err)
+      toast.error("Erro interno. Tente novamente.")
     } finally {
       setIsDeleting(false)
     }
@@ -49,16 +50,14 @@ export function ConfirmDeleteAddressDialog({
         <DialogHeader>
           <DialogTitle>Remover Endereço</DialogTitle>
         </DialogHeader>
-        <p>Tem certeza que deseja remover o endereço <strong>{addressName}</strong>?</p>
+        <p>
+          Tem certeza que deseja remover o endereço <strong>{addressName}</strong>?
+        </p>
         <DialogFooter className="flex justify-end gap-2 pt-4">
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isDeleting}>
             Cancelar
           </Button>
-          <Button
-            onClick={handleDelete}
-            className="bg-red-600 hover:bg-red-700 text-white"
-            disabled={isDeleting}
-          >
+          <Button onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white" disabled={isDeleting}>
             {isDeleting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

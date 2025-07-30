@@ -129,10 +129,23 @@ model CartItem {
 
 
 model Address {
-  id        String  @id @default(cuid())
-  userId    String
-  name      String
-  address   String
-  isDefault Boolean @default(false)
-  user      User    @relation(fields: [userId], references: [id])
+  id          String   @id @default(cuid())
+  userId      String
+
+  name        String             // Nome do endereço, ex: "Casa", "Trabalho"
+  street      String     @default("Desconhecido")
+  number      String     @default("S/N")       
+  complement  String?    @default("Desconhecido")        
+  neighborhood String    @default("Desconhecido")        // Bairro
+  city        String     @default("Desconhecida")        // Cidade
+  state       String     @default("São Paulo")
+  country     String   @default("Brasil") // País (default Brasil)
+  cep         String   @default("00000-000")
+
+  isDefault   Boolean  @default(false)
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
