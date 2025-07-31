@@ -123,7 +123,6 @@ export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: 
                     <p className="font-semibold text-gray-800 text-xs">Tempo Estimado</p>
                     <p className="text-sm font-bold text-orange-600">45-60 min</p>
                   </div>
-
                   <div className="bg-gradient-to-r from-green-50 to-emerald-100 p-3 rounded-xl shadow-sm">
                     <DollarSign className="h-5 w-5 text-green-600 mx-auto mb-1" />
                     <p className="font-semibold text-gray-800 text-xs">Total</p>
@@ -153,7 +152,6 @@ export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: 
                   <Home className="h-4 w-4 mr-2" />
                   Fazer Novo Pedido
                 </Button>
-
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
@@ -248,7 +246,6 @@ export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: 
                   <p className="font-semibold text-gray-800 text-base">Número do Pedido</p>
                   <p className="text-2xl font-bold text-blue-600">#CD{orderNumber}</p>
                 </div>
-
                 <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-6 rounded-xl shadow-lg">
                   <Timer className="h-8 w-8 text-orange-600 mx-auto mb-2" />
                   <p className="font-semibold text-gray-800 text-base">Tempo Estimado</p>
@@ -269,7 +266,6 @@ export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: 
                   <p className="text-lg font-bold text-purple-600">{getPaymentLabel()}</p>
                   <p className="text-sm text-purple-700">Na entrega</p>
                 </div>
-
                 <div className="bg-gradient-to-r from-green-50 to-emerald-100 p-6 rounded-xl shadow-lg">
                   <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-2" />
                   <p className="font-semibold text-gray-800 text-base">Total a Pagar</p>
@@ -291,7 +287,6 @@ export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: 
                   <Gift className="h-5 w-5 mr-2" />
                   Fazer Novo Pedido
                 </Button>
-
                 <Button
                   variant="outline"
                   className="w-full border-2 border-gray-200 hover:border-yellow-300 hover:bg-yellow-50 py-3 rounded-xl transition-all duration-300 bg-transparent"

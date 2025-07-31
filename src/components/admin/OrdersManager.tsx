@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Search,
   Filter,
@@ -19,28 +18,40 @@ import {
   Truck,
   Package,
   User,
+  MapPin,
   Phone,
   MoreVertical,
-  RefreshCw,
+  Loader2,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { getAllOrders, updateOrderStatus } from "@/app/actions/order/orders"
 import { toast } from "sonner"
-import type { Order, OrderItem, User as PrismaUser } from "@/generated/prisma"
 
-interface OrderWithDetails extends Order {
-  user: Pick<PrismaUser, "name" | "email" | "phone">
-  items: OrderItem[]
+interface Order {
+  id: string
+  customer: {
+    name: string
+    email: string
+    phone: string
+    address: string
+  }
+  items: Array<{
+    name: string
+    quantity: number
+    price: number
+  }>
+  total: number
+  status: string
+  createdAt: string
 }
 
 export default function OrdersManager() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
-  const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false)
-  const [orders, setOrders] = useState<OrderWithDetails[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null)
 
   const statusOptions = [
     { value: "Confirmado", label: "Confirmado", color: "bg-blue-100 text-blue-800" },
@@ -50,14 +61,18 @@ export default function OrdersManager() {
     { value: "Cancelado", label: "Cancelado", color: "bg-red-100 text-red-800" },
   ]
 
-  const fetchOrders = async () => {
+  useEffect(() => {
+    loadOrders()
+  }, [])
+
+  const loadOrders = async () => {
     setIsLoading(true)
     try {
       const result = await getAllOrders()
       if (result.success) {
-        setOrders(result.orders as OrderWithDetails[])
+        setOrders(result.orders)
       } else {
-        toast.error("Erro ao carregar pedidos")
+        toast.error(result.message || "Erro ao carregar pedidos")
       }
     } catch (error) {
       toast.error("Erro ao carregar pedidos")
@@ -65,10 +80,6 @@ export default function OrdersManager() {
       setIsLoading(false)
     }
   }
-
-  useEffect(() => {
-    fetchOrders()
-  }, [])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -100,35 +111,32 @@ export default function OrdersManager() {
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.user.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      order.customer.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = selectedStatus === "all" || order.status === selectedStatus
     return matchesSearch && matchesStatus
   })
 
-  const handleViewOrder = (order: OrderWithDetails) => {
+  const handleViewOrder = (order: Order) => {
     setSelectedOrder(order)
     setIsOrderDetailOpen(true)
   }
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
-    setIsUpdatingStatus(orderId)
     try {
       const result = await updateOrderStatus(orderId, newStatus)
       if (result.success) {
         toast.success("Status atualizado com sucesso!")
-        await fetchOrders() // Refresh orders
+        await loadOrders() // Reload orders
       } else {
         toast.error(result.message || "Erro ao atualizar status")
       }
     } catch (error) {
       toast.error("Erro ao atualizar status")
-    } finally {
-      setIsUpdatingStatus(null)
     }
   }
 
   // Mobile Order Card Component
-  const OrderCard = ({ order }: { order: OrderWithDetails }) => (
+  const OrderCard = ({ order }: { order: Order }) => (
     <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
@@ -137,8 +145,8 @@ export default function OrdersManager() {
               <ShoppingCart className="h-5 w-5 text-red-600" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">#{order.id.slice(-8).toUpperCase()}</p>
-              <p className="text-sm text-gray-600">{order.user.name}</p>
+              <p className="font-semibold text-gray-900">{order.id}</p>
+              <p className="text-sm text-gray-600">{order.customer.name}</p>
             </div>
           </div>
           <DropdownMenu>
@@ -170,8 +178,14 @@ export default function OrdersManager() {
             </Badge>
           </div>
           <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Pagamento:</span>
+            <Badge variant="outline" className="text-xs">
+              teste
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Data:</span>
-            <span className="text-sm text-gray-900">{new Date(order.createdAt).toLocaleDateString("pt-BR")}</span>
+            <span className="text-sm text-gray-900">{order.createdAt.split(" ")[0]}</span>
           </div>
         </div>
       </CardContent>
@@ -181,32 +195,12 @@ export default function OrdersManager() {
   if (isLoading) {
     return (
       <div className="space-y-4 lg:space-y-6">
-        <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
-          <div>
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64 mt-2" />
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-red-600" />
+            <p className="text-gray-600">Carregando pedidos...</p>
           </div>
         </div>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-4">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-48" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     )
   }
@@ -219,10 +213,6 @@ export default function OrdersManager() {
           <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Gerenciar Pedidos</h2>
           <p className="text-sm lg:text-base text-gray-600">Acompanhe e gerencie todos os pedidos</p>
         </div>
-        <Button onClick={fetchOrders} variant="outline" className="bg-transparent">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
       </div>
 
       {/* Filters */}
@@ -270,8 +260,7 @@ export default function OrdersManager() {
           {filteredOrders.length === 0 ? (
             <div className="text-center py-12">
               <ShoppingCart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum pedido encontrado</h3>
-              <p className="text-gray-600">Não há pedidos que correspondam aos filtros selecionados.</p>
+              <p className="text-gray-600">Nenhum pedido encontrado</p>
             </div>
           ) : (
             <>
@@ -295,6 +284,7 @@ export default function OrdersManager() {
                       <TableHead>Cliente</TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Pagamento</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
@@ -308,15 +298,15 @@ export default function OrdersManager() {
                               <ShoppingCart className="h-5 w-5 text-red-600" />
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">#{order.id.slice(-8).toUpperCase()}</p>
+                              <p className="font-medium text-gray-900">{order.id}</p>
                               <p className="text-sm text-gray-600">{order.items.length} itens</p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium text-gray-900">{order.user.name}</p>
-                            <p className="text-sm text-gray-600">{order.user.email}</p>
+                            <p className="font-medium text-gray-900">{order.customer.name}</p>
+                            <p className="text-sm text-gray-600">{order.customer.email}</p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -327,15 +317,10 @@ export default function OrdersManager() {
                             <Select
                               value={order.status}
                               onValueChange={(newStatus) => handleStatusChange(order.id, newStatus)}
-                              disabled={isUpdatingStatus === order.id}
                             >
                               <SelectTrigger className="w-32">
                                 <div className="flex items-center space-x-2">
-                                  {isUpdatingStatus === order.id ? (
-                                    <RefreshCw className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    getStatusIcon(order.status)
-                                  )}
+                                  {getStatusIcon(order.status)}
                                   <SelectValue />
                                 </div>
                               </SelectTrigger>
@@ -353,13 +338,14 @@ export default function OrdersManager() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          <Badge variant="outline" className="text-gray-600">
+                            teste
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <div>
-                            <p className="text-sm text-gray-900">
-                              {new Date(order.createdAt).toLocaleDateString("pt-BR")}
-                            </p>
-                            <p className="text-xs text-gray-600">
-                              {new Date(order.createdAt).toLocaleTimeString("pt-BR")}
-                            </p>
+                            <p className="text-sm text-gray-900">{order.createdAt.split(" ")[0]}</p>
+                            <p className="text-xs text-gray-600">{order.createdAt.split(" ")[1]}</p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -386,7 +372,7 @@ export default function OrdersManager() {
       <Dialog open={isOrderDetailOpen} onOpenChange={setIsOrderDetailOpen}>
         <DialogContent className="max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes do Pedido #{selectedOrder?.id.slice(-8).toUpperCase()}</DialogTitle>
+            <DialogTitle>Detalhes do Pedido {selectedOrder?.id}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4 lg:space-y-6">
@@ -401,17 +387,16 @@ export default function OrdersManager() {
                 <CardContent className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <User className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm lg:text-base">{selectedOrder.user.name}</span>
+                    <span className="text-sm lg:text-base">{selectedOrder.customer.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm lg:text-base">{selectedOrder.user.email}</span>
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm lg:text-base">{selectedOrder.customer.phone}</span>
                   </div>
-                  {selectedOrder.user.phone && (
-                    <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm lg:text-base">{selectedOrder.user.phone}</span>
-                    </div>
-                  )}
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                    <span className="text-sm lg:text-base">{selectedOrder.customer.address}</span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -429,9 +414,7 @@ export default function OrdersManager() {
                       <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                         <div>
                           <p className="font-medium text-sm lg:text-base">{item.name}</p>
-                          <p className="text-xs lg:text-sm text-gray-600">
-                            Quantidade: {item.quantity} • Categoria: {item.category}
-                          </p>
+                          <p className="text-xs lg:text-sm text-gray-600">Quantidade: {item.quantity}</p>
                         </div>
                         <p className="font-semibold text-sm lg:text-base">
                           {formatCurrency(item.price * item.quantity)}
@@ -453,7 +436,7 @@ export default function OrdersManager() {
                 <CardHeader>
                   <CardTitle className="flex items-center text-base lg:text-lg">
                     <Clock className="h-4 w-4 lg:h-5 lg:w-5 mr-2" />
-                    Status e Data
+                    Status e Entrega
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -462,10 +445,12 @@ export default function OrdersManager() {
                     <Badge className={getStatusColor(selectedOrder.status)}>{selectedOrder.status}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm lg:text-base">Data do pedido:</span>
-                    <span className="text-sm lg:text-base">
-                      {new Date(selectedOrder.createdAt).toLocaleString("pt-BR")}
-                    </span>
+                    <span className="text-sm lg:text-base">Método de pagamento:</span>
+                    <span className="text-sm lg:text-base">{selectedOrder.status}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm lg:text-base">Previsão de entrega:</span>
+                    <span className="text-sm lg:text-base">20 - 40 minutos</span>
                   </div>
                 </CardContent>
               </Card>

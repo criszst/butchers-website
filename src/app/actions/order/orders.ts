@@ -160,39 +160,63 @@ export async function getAllOrders() {
   try {
     const orders = await prisma.order.findMany({
       include: {
+        items: true,
         user: {
           select: {
+            id: true,
             name: true,
             email: true,
-            phone: true,
           },
         },
-        items: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: {
+        createdAt: "desc",
+      },
     })
 
     return {
       success: true,
-      orders,
+      orders: orders.map((order) => ({
+        id: `#${order.id.toString().padStart(4, "0")}`,
+        customer: {
+          name: order.user.name || "Cliente",
+          email: order.user.email || "",
+          phone: "(11) 99999-9999", // Mock phone
+          address: "Endereço não disponível", // Would need to get from address table
+        },
+        items: order.items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt.toLocaleString("pt-BR"),
+        estimatedDelivery: new Date(order.createdAt.getTime() + 60 * 60 * 1000).toLocaleString("pt-BR"),
+
+      })),
     }
   } catch (error) {
     console.error("Erro ao buscar pedidos:", error)
     return {
       success: false,
+      message: "Erro ao buscar pedidos",
       orders: [],
     }
   }
 }
 
-export async function updateOrderStatus(orderId: string, status: string) {
+export async function updateOrderStatus(orderId: string, newStatus: string) {
   try {
+    const id = orderId
+
     await prisma.order.update({
-      where: { id: orderId },
-      data: { status },
+      where: { id },
+      data: { status: newStatus },
     })
 
-    revalidatePath("/admin")
+    revalidatePath("/admin/orders")
+
     return {
       success: true,
       message: "Status do pedido atualizado com sucesso",
@@ -201,7 +225,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
     console.error("Erro ao atualizar status do pedido:", error)
     return {
       success: false,
-      message: "Erro interno do servidor",
+      message: "Erro ao atualizar status do pedido",
     }
   }
 }
