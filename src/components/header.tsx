@@ -80,9 +80,9 @@ export default function Header() {
 
   const menuItems = [
     { href: "/", label: "Início", icon: Package },
-    { href: "#produtos", label: "Produtos", icon: Package },
-    { href: "#sobre", label: "Sobre", icon: User },
-    { href: "#contato", label: "Contato", icon: Bell },
+    { href: "/#produtos", label: "Produtos", icon: Package },
+    { href: "/#sobre", label: "Sobre", icon: User },
+    { href: "/#contato", label: "Contato", icon: Bell },
   ]
 
   const userMenuItems = [

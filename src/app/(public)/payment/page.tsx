@@ -37,7 +37,8 @@ import { AddressModal } from "@/components/address/AddressModal"
 import { ProductDetailModal } from "@/components/product/modals/ProductDetail"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
-import type { Address } from "@/generated/prisma" // Ensure this type is correctly imported and reflects the new schema
+import type { Address } from "@/generated/prisma"
+import { SuccessPage } from "@/components/checkout/SucessPage"
 
 export default function PaymentPage() {
   const router = useRouter()
@@ -133,15 +134,15 @@ export default function PaymentPage() {
         customerData: {
           nome: session.user?.name || "",
           email: session.user?.email || "",
-          street: selectedAddress.street, // Updated to new schema field
-          number: selectedAddress.number, // Updated to new schema field
-          complement: selectedAddress.complement ?? "", // Updated to new schema field
-          neighborhood: selectedAddress.neighborhood, // Updated to new schema field
-          city: selectedAddress.city, // Updated to new schema field
-          state: selectedAddress.state, // Updated to new schema field
-          country: selectedAddress.country, // Updated to new schema field
-          cep: selectedAddress.cep, // Updated to new schema field
-          observacoes: "", // This would come from a form field if you add one
+          street: selectedAddress.street,
+          number: selectedAddress.number,
+          complement: selectedAddress.complement ?? "",
+          neighborhood: selectedAddress.neighborhood,
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          country: selectedAddress.country,
+          cep: selectedAddress.cep,
+          observacoes: "",
         },
         deliveryFee,
       }
@@ -247,57 +248,12 @@ export default function PaymentPage() {
   // Success page
   if (orderSuccess) {
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="max-w-lg mx-auto text-center shadow-2xl border-0">
-              <CardContent className="p-8">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                  className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6"
-                >
-                  <CheckCircle className="h-10 w-10 text-white" />
-                </motion.div>
-
-                <h2 className="text-3xl font-bold text-green-600 mb-4">Pedido Confirmado!</h2>
-                <p className="text-gray-600 mb-6">Seu pedido foi recebido e está sendo preparado com carinho.</p>
-
-                <div className="bg-green-50 p-4 rounded-lg mb-6">
-                  <p className="text-sm text-green-800 mb-2">Número do Pedido</p>
-                  <p className="text-2xl font-bold text-green-600">#{orderNumber}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <Clock className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-                    <p className="text-blue-800 font-medium">Tempo estimado</p>
-                    <p className="text-blue-600">45-60 min</p>
-                  </div>
-                  <div className="bg-orange-50 p-3 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-orange-600 mx-auto mb-1" />
-                    <p className="text-orange-800 font-medium">Total pago</p>
-                    <p className="text-orange-600">R$ {total.toFixed(2)}</p>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={() => router.push("/")}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg"
-                >
-                  Fazer Novo Pedido
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      </>
+      <SuccessPage
+        formaPagamento={paymentType}
+        tipoEntrega={paymentType}
+        total={total}
+        onNewOrder={() => router.push("/")}
+      />
     )
   }
 

@@ -52,7 +52,7 @@ export async function createOrder(orderData: CreateOrderData) {
       return { success: false, message: "Usuário não encontrado" }
     }
 
-    // Verificar se todos os produtos estão disponíveis
+    
     const productIds = orderData.items.map((item) => item.productId)
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
@@ -100,7 +100,7 @@ export async function createOrder(orderData: CreateOrderData) {
       })
     }
 
-    // Salvar endereço se não existir, usando os novos campos
+    
     const existingAddress = await prisma.address.findFirst({
       where: {
         userId: user.id,
@@ -119,7 +119,7 @@ export async function createOrder(orderData: CreateOrderData) {
       await prisma.address.create({
         data: {
           userId: user.id,
-          name: "Endereço do Pedido", // Default name for order address
+          name: "Endereço não disponivel",
           street: orderData.customerData.street,
           number: orderData.customerData.number,
           complement: orderData.customerData.complement,
@@ -128,7 +128,7 @@ export async function createOrder(orderData: CreateOrderData) {
           state: orderData.customerData.state,
           country: orderData.customerData.country,
           cep: orderData.customerData.cep,
-          isDefault: false, // This address is created for the order, not necessarily default
+          isDefault: false,
         },
       })
     }
@@ -149,6 +149,56 @@ export async function createOrder(orderData: CreateOrderData) {
     }
   } catch (error) {
     console.error("Erro ao criar pedido:", error)
+    return {
+      success: false,
+      message: "Erro interno do servidor",
+    }
+  }
+}
+
+export async function getAllOrders() {
+  try {
+    const orders = await prisma.order.findMany({
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        items: true,
+      },
+      orderBy: { createdAt: "desc" },
+    })
+
+    return {
+      success: true,
+      orders,
+    }
+  } catch (error) {
+    console.error("Erro ao buscar pedidos:", error)
+    return {
+      success: false,
+      orders: [],
+    }
+  }
+}
+
+export async function updateOrderStatus(orderId: string, status: string) {
+  try {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status },
+    })
+
+    revalidatePath("/admin")
+    return {
+      success: true,
+      message: "Status do pedido atualizado com sucesso",
+    }
+  } catch (error) {
+    console.error("Erro ao atualizar status do pedido:", error)
     return {
       success: false,
       message: "Erro interno do servidor",

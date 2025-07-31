@@ -73,7 +73,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
 
           {/* Mini Cart */}
           <motion.div
-            className="fixed top-0 right-0 h-full w-full sm:w-96 bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed top-0 right-0 h-full w-full sm:w-120 bg-white shadow-2xl z-50 flex flex-col"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -236,7 +236,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                           <p className="text-xs text-gray-600 capitalize mb-1">{item.product.category}</p>
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-red-600 text-sm">
-                              R$ {item.product.price.toFixed(2)}/kg
+                              R$ {item.product.price.toFixed(2)}/{item.product.priceWeightAmount} {item.product.priceWeightUnit}	
                             </span>
                             <span className="font-bold text-green-600 text-sm">
                               R$ {(item.product.price * item.quantity).toFixed(2)}
@@ -257,7 +257,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                                 <Minus className="h-3 w-3" />
                               </Button>
                             </motion.div>
-                            <span className="text-xs font-bold w-8 text-center">{item.quantity} {item.product.priceWeightUnit}</span>
+                            <span className="text-xs font-bold w-8 text-center">{item.product.priceWeightAmount} {item.product.priceWeightUnit}</span>
                             <motion.div whileTap={{ scale: 0.9 }}>
                               <Button
                                 variant="ghost"

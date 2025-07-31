@@ -97,7 +97,7 @@ export async function createOrder(orderData: CreateOrderData) {
       })
     }
 
-    // Salvar endereço se não existir
+
     const existingAddress = await prisma.address.findFirst({
       where: {
          userId: user.id,

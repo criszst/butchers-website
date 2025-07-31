@@ -46,7 +46,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
     setFilters(newFilters)
     updateURL(newFilters)
 
-    // Update active filters for display
+  
     const newActiveFilters: string[] = []
     if (newFilters.search) newActiveFilters.push(`Busca: ${newFilters.search}`)
     if (newFilters.category !== "todas") newActiveFilters.push(`Categoria: ${newFilters.category}`)
@@ -84,7 +84,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
     }
   }
 
-  // Initialize active filters on mount
+
   useEffect(() => {
     const newActiveFilters: string[] = []
     if (filters.search) newActiveFilters.push(`Busca: ${filters.search}`)

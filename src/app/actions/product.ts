@@ -178,3 +178,59 @@ export async function getProductCategoriesAction() {
     }
   }
 }
+
+export async function getProductById(id: number) {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id },
+    })
+
+    if (!product) {
+      return {
+        success: false,
+        product: null,
+        message: "Produto não encontrado",
+      }
+    }
+
+    return {
+      success: true,
+      product,
+    }
+  } catch (error) {
+    console.error("Erro ao buscar produto:", error)
+    return {
+      success: false,
+      product: null,
+      message: "Erro interno do servidor",
+    }
+  }
+}
+
+
+export async function getRelatedProducts(productId: number, category: string, limit = 4) {
+  try {
+    const relatedProducts = await prisma.product.findMany({
+      where: {
+        AND: [
+          { id: { not: productId } },
+          { category: category }, 
+          { available: true },
+        ],
+      },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    })
+
+    return {
+      success: true,
+      products: relatedProducts,
+    }
+  } catch (error) {
+    console.error("Erro ao buscar produtos relacionados:", error)
+    return {
+      success: false,
+      products: [],
+    }
+  }
+}

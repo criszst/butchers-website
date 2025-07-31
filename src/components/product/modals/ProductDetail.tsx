@@ -25,12 +25,12 @@ export function ProductDetailModal({
   product,
   isFavorite = false,
   onToggleFavorite,
-}: ProductDetailModalProps) {
+}: ProductDetailModalProps ) {
   const [quantity, setQuantity] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const { addItem } = useCart()
 
-  if (!product) return null
+  if (!product) return <div>Produto não encontrado</div>;
 
   const handleAddToCart = async () => {
     setIsLoading(true)
@@ -200,7 +200,7 @@ export function ProductDetailModal({
 
                   <div className="flex items-center justify-between mb-6">
                     <span className="text-3xl font-bold text-gray-800">{formatPrice(product.price * quantity)}</span>
-                    <span className="text-sm text-gray-500">por {quantity}kg</span>
+                    <span className="text-sm text-gray-500">por {quantity} {product.priceWeightUnit}</span>
                   </div>
 
                   <Button

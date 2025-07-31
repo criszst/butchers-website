@@ -36,7 +36,13 @@ module.exports = {
         protocol: 'https',
         hostname: 'developers.google.com',
         pathname: '**'
-      }
+      },
+
+       {
+        protocol: 'https',
+        hostname: 'encrypted-tbn0.gstatic.com',
+        pathname: '**'
+      },
 
     ],
 }
