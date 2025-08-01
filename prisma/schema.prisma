@@ -98,6 +98,8 @@ model Order {
   updatedAt DateTime    @updatedAt
   items     OrderItem[]
   user      User        @relation(fields: [userId], references: [id])
+
+  paymentMethod String @default("Nenhum")
 }
 
 model OrderItem {

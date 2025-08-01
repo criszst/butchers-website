@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -27,6 +26,7 @@ import {
   Minus,
   LogIn,
   Eye,
+  Check,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -38,13 +38,12 @@ import { ProductDetailModal } from "@/components/product/modals/ProductDetail"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
 import type { Address } from "@/generated/prisma"
-import { SuccessPage } from "@/components/checkout/SucessPage"
+import { SuccessPage } from "@/components/checkout/SuccessPage"
 
 export default function PaymentPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const { items, total: cartTotal, itemCount, clearCart, updateQuantity, removeItem } = useCart()
-
   const [paymentType, setPaymentType] = useState("dinheiro")
   const [isProcessing, setIsProcessing] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState(false)
@@ -78,13 +77,11 @@ export default function PaymentPage() {
   useEffect(() => {
     const checkUserAndAddresses = async () => {
       if (status === "loading") return
-
       if (!session) {
         setShowLoginPrompt(true)
         setIsLoadingAddresses(false)
         return
       }
-
       try {
         const result = await getUserAddresses()
         if (result.success) {
@@ -107,13 +104,24 @@ export default function PaymentPage() {
   }, [session, status])
 
   const handleSubmitOrder = async () => {
+    console.log("=== INICIANDO SUBMIT ORDER ===")
+
     if (!session) {
+      console.log("❌ Sem sessão")
       setShowLoginPrompt(true)
       return
     }
 
     if (!selectedAddress) {
+      console.log("❌ Sem endereço selecionado")
+      toast.error("Selecione um endereço de entrega")
       setShowAddressModal(true)
+      return
+    }
+
+    if (items.length === 0) {
+      console.log("❌ Carrinho vazio")
+      toast.error("Carrinho está vazio")
       return
     }
 
@@ -129,8 +137,8 @@ export default function PaymentPage() {
           category: item.product.category,
         })),
         total,
-        paymentMethod: "entrega",
-        paymentType,
+        paymentMethod: "entrega", // Método de entrega
+        paymentType, // Tipo de pagamento (dinheiro, credito, etc)
         customerData: {
           nome: session.user?.name || "",
           email: session.user?.email || "",
@@ -142,22 +150,27 @@ export default function PaymentPage() {
           state: selectedAddress.state,
           country: selectedAddress.country,
           cep: selectedAddress.cep,
-          observacoes: "",
         },
         deliveryFee,
       }
 
+      console.log("📦 Dados do pedido preparados:", orderData)
+
       const result = await createOrder(orderData)
+      console.log("📋 Resultado do createOrder:", result)
 
       if (result.success) {
+        console.log("✅ Pedido criado com sucesso!")
         setOrderNumber(result.orderNumber || "")
         setOrderSuccess(true)
         await clearCart()
         toast.success("Pedido realizado com sucesso!")
       } else {
+        console.log("❌ Erro ao criar pedido:", result.message)
         toast.error(result.message || "Erro ao processar pedido")
       }
     } catch (error) {
+      console.error("❌ Erro no handleSubmitOrder:", error)
       toast.error("Erro interno. Tente novamente.")
     } finally {
       setIsProcessing(false)
@@ -252,7 +265,10 @@ export default function PaymentPage() {
         formaPagamento={paymentType}
         tipoEntrega={paymentType}
         total={total}
-        onNewOrder={() => router.push("/")}
+        onNewOrder={() => {
+          setOrderSuccess(false)
+          router.push("/")
+        }}
       />
     )
   }
@@ -304,13 +320,11 @@ export default function PaymentPage() {
                             <Eye className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </div>
-
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-800">{item.product.name}</h4>
                           <p className="text-sm text-gray-600 capitalize">{item.product.category}</p>
                           <p className="text-sm text-gray-500">R$ {item.product.price.toFixed(2)}/kg</p>
                         </div>
-
                         {/* Quantity Controls */}
                         <div className="flex items-center space-x-2">
                           <motion.button
@@ -331,7 +345,6 @@ export default function PaymentPage() {
                             <Plus className="h-3 w-3 text-gray-600" />
                           </motion.button>
                         </div>
-
                         <div className="text-right">
                           <p className="font-bold text-red-600">R$ {(item.product.price * item.quantity).toFixed(2)}</p>
                         </div>
@@ -493,9 +506,9 @@ export default function PaymentPage() {
               {/* Checkout Button */}
               <Button
                 onClick={handleSubmitOrder}
-                disabled={!selectedAddress || isProcessing}
+                disabled={!selectedAddress || isProcessing || items.length === 0}
                 className={`w-full py-4 text-lg font-bold rounded-lg transition-all duration-300 ${
-                  selectedAddress && !isProcessing
+                  selectedAddress && !isProcessing && items.length > 0
                     ? "bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
@@ -507,7 +520,7 @@ export default function PaymentPage() {
                   </>
                 ) : (
                   <>
-                    <Shield className="h-5 w-5 mr-2" />
+                    <Check className="h-5 w-5 mr-2" />
                     Finalizar Pedido - R$ {total.toFixed(2)}
                   </>
                 )}

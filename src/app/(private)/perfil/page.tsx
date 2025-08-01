@@ -1,27 +1,13 @@
 "use client"
-
-import { useState, useEffect, useCallback } from "react"
-import { signOut, useSession } from "next-auth/react"
-
-import { useToast } from "@/app/hooks/use-toast"
-
-import { getUserProfileDetails, updateUserProfileDetails, checkUserExistsInDatabase } from "@/app/actions/user-info"
-
-import { Target, Crown, Sparkles, Beef } from "lucide-react"
-
-import ProfileHeader from "@/components/profile/Header"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import type { Order } from "@/generated/prisma"
+import { getUserOrders } from "@/app/actions/order/orders"
 import ProfileTabs from "@/components/profile/ProfileTab"
 import ProfileTab from "@/components/profile/tabs/profile"
-import AddressesTab from "@/components/profile/tabs/AddressesTab"
 import OrdersTab from "@/components/profile/tabs/OrdersTab"
-import SettingsTab from "@/components/profile/tabs/SettingsTab"
-import OrderDetailDialog from "@/components/profile/OrderDetail"
+import { toast } from "sonner"
 
-import prisma from "@/lib/prisma"
-import { Address, Order, OrderItem } from "@/generated/prisma"
-import { getUserAddresses } from "@/app/actions/address"
-
-// Interface que combina os campos do session com campos adicionais
 interface ExtendedUser {
   name?: string | null
   email?: string | null
@@ -32,293 +18,124 @@ interface ExtendedUser {
   cpf?: string | null
 }
 
-interface Adrss {
-  id: string
-  name: string
-  address: string
-  isDefault: boolean
+interface Achievement {
+  title: string
+  icon: any
+  color: string
+  earned: boolean
+  date: string
 }
 
-export default function ProfilePage() {
-  const { toast } = useToast()
-  const { data: session, status } = useSession()
-
-  const [isEditing, setIsEditing] = useState(false)
+function ProfilePage() {
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState("perfil")
+  const [isEditing, setIsEditing] = useState(false)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [showOrderDetails, setShowOrderDetails] = useState(false)
 
-  const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null)
-  const [isLoadingUser, setIsLoadingUser] = useState(true)
-
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-
-  const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false)
-  const [selectedOrder, setSelectedOrder] = useState<Order | OrderItem>()
-
-  const [userExistsInDB, setUserExistsInDB] = useState<boolean | null>(null)
-  const [activeNumber, setActiveNumber] = useState<number>(4)
-
-  const shouldRedirect =
-    status !== "loading" &&
-    userExistsInDB !== null &&
-    (
-      status === "unauthenticated" ||
-      (status === "authenticated" && (!session?.user?.email || userExistsInDB === false))
-    )
-  
-  const getOrders = useCallback(async () => {
-    if (session?.user?.email) {
-      const orders = await prisma.order.findMany({
-        where: { user: { email: session.user.email } },
-        include: { items: true },
-      })
-      return orders
-    }
-    }, [session, prisma, setOrders])
-
-  
-
-  const getOrdersItems = useCallback(async () => {
-    if (orders.length > 0) {
-      const orderItems = await prisma.orderItem.findMany({
-        where: { orderId: { in: orders.map(order => order.id) } },
-      })
-      return orderItems
-    }
-    }, [session, prisma, orders, setOrderItems])
-
-
-  // INTERVAL USE EFFECT
-  useEffect(() => {
-    let interval: NodeJS.Timeout
-
-    if (shouldRedirect) {
-      interval = setInterval(() => {
-        setActiveNumber((prev) => {
-          if (prev === 0) {
-            clearInterval(interval)
-            window.location.href = "/register"
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval)
-      }
-    }
-  }, [shouldRedirect, status])
-
-
-  // USER DATA USE EFFECT
-  useEffect(() => {
-    const fetchUserData = async () => {
-      setIsLoadingUser(true)
-
-      if (status === "authenticated" && session.user?.email) {
-
-        const userExists = await checkUserExistsInDatabase(session.user.email)
-        setUserExistsInDB(userExists)
-
-        if (userExists) {
-
-          const additionalDetails = await getUserProfileDetails(session.user.email)
-
-
-          const combinedUser: ExtendedUser = {
-            name: session.user.name,
-            email: session.user.email,
-            image: session.user.image,
-            phone: additionalDetails.phone,
-            bio: additionalDetails.bio,
-            birthDate: additionalDetails.birthDate,
-            cpf: additionalDetails.cpf,
-          }
-          setCurrentUser(combinedUser)
-        } else {
-          console.log("Usuário não encontrado no banco de dados")
-          setCurrentUser(null)
-        }
-      } else if (status === "unauthenticated") {
-        setUserExistsInDB(false)
-        setCurrentUser(null)
-      }
-
-      setIsLoadingUser(false)
-    }
-
-    fetchUserData()
-  }, [session, status])
-
-
-  // ORDERS USE EFFECT
-  useEffect(() => {
-  const fetchOrders = async () => {
-    const orders = await getOrders();
-    setOrders(orders || []);
-  };
-  fetchOrders();
-}, [session?.user?.email]);
-
-useEffect(() => {
-  const fetchOrderItems = async () => {
-    const orderItems = await getOrdersItems();
-    setOrderItems(orderItems || []);
-  };
-  fetchOrderItems();
-}, [orders]);
-
-
-  const handleUpdateProfile = useCallback(
-    async (updatedFields: Partial<ExtendedUser>) => {
-      if (!session?.user?.email) {
-        toast({
-          title: "❌ Erro",
-          description: "Email do usuário não encontrado para salvar as alterações.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      try {
-
-        const { phone, bio, birthDate, cpf } = updatedFields
-        const result = await updateUserProfileDetails(session.user.email, { phone, bio, birthDate, cpf })
-
-        if (result.success) {
-          setCurrentUser((prev) => (prev ? { ...prev, ...updatedFields } : null))
-          setIsEditing(false)
-          toast({
-            title: "✅ Perfil atualizado!",
-            description: "Suas informações foram salvas com sucesso.",
-          })
-        } else {
-          toast({
-            title: "❌ Erro",
-            description: result.message || "Não foi possível salvar as alterações.",
-            variant: "destructive",
-          })
-        }
-      } catch (error) {
-        console.error("Failed to save profile:", error)
-        toast({
-          title: "❌ Erro",
-          description: "Ocorreu um erro ao salvar as alterações.",
-          variant: "destructive",
-        })
-      }
-    },
-    [session?.user?.email, toast],
-  )
-
+  // Mock data - substitua pelos dados reais
   const stats = {
-    orders: 24,
-    favorites: 12,
-    spent: 2840.5,
-    points: 340,
+    orders: orders.length,
+    favorites: 0,
+    spent: orders.reduce((total, order) => total + order.total, 0),
+    points: 0,
   }
 
-  const achievements = [
-    { title: "Primeiro Pedido", icon: Target, color: "bg-green-500", earned: true, date: "14/01/2023" },
-    { title: "Cliente Fiel", icon: Crown, color: "bg-orange-500", earned: true, date: "19/06/2023" },
-    { title: "Explorador", icon: Sparkles, color: "bg-purple-500", earned: true, date: "09/08/2023" },
-    { title: "Mestre do Churrasco", icon: Beef, color: "bg-red-500", earned: false, date: "" },
+  const achievements: Achievement[] = [
+    {
+      title: "Primeiro Pedido",
+      icon: () => "🎉",
+      color: "bg-green-500",
+      earned: orders.length > 0,
+      date: "01/01/2024",
+    },
   ]
 
-  const addresses = [
-  {
-    id: '1',
-    name: "Casa",
-    address: "Rua das Flores, 123 - Centro",
-    isDefault: true,
-    number: '123',
-    userId: '1',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    street: 'Rua das Flores',
-    complement: null,
-    neighborhood: 'Centro',
-    city: 'São Paulo',
-    state: 'SP',
-    country: 'Brasil',
-    cep: '12345-678',
-  },
-  {
-    id: '2',
-    name: "Trabalho",
-    address: "Av. Paulista, 456 - Bela Vista",
-    isDefault: false,
-    number: '456',
-    userId: '1',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    street: 'Av. Paulista',
-    complement: null,
-    neighborhood: 'Bela Vista',
-    city: 'São Paulo',
-    state: 'SP',
-    country: 'Brasil',
-    cep: '12345-678',
-  },
-];
-  const handleViewOrderDetails = (order: Order) => {
-    setSelectedOrder(order)
-    setIsOrderDetailOpen(true)
-  }
-
-
-  if (shouldRedirect) {
-    let message = "Você precisa estar logado para acessar essa página."
-
-    if (status === "authenticated" && userExistsInDB === false && session?.user?.email === null) {
-      message = "Usuário não encontrado no banco de dados. Você precisa se registrar."
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const result = await getUserOrders()
+        if (result.success) {
+          setOrders(result.orders)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar pedidos:", error)
+        toast.error("Erro ao carregar pedidos")
+      }
     }
 
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-700 mb-4">{message}</p>
-          <p className="text-sm text-gray-500">
-            Será redirecionado para a página de registro em {activeNumber} segundos.
-          </p>
-        </div>
-      </div>
-    )
+    if (session?.user?.email) {
+      loadOrders()
+    }
+  }, [session])
+
+  const handleSave = async (updatedFields: Partial<ExtendedUser>) => {
+    try {
+      // Implementar a lógica de salvamento aqui
+      console.log("Salvando:", updatedFields)
+      toast.success("Perfil atualizado com sucesso!")
+    } catch (error) {
+      console.error("Erro ao salvar:", error)
+      toast.error("Erro ao salvar perfil")
+    }
   }
 
+  const handleViewOrderDetails = (order: Order) => {
+    setSelectedOrder(order)
+    setShowOrderDetails(true)
+  }
+
+  const user: ExtendedUser | null = session?.user
+    ? {
+        name: session.user.name,
+        email: session.user.email,
+        image: session.user.image,
+        phone: null, // Buscar do banco de dados
+        bio: null, // Buscar do banco de dados
+        birthDate: null, // Buscar do banco de dados
+        cpf: null, // Buscar do banco de dados
+      }
+    : null
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Cabeçalho Modular */}
-      <ProfileHeader userName={currentUser?.name} notificationCount={3} cartItemCount={1}  />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navegação por Abas Modular */}
-        <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
-        {/* Conteúdo das Abas */}
-        <div className="space-y-6">
-          {activeTab === "perfil" && (
-            <ProfileTab
-              user={currentUser}
-              isEditing={isEditing}
-              setIsEditing={setIsEditing}
-              onSave={handleUpdateProfile}
-              stats={stats}
-              achievements={achievements}
-            />
-          )}
-          {activeTab === "enderecos" && <AddressesTab address={addresses} />}
+    <div className="container mx-auto px-4 py-8">
+      <ProfileTab
+        />
+     
 
-          <div id="pedidos">
-          {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
+      {activeTab === "perfil" && (
+         <ProfileTabs orders={orders} user={user} isEditing={isEditing} setIsEditing={setIsEditing} onSave={handleSave} stats={stats} achievements={achievements} />
+      )}
+
+      {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
+
+      {/* Modal de detalhes do pedido */}
+      {showOrderDetails && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold">
+                  Detalhes do Pedido #{selectedOrder.id.toString().padStart(4, "0")}
+                </h3>
+                <button onClick={() => setShowOrderDetails(false)} className="text-gray-500 hover:text-gray-700">
+                  ✕
+                </button>
+              </div>
+              {/* Conteúdo do modal aqui */}
+              <div className="space-y-4">
+                <p>Status: {selectedOrder.status}</p>
+                <p>Total: R$ {selectedOrder.total.toFixed(2)}</p>
+                <p>Data: {new Date(selectedOrder.createdAt).toLocaleDateString("pt-BR")}</p>
+                {/* Adicionar mais detalhes conforme necessário */}
+              </div>
+            </div>
           </div>
-
-          {activeTab === "configuracoes" && <SettingsTab />}
         </div>
-      </div>
-      {/* Modal de Detalhes do Pedido */}
-      <OrderDetailDialog order={selectedOrder as Order | null} items={orderItems} isOpen={isOrderDetailOpen} onClose={() => setIsOrderDetailOpen(false)} />
+      )}
     </div>
   )
 }
+
+export default ProfilePage

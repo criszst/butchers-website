@@ -30,6 +30,8 @@ interface SuccessPageProps {
 export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: SuccessPageProps) => {
   const orderNumber = Math.floor(Math.random() * 10000)
 
+  console.log("SuccessPage renderizada com:", { formaPagamento, tipoEntrega, total }) // Debug log
+
   const getPaymentIcon = () => {
     switch (tipoEntrega) {
       case "dinheiro":
@@ -61,7 +63,7 @@ export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: 
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500 flex items-center justify-center p-4 z-[9999]">
       {/* Mobile Design */}
       <div className="lg:hidden w-full max-w-sm">
         <motion.div

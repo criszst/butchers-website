@@ -1,5 +1,4 @@
 "use server"
-
 import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
@@ -12,7 +11,6 @@ interface OrderItem {
   category: string
 }
 
-// Updated CustomerData interface to match new Address schema fields
 interface CustomerData {
   nome: string
   email?: string
@@ -24,7 +22,6 @@ interface CustomerData {
   state: string
   country: string
   cep: string
-  observacoes?: string
 }
 
 interface CreateOrderData {
@@ -39,8 +36,14 @@ interface CreateOrderData {
 
 export async function createOrder(orderData: CreateOrderData) {
   try {
+    console.log("=== INÍCIO CREATE ORDER ===")
+    console.log("Dados recebidos:", JSON.stringify(orderData, null, 2))
+
     const session = await getServerSession()
+    console.log("Sessão:", session?.user?.email)
+
     if (!session?.user?.email) {
+      console.log("❌ Usuário não autenticado")
       return { success: false, message: "Usuário não autenticado" }
     }
 
@@ -48,32 +51,75 @@ export async function createOrder(orderData: CreateOrderData) {
       where: { email: session.user.email },
     })
 
+    console.log("Usuário encontrado:", user?.id)
+
     if (!user) {
+      console.log("❌ Usuário não encontrado no banco")
       return { success: false, message: "Usuário não encontrado" }
     }
 
-    
+    // Validar se há itens no pedido
+    if (!orderData.items || orderData.items.length === 0) {
+      console.log("❌ Nenhum item no pedido")
+      return { success: false, message: "Nenhum item no pedido" }
+    }
+
+    // Buscar produtos e validar disponibilidade
     const productIds = orderData.items.map((item) => item.productId)
+    console.log("IDs dos produtos:", productIds)
+
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
     })
 
+    console.log("Produtos encontrados:", products.length)
+
     for (const item of orderData.items) {
       const product = products.find((p) => p.id === item.productId)
-      if (!product || !product.available || product.stock < item.quantity) {
+      console.log(`Validando produto ${item.productId}:`, {
+        encontrado: !!product,
+        disponivel: product?.available,
+        estoque: product?.stock,
+        quantidadeSolicitada: item.quantity,
+      })
+
+      if (!product) {
+        console.log(`❌ Produto ${item.productId} não encontrado`)
         return {
           success: false,
-          message: `Produto ${item.name} não está disponível na quantidade solicitada`,
+          message: `Produto ${item.name} não encontrado`,
+        }
+      }
+
+      if (!product.available) {
+        console.log(`❌ Produto ${item.productId} não disponível`)
+        return {
+          success: false,
+          message: `Produto ${item.name} não está disponível`,
+        }
+      }
+
+      if (product.stock < item.quantity) {
+        console.log(`❌ Estoque insuficiente para produto ${item.productId}`)
+        return {
+          success: false,
+          message: `Produto ${item.name} não tem estoque suficiente. Disponível: ${product.stock}`,
         }
       }
     }
 
-    // Criar o pedido
+    console.log("✅ Todos os produtos validados")
+
+
+    console.log("Criando pedido...")
     const order = await prisma.order.create({
       data: {
         userId: user.id,
         total: orderData.total,
         status: "Preparando",
+
+        paymentMethod: orderData.paymentType,
+
         items: {
           create: orderData.items.map((item) => ({
             name: item.name,
@@ -88,7 +134,10 @@ export async function createOrder(orderData: CreateOrderData) {
       },
     })
 
-    // Atualizar estoque dos produtos
+    console.log("✅ Pedido criado com ID:", order.id)
+
+
+    console.log("Atualizando estoque...")
     for (const item of orderData.items) {
       await prisma.product.update({
         where: { id: item.productId },
@@ -98,28 +147,28 @@ export async function createOrder(orderData: CreateOrderData) {
           },
         },
       })
+      console.log(`✅ Estoque atualizado para produto ${item.productId}`)
     }
 
-    
+    console.log("Verificando endereço...")
     const existingAddress = await prisma.address.findFirst({
       where: {
         userId: user.id,
         street: orderData.customerData.street,
         number: orderData.customerData.number,
-        complement: orderData.customerData.complement,
         neighborhood: orderData.customerData.neighborhood,
         city: orderData.customerData.city,
         state: orderData.customerData.state,
-        country: orderData.customerData.country,
         cep: orderData.customerData.cep,
       },
     })
 
     if (!existingAddress) {
+      console.log("Criando novo endereço...")
       await prisma.address.create({
         data: {
           userId: user.id,
-          name: "Endereço não disponivel",
+          name: orderData.customerData.nome || "Endereço de entrega",
           street: orderData.customerData.street,
           number: orderData.customerData.number,
           complement: orderData.customerData.complement,
@@ -131,27 +180,34 @@ export async function createOrder(orderData: CreateOrderData) {
           isDefault: false,
         },
       })
+      console.log("✅ Novo endereço criado")
     }
 
-    // Limpar carrinho do usuário
-    await prisma.cartItem.deleteMany({
+    console.log("Limpando carrinho...")
+    const deletedItems = await prisma.cartItem.deleteMany({
       where: { userId: user.id },
     })
+    console.log(`✅ ${deletedItems.count} itens removidos do carrinho`)
 
     revalidatePath("/")
-    revalidatePath("/orders")
+    revalidatePath("/perfil#orders")
+
+    const orderNumber = order.id.toString().padStart(8, "0").toUpperCase()
+    console.log("✅ Pedido finalizado com sucesso:", orderNumber)
+    console.log("=== FIM CREATE ORDER ===")
 
     return {
       success: true,
       message: "Pedido criado com sucesso",
       orderId: order.id,
-      orderNumber: order.id.slice(-8).toUpperCase(),
+      orderNumber,
     }
-  } catch (error) {
-    console.error("Erro ao criar pedido:", error)
+  } catch (error: any) {
+    console.error("❌ ERRO COMPLETO:", error)
+    console.error("Stack trace:", error.stack)
     return {
       success: false,
-      message: "Erro interno do servidor",
+      message: `Erro interno do servidor: ${error.message}`,
     }
   }
 }
@@ -182,7 +238,7 @@ export async function getAllOrders() {
           name: order.user.name || "Cliente",
           email: order.user.email || "",
           phone: "(11) 99999-9999", // Mock phone
-          address: "Endereço não disponível", // Would need to get from address table
+          address: "Endereço não disponível",
         },
         items: order.items.map((item) => ({
           name: item.name,
@@ -193,7 +249,7 @@ export async function getAllOrders() {
         status: order.status,
         createdAt: order.createdAt.toLocaleString("pt-BR"),
         estimatedDelivery: new Date(order.createdAt.getTime() + 60 * 60 * 1000).toLocaleString("pt-BR"),
-
+        paymentMethod: order.paymentMethod,
       })),
     }
   } catch (error) {
@@ -208,7 +264,8 @@ export async function getAllOrders() {
 
 export async function updateOrderStatus(orderId: string, newStatus: string) {
   try {
-    const id = orderId
+  
+    const id = orderId.replace("#", "").replace(/^0+/, "") // Remove # e zeros à esquerda
 
     await prisma.order.update({
       where: { id },
@@ -216,7 +273,6 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     })
 
     revalidatePath("/admin/orders")
-
     return {
       success: true,
       message: "Status do pedido atualizado com sucesso",
@@ -227,5 +283,36 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
       success: false,
       message: "Erro ao atualizar status do pedido",
     }
+  }
+}
+
+
+export async function getUserOrders() {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return { success: false, orders: [] }
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    })
+
+    if (!user) {
+      return { success: false, orders: [] }
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { userId: user.id },
+      include: {
+        items: true,
+      },
+      orderBy: { createdAt: "desc" },
+    })
+
+    return { success: true, orders }
+  } catch (error) {
+    console.error("Erro ao buscar pedidos do usuário:", error)
+    return { success: false, orders: [] }
   }
 }
