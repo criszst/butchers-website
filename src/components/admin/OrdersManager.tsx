@@ -36,10 +36,8 @@ import {
   ChevronUp,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { getAllOrders, updateOrderStatus } from "@/app/actions/order/orders"
+import { getAllOrders, updateOrderStatusByOrderNumber } from "@/app/actions/order/orders"
 import { toast } from "sonner"
-
-import { PaymentStatus } from "@/generated/prisma"
 
 interface Order {
   id: string
@@ -68,15 +66,12 @@ interface Order {
   total: number
   status: string
   paymentMethod: string
-  paymentStatus: PaymentStatus | undefined
-
   createdAt: string
   estimatedDelivery?: Date | null
   trackingNumber?: string
   deliveryFee?: number
   discount?: number
-   
-
+  
 }
 
 export function OrdersManager() {
@@ -144,20 +139,6 @@ export function OrdersManager() {
     setFilteredOrders(filtered)
   }, [orders, searchTerm, statusFilter])
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
-    try {
-      const result = await updateOrderStatus(orderId, newStatus)
-      if (result.success) {
-        setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)))
-        toast.success("Status do pedido atualizado com sucesso!")
-      } else {
-        toast.error(result.message || "Erro ao atualizar status")
-      }
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error)
-      toast.error("Erro ao atualizar status do pedido")
-    }
-  }
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -173,7 +154,7 @@ export function OrdersManager() {
     if (!editingOrder) return
     
     try {
-      const result = await updateOrderStatus(editingOrder.id, editingOrder.status)
+      const result = await updateOrderStatusByOrderNumber(editingOrder.orderNumber, editingOrder.status)
       if (result.success) {
         setOrders((prev) => prev.map((order) => (order.id === editingOrder.id ? editingOrder : order)))
         setShowEditModal(false)
@@ -436,7 +417,7 @@ export function OrdersManager() {
                     </div>
                     <div className="flex items-center text-xs sm:text-sm text-gray-600">
                       <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
-                      <span className="truncate">{order.customer.phone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")}</span>
+                      <span className="truncate">{order.customer.phone}</span>
                     </div>
                     <div className="flex items-start text-xs sm:text-sm text-gray-600">
                       <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0 mt-0.5" />
@@ -593,7 +574,7 @@ export function OrdersManager() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
             onClick={() => setShowOrderDetails(false)}
           >
             <motion.div
@@ -602,39 +583,120 @@ export function OrdersManager() {
               animate="visible"
               exit="exit"
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
             >
-              <div className="p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg sm:text-xl font-bold">Detalhes do Pedido {selectedOrder.id}</h3>
+              {/* Header com gradiente */}
+              <div className="relative bg-gradient-to-r from-red-600 to-red-700 text-white p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Package className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">{selectedOrder.id}</h3>
+                      <p className="text-red-100">Detalhes do Pedido</p>
+                    </div>
+                  </div>
                   <motion.button
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setShowOrderDetails(false)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 hover:bg-white/20 rounded-full transition-colors"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-6 w-6" />
                   </motion.button>
                 </div>
+                
+                {/* Status Badge */}
+                <div className="mt-4">
+                  <Badge className={`${getStatusColor(selectedOrder.status)} text-sm px-3 py-1`}>
+                    {getStatusIcon(selectedOrder.status)}
+                    <span className="ml-2">{selectedOrder.status}</span>
+                  </Badge>
+                </div>
+              </div>
 
-                <div className="space-y-6">
-                  {/* Customer Details */}
+              <div className="overflow-y-auto max-h-[calc(90vh-160px)]">
+                <div className="p-6 space-y-8">
+                  {/* Status Timeline */}
                   <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                   >
-                    <h4 className="font-semibold mb-3 flex items-center">
-                      <User className="h-5 w-5 mr-2" />
-                      Informações do Cliente
-                    </h4>
-                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                      <p><strong>Nome:</strong> {selectedOrder.customer.name}</p>
-                      <p><strong>Email:</strong> {selectedOrder.customer.email}</p>
-                      <p><strong>Telefone:</strong> {selectedOrder.customer.phone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")}</p>
-                      <p><strong>Endereço:</strong>
-                       <div className="mb-1">
-                          <div className="mb-2">
+                    <h4 className="font-bold text-lg mb-4 text-gray-900">Status do Pedido</h4>
+                    <div className="relative">
+                      <div className="flex items-center justify-between">
+                        {["Preparando", "Pronto", "Saiu para Entrega", "Entregue"].map((status, index) => {
+                          const isActive = statusOptions.findIndex(s => s.value === selectedOrder.status) >= index + 1
+                          const isCurrent = selectedOrder.status === status
+                          
+                          return (
+                            <div key={status} className="flex flex-col items-center relative">
+                              <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: 0.2 + index * 0.1 }}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                                  isActive || isCurrent 
+                                    ? 'bg-red-600 border-red-600 text-white' 
+                                    : 'bg-gray-200 border-gray-300 text-gray-500'
+                                }`}
+                              >
+                                {getStatusIcon(status)}
+                              </motion.div>
+                              <span className={`text-xs mt-2 text-center max-w-16 ${
+                                isActive || isCurrent ? 'text-red-600 font-medium' : 'text-gray-500'
+                              }`}>
+                                {status}
+                              </span>
+                              {index < 3 && (
+                                <div className={`absolute top-5 left-10 w-full h-0.5 ${
+                                  isActive ? 'bg-red-600' : 'bg-gray-300'
+                                }`} style={{ width: '100px' }} />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <div className="grid lg:grid-cols-2 gap-8">
+                    {/* Customer Details */}
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="space-y-4"
+                    >
+                      <h4 className="font-bold text-lg text-gray-900 flex items-center">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                          <User className="h-5 w-5 text-blue-600" />
+                        </div>
+                        Cliente
+                      </h4>
+                      
+                      <Card className="border-l-4 border-l-blue-500">
+                        <CardContent className="p-4">
+                          <div className="flex items-start space-x-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                              {selectedOrder.customer.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <div className="grid grid-cols-1 gap-2">
+                                <div className="flex items-center text-sm">
+                                  <User className="h-4 w-4 mr-2 text-gray-500" />
+                                  <span className="font-medium">{selectedOrder.customer.name}</span>
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                                  <span>{selectedOrder.customer.phone}</span>
+                                </div>
+                                <div className="flex items-start text-sm text-gray-600">
+                                  <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5 flex-shrink-0" />
+                                    <div className="mb-1">
+                          <div className="font-bold mb-2">
                             {selectedOrder.customer.address[0].street}, {selectedOrder.customer.address[0].number}
                           </div>
                           <div >
@@ -644,75 +706,100 @@ export function OrdersManager() {
                             {selectedOrder.customer.address[0].state}, {selectedOrder.customer.address[0].cep}
                           </div>
                         </div>
-                      </p>
-                    </div>
-                  </motion.div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+
+                    {/* Order Summary */}
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="space-y-4"
+                    >
+                      <h4 className="font-bold text-lg text-gray-900 flex items-center">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                          <DollarSign className="h-5 w-5 text-green-600" />
+                        </div>
+                        Resumo
+                      </h4>
+                      
+                      <Card className="border-l-4 border-l-green-500">
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-gray-600">Total do Pedido:</span>
+                            <span className="font-bold text-2xl text-green-600">R$ {selectedOrder.total.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600">Método de Pagamento:</span>
+                            <Badge variant="outline" className="font-medium">
+                              <CreditCard className="h-3 w-3 mr-1" />
+                              {selectedOrder.paymentMethod}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600">Data do Pedido:</span>
+                            <div className="flex items-center text-sm">
+                              <Calendar className="h-4 w-4 mr-1 text-gray-500" />
+                              {selectedOrder.createdAt}
+                            </div>
+                          </div>
+                          {selectedOrder.estimatedDelivery && (
+                            <div className="flex justify-between items-center py-1">
+                              <span className="text-gray-600">Previsão de Entrega:</span>
+                              <div className="flex items-center text-sm">
+                                <Truck className="h-4 w-4 mr-1 text-gray-500" />
+                                {selectedOrder.estimatedDelivery === null ? "Não disponível" : selectedOrder.estimatedDelivery.toLocaleDateString("pt-BR")}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </div>
 
                   {/* Order Items */}
                   <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
                   >
-                    <h4 className="font-semibold mb-3 flex items-center">
-                      <Package2 className="h-5 w-5 mr-2" />
-                      Itens do Pedido
+                    <h4 className="font-bold text-lg mb-4 text-gray-900 flex items-center">
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                        <Package2 className="h-5 w-5 text-orange-600" />
+                      </div>
+                      Itens do Pedido ({selectedOrder.items.length})
                     </h4>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedOrder.items.map((item, idx) => (
                         <motion.div 
                           key={idx}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3 + idx * 0.1 }}
-                          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          transition={{ delay: 0.5 + idx * 0.1 }}
                         >
-                          <div>
-                            <p className="font-medium">{item.name}</p>
-                            <p className="text-sm text-gray-600">Quantidade: {item.quantity}</p>
-                          </div>
-                          <p className="font-bold text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</p>
+                          <Card className="hover:shadow-md transition-all duration-200">
+                            <CardContent className="p-4">
+                              <div className="flex items-center space-x-4">
+                                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
+                                  <Package2 className="h-6 w-6 text-white" />
+                                </div>
+                                <div className="flex-1">
+                                  <h5 className="font-bold text-gray-900">{item.name}</h5>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span className="text-sm text-gray-600">Qtd: {item.quantity}</span>
+                                    <span className="font-bold text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
                         </motion.div>
                       ))}
-                    </div>
-                  </motion.div>
-
-                  {/* Order Summary */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <h4 className="font-semibold mb-3 flex items-center">
-                      <TrendingUp className="h-5 w-5 mr-2" />
-                      Resumo do Pedido
-                    </h4>
-                    <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span>Total:</span>
-                        <span className="font-bold text-lg text-green-600">R$ {selectedOrder.total.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Pagamento:</span>
-                        <Badge variant="outline">{selectedOrder.paymentMethod}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Status:</span>
-                        <Badge className={getStatusColor(selectedOrder.status)}>
-                          {getStatusIcon(selectedOrder.status)}
-                          {selectedOrder.status}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Data do Pedido:</span>
-                        <span>{selectedOrder.createdAt}</span>
-                      </div>
-                      {selectedOrder.estimatedDelivery && (
-                        <div className="flex justify-between items-center">
-                          <span>Previsão de Entrega:</span>
-                          <span>{selectedOrder.estimatedDelivery === null ? "N/A" : selectedOrder.estimatedDelivery.toLocaleDateString('pt-BR')}</span>
-                        </div>
-                      )}
                     </div>
                   </motion.div>
                 </div>
@@ -745,7 +832,7 @@ export function OrdersManager() {
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg sm:text-xl font-bold flex items-center">
                     <Edit className="h-5 w-5 mr-2" />
-                    Editar Pedido {editingOrder.id}
+                    Editar Pedido {editingOrder.orderNumber}
                   </h3>
                   <motion.button
                     whileHover={{ scale: 1.1, rotate: 90 }}
@@ -795,12 +882,15 @@ export function OrdersManager() {
                     <div className="mt-2 bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
                       <div><strong>Nome:</strong> {editingOrder.customer.name}</div>
                       <div><strong>Email:</strong> {editingOrder.customer.email}</div>
-                      <div><strong>Telefone:</strong> {editingOrder.customer.phone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")}</div>
-                      <div><strong>Endereço:</strong>
-                      {editingOrder.customer.address.map((line, idx) => (
-                        <div key={idx} className="ml-2">{line.street}, {line.number} - {line.neighborhood} - {line.cep} / {line.state} </div>
-                      ))}
-                      </div>
+                      <div><strong>Telefone:</strong> {editingOrder.customer.phone}</div>
+                      <div><strong>Endereço:</strong> 
+                      {editingOrder.customer.address.map((line, idx) => { 
+                        return (
+                        <div key={idx} className="mt-1">
+                          {line.street}, {line.number} - {line.neighborhood} - {line.city}, <br />
+                          {line.city} - {line.state}, {line.cep}
+                        </div> 
+                       ) })}</div>
                     </div>
                   </motion.div>
 

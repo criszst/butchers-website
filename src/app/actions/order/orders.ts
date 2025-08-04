@@ -291,17 +291,17 @@ export async function getAllOrders() {
   }
 }
 
-export async function updateOrderStatus(orderId: string, newStatus: string) {
+export async function updateOrderStatusByOrderNumber(orderId: string, newStatus: string) {
   try {
   
-    const id = orderId.replace("#", "").replace(/^0+/, "") // Remove # e zeros à esquerda
+    console.log("Atualizando status do pedido:", orderId, "para", newStatus)
 
     await prisma.order.update({
-      where: { id },
+      where: { orderNumber: orderId },
       data: { status: newStatus },
     })
 
-    revalidatePath("/admin/orders")
+    revalidatePath("/admin#orders")
     return {
       success: true,
       message: "Status do pedido atualizado com sucesso",
