@@ -37,7 +37,7 @@ import { AddressModal } from "@/components/address/AddressModal"
 import { ProductDetailModal } from "@/components/product/modals/ProductDetail"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
-import type { Address } from "@/generated/prisma"
+import { PaymentStatus, type Address } from "@/generated/prisma"
 import { SuccessPage } from "@/components/checkout/SuccessPage"
 
 export default function PaymentPage() {
@@ -107,20 +107,20 @@ export default function PaymentPage() {
     console.log("=== INICIANDO SUBMIT ORDER ===")
 
     if (!session) {
-      console.log("❌ Sem sessão")
+      console.log("Sem sessão")
       setShowLoginPrompt(true)
       return
     }
 
     if (!selectedAddress) {
-      console.log("❌ Sem endereço selecionado")
+      console.log("Sem endereço selecionado")
       toast.error("Selecione um endereço de entrega")
       setShowAddressModal(true)
       return
     }
 
     if (items.length === 0) {
-      console.log("❌ Carrinho vazio")
+      console.log(" Carrinho vazio")
       toast.error("Carrinho está vazio")
       return
     }
@@ -137,8 +137,9 @@ export default function PaymentPage() {
           category: item.product.category,
         })),
         total,
-        paymentMethod: "entrega", // Método de entrega
-        paymentType, // Tipo de pagamento (dinheiro, credito, etc)
+        paymentMethod: "entrega",
+        paymentType,
+        PaymentStatus: PaymentStatus.Pendente,
         customerData: {
           nome: session.user?.name || "",
           email: session.user?.email || "",

@@ -9,6 +9,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ----------->>> ENUMS
+
+enum OrderStatus {
+  Preparando
+  Enviado
+  Entregue
+  Cancelado
+}
+
+enum PaymentStatus {
+  Pendente
+  Pago
+  Cancelado
+  Estornado
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -90,16 +106,30 @@ model VerificationToken {
 
 model Order {
   id        String      @id @default(cuid())
+  orderNumber String @unique @default(cuid())
+
+  user      User        @relation(fields: [userId], references: [id])
   userId    String
+  
   date      DateTime    @default(now())
   total     Float
   status    String      @default("Preparando")
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  items     OrderItem[]
-  user      User        @relation(fields: [userId], references: [id])
 
-  paymentMethod String @default("Nenhum")
+  paymentMethod  String
+  paymentStatus  PaymentStatus @default(Pendente)
+  paymentDate    DateTime?
+
+  estimatedDelivery DateTime?
+  deliveryDate      DateTime?
+  trackingCode      String?
+
+  deliveryAddress String? @db.Text
+
+  createdAt DateTime    @default(now())  
+  updatedAt DateTime    @updatedAt
+  
+  items     OrderItem[]
+
 }
 
 model OrderItem {

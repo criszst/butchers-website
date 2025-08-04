@@ -3,6 +3,11 @@ import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 
+import crypto from "crypto"
+import generateOrderNumber from "@/app/utils/db/generateOrderNumber"
+
+import { PaymentStatus } from "@/generated/prisma"
+
 interface OrderItem {
   productId: number
   name: string
@@ -25,17 +30,20 @@ interface CustomerData {
 }
 
 interface CreateOrderData {
+  paymentType: any
   items: OrderItem[]
   total: number
   paymentMethod: string
-  paymentType: string
+  PaymentStatus: PaymentStatus | undefined
   customerData: CustomerData
   deliveryFee: number
   discount?: number
 }
 
+
 export async function createOrder(orderData: CreateOrderData) {
   try {
+    
     console.log("=== INÍCIO CREATE ORDER ===")
     console.log("Dados recebidos:", JSON.stringify(orderData, null, 2))
 
@@ -110,6 +118,8 @@ export async function createOrder(orderData: CreateOrderData) {
 
     console.log("✅ Todos os produtos validados")
 
+    const readableOrderNumber = generateOrderNumber(user.name || "XX")
+
 
     console.log("Criando pedido...")
     const order = await prisma.order.create({
@@ -118,7 +128,9 @@ export async function createOrder(orderData: CreateOrderData) {
         total: orderData.total,
         status: "Preparando",
 
-        paymentMethod: orderData.paymentType,
+        paymentMethod: orderData.paymentMethod,
+        paymentStatus: orderData.PaymentStatus,
+        orderNumber: readableOrderNumber,
 
         items: {
           create: orderData.items.map((item) => ({
@@ -222,6 +234,17 @@ export async function getAllOrders() {
             id: true,
             name: true,
             email: true,
+            phone: true,
+            Address: {
+              select: {
+                street: true,
+                number: true,
+                neighborhood: true,
+                city: true,
+                state: true,
+                cep: true,
+              },
+            },
           },
         },
       },
@@ -233,23 +256,29 @@ export async function getAllOrders() {
     return {
       success: true,
       orders: orders.map((order) => ({
-        id: `#${order.id.toString().padStart(4, "0")}`,
+        id: `#${order.orderNumber}`,
+        orderNumber: order.orderNumber,
         customer: {
           name: order.user.name || "Cliente",
           email: order.user.email || "",
-          phone: "(11) 99999-9999", // Mock phone
-          address: "Endereço não disponível",
+          phone: order.user.phone || "",
+          address: order.user.Address
         },
         items: order.items.map((item) => ({
           name: item.name,
           quantity: item.quantity,
           price: item.price,
+          category: item.category || "Outros",
         })),
         total: order.total,
         status: order.status,
+
+         paymentMethod: order.paymentMethod,
+         paymentStatus: order.paymentStatus,
+
         createdAt: order.createdAt.toLocaleString("pt-BR"),
-        estimatedDelivery: new Date(order.createdAt.getTime() + 60 * 60 * 1000).toLocaleString("pt-BR"),
-        paymentMethod: order.paymentMethod,
+        estimatedDelivery: order.estimatedDelivery,
+
       })),
     }
   } catch (error) {

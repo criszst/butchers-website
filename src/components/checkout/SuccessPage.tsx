@@ -19,6 +19,8 @@ import {
   MessageCircle,
 } from "lucide-react"
 import { motion } from "framer-motion"
+import { useEffect, useState } from "react"
+import { getUserOrders } from "@/app/actions/order/orders"
 
 interface SuccessPageProps {
   formaPagamento: string
@@ -27,9 +29,40 @@ interface SuccessPageProps {
   onNewOrder: () => void
 }
 
-export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: SuccessPageProps) => {
-  const orderNumber = Math.floor(Math.random() * 10000)
+interface UserOrder {
+  orderNumber:  string
+  formaPagamento: string
+  tipoEntrega: string
+  total: number
+  estimatedDelivery: Date | null
+}
 
+export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: SuccessPageProps) => {
+
+  const [userOrder, setUserOrder] = useState<UserOrder>({
+    orderNumber: "",
+    formaPagamento: formaPagamento,
+    tipoEntrega: tipoEntrega,
+    total: total,
+    estimatedDelivery: null,
+  })
+
+  useEffect(() => {
+  const getUserOrder = async (): Promise<UserOrder> => {
+    const data = await getUserOrders();
+    return {
+      orderNumber: data.orders[0]?.orderNumber,
+      formaPagamento: data.orders[0]?.paymentMethod || formaPagamento,
+      tipoEntrega: tipoEntrega,
+      total: data.orders[0]?.total || total,
+      estimatedDelivery: data.orders[0]?.estimatedDelivery || null,
+    }
+  }
+
+  getUserOrder().then((userOrder) => {
+    setUserOrder(userOrder);
+  });
+}, []);
   console.log("SuccessPage renderizada com:", { formaPagamento, tipoEntrega, total }) // Debug log
 
   const getPaymentIcon = () => {
@@ -116,14 +149,14 @@ export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: 
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl shadow-sm">
                   <Package className="h-6 w-6 text-blue-600 mx-auto mb-2" />
                   <p className="font-semibold text-gray-800 text-sm">Número do Pedido</p>
-                  <p className="text-lg font-bold text-blue-600">#CD{orderNumber}</p>
+                  <p className="text-lg font-bold text-blue-600">{userOrder.orderNumber}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-3 rounded-xl shadow-sm">
                     <Timer className="h-5 w-5 text-orange-600 mx-auto mb-1" />
                     <p className="font-semibold text-gray-800 text-xs">Tempo Estimado</p>
-                    <p className="text-sm font-bold text-orange-600">45-60 min</p>
+                    <p className="text-sm font-bold text-orange-600">{userOrder.estimatedDelivery === null ? "Indefinido" : userOrder.estimatedDelivery.toLocaleDateString("pt-BR")}</p>
                   </div>
                   <div className="bg-gradient-to-r from-green-50 to-emerald-100 p-3 rounded-xl shadow-sm">
                     <DollarSign className="h-5 w-5 text-green-600 mx-auto mb-1" />
@@ -246,12 +279,12 @@ export const SuccessPage = ({ formaPagamento, tipoEntrega, total, onNewOrder }: 
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-xl shadow-lg">
                   <Package className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                   <p className="font-semibold text-gray-800 text-base">Número do Pedido</p>
-                  <p className="text-2xl font-bold text-blue-600">#CD{orderNumber}</p>
+                  <p className="text-2xl font-bold text-blue-600">{userOrder.orderNumber}</p>
                 </div>
                 <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-6 rounded-xl shadow-lg">
                   <Timer className="h-8 w-8 text-orange-600 mx-auto mb-2" />
                   <p className="font-semibold text-gray-800 text-base">Tempo Estimado</p>
-                  <p className="text-2xl font-bold text-orange-600">45-60 min</p>
+                  <p className="text-2xl font-bold text-orange-600">{userOrder.estimatedDelivery === null ? "Indefinido" : userOrder.estimatedDelivery.toLocaleDateString("pt-BR")}</p>
                 </div>
               </motion.div>
 
