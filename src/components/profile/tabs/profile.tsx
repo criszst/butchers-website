@@ -101,7 +101,6 @@ function ProfilePage() {
   return (
     <div className="container mx-auto px-4 py-8">
        
-     
 
       {activeTab === "perfil" && (
          <ProfileTabs orders={orders} user={user} isEditing={isEditing} setIsEditing={setIsEditing} onSave={handleSave} stats={stats} achievements={achievements} />

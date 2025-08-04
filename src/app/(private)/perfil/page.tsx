@@ -26,7 +26,7 @@ interface Achievement {
   date: string
 }
 
-function ProfilePage() {
+export default function ProfilePage() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState("perfil")
   const [isEditing, setIsEditing] = useState(false)
@@ -34,7 +34,7 @@ function ProfilePage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderDetails, setShowOrderDetails] = useState(false)
 
-  
+  // Mock data - substitua pelos dados reais
   const stats = {
     orders: orders.length,
     favorites: 0,
@@ -99,12 +99,44 @@ function ProfilePage() {
     : null
 
   return (
-    <div className="container mx-auto px-4 py-8">
-    
-     <ProfileTab />
+   <div className="container mx-auto px-4 py-8">
+  <div className="flex space-x-4 border-b border-gray-200 mb-6">
+    <button
+      onClick={() => setActiveTab("perfil")}
+      className={`px-4 py-2 font-medium ${
+        activeTab === "perfil"
+          ? "border-b-2 border-black text-black"
+          : "text-gray-500 hover:text-black"
+      }`}
+    >
+      Perfil
+    </button>
+    <button
+      onClick={() => setActiveTab("pedidos")}
+      className={`px-4 py-2 font-medium ${
+        activeTab === "pedidos"
+          ? "border-b-2 border-black text-black"
+          : "text-gray-500 hover:text-black"
+      }`}
+    >
+      Pedidos
+    </button>
+
+    {/* Se quiser adicionar mais abas, pode seguir o mesmo padrão */}
+  </div>
+ 
+ 
 
       {activeTab === "perfil" && (
-         <ProfileTabs orders={orders} user={user} isEditing={isEditing} setIsEditing={setIsEditing} onSave={handleSave} stats={stats} achievements={achievements} />
+        <ProfileTabs
+          user={user}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+          onSave={handleSave}
+          stats={stats}
+          achievements={achievements}
+          orders={orders}
+        />
       )}
 
       {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
@@ -136,5 +168,3 @@ function ProfilePage() {
     </div>
   )
 }
-
-export default ProfilePage

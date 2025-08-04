@@ -45,7 +45,15 @@ interface ProfileTabProps {
   orders: Order[]
 }
 
-function ProfileTab({ user, isEditing, setIsEditing, onSave, stats, achievements, orders }: ProfileTabProps) {
+export default function ProfileTab({
+  user,
+  isEditing,
+  setIsEditing,
+  onSave,
+  stats,
+  achievements,
+  orders,
+}: ProfileTabProps) {
   const [formFields, setFormFields] = useState<Partial<ExtendedUser>>({})
   const [isPending, startTransition] = useTransition()
 
@@ -344,5 +352,3 @@ function ProfileTab({ user, isEditing, setIsEditing, onSave, stats, achievements
     </div>
   )
 }
-
-export default ProfileTab
