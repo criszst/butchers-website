@@ -121,7 +121,7 @@ export function ProductCard({
             {/* Price and Actions */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 mr-2">
                   <span className="text-xl lg:text-2xl font-bold text-red-600">{formatPrice(discountedPrice)}</span>
                   {product.discount && product.discount > 0 && (
                     <span className="text-sm line-through text-gray-400">{formatPrice(product.price)}</span>
@@ -140,6 +140,7 @@ export function ProductCard({
                   onClick={() => router.push(`/product/${product.id}`)}
                 >
                   <Eye className="h-4 w-4" />
+                  Ver
                 </Button>
                 <Button
                   className={`font-semibold transition-all duration-300 ${
@@ -286,6 +287,8 @@ export function ProductCard({
         </CardContent>
 
         <CardFooter className="p-6 pt-0">
+ 
+ <div className="relative row-2 w-full ">
           <Button
             className={`w-full font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-lg ${
               product.stock === 0
@@ -309,7 +312,19 @@ export function ProductCard({
               </>
             )}
           </Button>
+
+                   <Button
+            className="flex items-center mt-2 w-full text-black hover:bg-red-100 hover:border-red-300 bg-transparent transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-lg"
+            onClick={() => router.push(`/product/${product.id}`)}
+          >
+            <Eye className="h-4 w-4 mr-2 " />
+            <span className="text-sm ">
+            Ver Detalhes
+            </span>
+          </Button>
+          </div>
         </CardFooter>
+        
       </Card>
     </motion.div>
   )

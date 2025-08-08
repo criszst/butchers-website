@@ -116,7 +116,7 @@ export async function loginUser(prevState: LoginResult | null, formData: FormDat
 
   const errors: { [key: string]: string } = {}
 
-  // Validação básica
+  
   if (!email || email.trim() === "") {
     errors.email = "Email é obrigatório."
   } else if (!/\S+@\S+\.\S+/.test(email)) {

@@ -32,7 +32,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
 
   const { addItem, isLoading } = useCart()
 
-  // Filtrar produtos
+ 
   const productsFiltrados = products.filter((product) => {
     const correspondeNome = product.name.toLowerCase().includes(termoBusca.toLowerCase())
     const correspondeCategoria = categoriaSelecionada === "todas" || product.category === categoriaSelecionada

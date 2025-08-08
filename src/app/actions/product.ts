@@ -148,6 +148,14 @@ export async function getProductsAction(filters?: {
       orderBy: { createdAt: "desc" },
     })
 
+    if (!products) {
+      return {
+        success: false,
+        products: [],
+        message: "Nenhum produto encontrado",
+      }
+    }
+
     return {
       success: true,
       products,
