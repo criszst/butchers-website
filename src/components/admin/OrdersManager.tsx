@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   Search,
@@ -29,9 +28,6 @@ import {
   X,
   Save,
   Package2,
-  TrendingUp,
-  AlertTriangle,
-  History,
   ChevronDown,
   ChevronUp,
 } from "lucide-react"
@@ -39,6 +35,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { getAllOrders, updateOrderStatusByOrderNumber } from "@/app/actions/order/orders"
 import { toast } from "sonner"
 
+// Interface corrigida para corresponder ao retorno da action
 interface Order {
   id: string
   orderNumber: string
@@ -46,32 +43,24 @@ interface Order {
     name: string
     email: string
     phone: string
-    address: {
-      street: string
-      number: string
-      neighborhood: string
-      city: string
-      state: string
-      cep: string
-    }[];
   }
   items: {
-    id?: string
+    id: string
     name: string
     quantity: number
     price: number
     category: string
-  }[];
-
+  }[]
   total: number
   status: string
   paymentMethod: string
+  paymentStatus: string
+  deliveryAddress: string | null
+  date: Date
   createdAt: string
-  estimatedDelivery?: Date | null
-  trackingNumber?: string
-  deliveryFee?: number
-  discount?: number
-  
+  estimatedDelivery: Date | null
+  deliveryDate: Date | null
+  trackingCode: string | null
 }
 
 export function OrdersManager() {
@@ -90,8 +79,7 @@ export function OrdersManager() {
   const statusOptions = [
     { value: "all", label: "Todos os Status", color: "bg-gray-100 text-gray-800" },
     { value: "Preparando", label: "Preparando", color: "bg-yellow-100 text-yellow-800" },
-    { value: "Pronto", label: "Pronto", color: "bg-blue-100 text-blue-800" },
-    { value: "Saiu para Entrega", label: "Saiu para Entrega", color: "bg-purple-100 text-purple-800" },
+    { value: "Enviado", label: "Enviado", color: "bg-blue-100 text-blue-800" },
     { value: "Entregue", label: "Entregue", color: "bg-green-100 text-green-800" },
     { value: "Cancelado", label: "Cancelado", color: "bg-red-100 text-red-800" },
   ]
@@ -126,6 +114,7 @@ export function OrdersManager() {
       filtered = filtered.filter(
         (order) =>
           order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.customer.email.toLowerCase().includes(searchTerm.toLowerCase()),
       )
@@ -139,7 +128,6 @@ export function OrdersManager() {
     setFilteredOrders(filtered)
   }, [orders, searchTerm, statusFilter])
 
-
   const handleRefresh = async () => {
     setIsRefreshing(true)
     await loadOrders()
@@ -152,7 +140,7 @@ export function OrdersManager() {
 
   const handleSaveEdit = async () => {
     if (!editingOrder) return
-    
+
     try {
       const result = await updateOrderStatusByOrderNumber(editingOrder.orderNumber, editingOrder.status)
       if (result.success) {
@@ -170,7 +158,7 @@ export function OrdersManager() {
   }
 
   const toggleCardExpansion = (orderId: string) => {
-    setExpandedCards(prev => {
+    setExpandedCards((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(orderId)) {
         newSet.delete(orderId)
@@ -190,9 +178,7 @@ export function OrdersManager() {
     switch (status) {
       case "Preparando":
         return <Clock className="h-4 w-4" />
-      case "Pronto":
-        return <Package className="h-4 w-4" />
-      case "Saiu para Entrega":
+      case "Enviado":
         return <Truck className="h-4 w-4" />
       case "Entregue":
         return <CheckCircle className="h-4 w-4" />
@@ -205,41 +191,41 @@ export function OrdersManager() {
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.95 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      scale: 1
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
     },
     exit: { opacity: 0, y: -20, scale: 0.95 },
-    hover: { 
-      y: -5, 
-      scale: 1.02
-    }
+    hover: {
+      y: -5,
+      scale: 1.02,
+    },
   }
 
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.8, y: 50 },
-    visible: { 
-      opacity: 1, 
-      scale: 1, 
-      y: 0
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
     },
-    exit: { 
-      opacity: 0, 
-      scale: 0.8, 
-      y: 50
-    }
+    exit: {
+      opacity: 0,
+      scale: 0.8,
+      y: 50,
+    },
   }
 
   const overlayVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1 },
-    exit: { opacity: 0 }
+    exit: { opacity: 0 },
   }
 
   if (isLoading) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="flex items-center justify-center min-h-[400px]"
@@ -247,11 +233,11 @@ export function OrdersManager() {
         <div className="text-center">
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
           >
             <Loader2 className="h-8 w-8 mx-auto mb-4 text-red-600" />
           </motion.div>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -265,14 +251,14 @@ export function OrdersManager() {
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       className="space-y-4 sm:space-y-6 p-4 sm:p-6"
     >
       {/* Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
@@ -282,18 +268,15 @@ export function OrdersManager() {
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Gerenciar Pedidos</h2>
           <p className="text-sm sm:text-base text-gray-600">Visualize e gerencie todos os pedidos do sistema</p>
         </div>
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Button 
-            onClick={handleRefresh} 
-            disabled={isRefreshing} 
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
             className="w-full lg:w-auto bg-red-600 hover:bg-red-700 text-white transition-all duration-200"
           >
             <motion.div
               animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
-              transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: "linear" }}
+              transition={{ duration: 1, repeat: isRefreshing ? Number.POSITIVE_INFINITY : 0, ease: "linear" }}
             >
               {isRefreshing ? <Loader2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             </motion.div>
@@ -303,14 +286,14 @@ export function OrdersManager() {
       </motion.div>
 
       {/* Stats Cards */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
       >
         {statusOptions.slice(1).map((status, index) => {
-          const count = orders.filter(order => order.status === status.value).length
+          const count = orders.filter((order) => order.status === status.value).length
           return (
             <motion.div
               key={status.value}
@@ -321,16 +304,18 @@ export function OrdersManager() {
               className="cursor-pointer"
               onClick={() => setStatusFilter(statusFilter === status.value ? "all" : status.value)}
             >
-              <Card className={`border-l-4 ${statusFilter === status.value ? 'border-l-red-500 bg-red-50' : 'border-l-gray-200'} hover:shadow-md transition-all duration-200`}>
+              <Card
+                className={`border-l-4 ${
+                  statusFilter === status.value ? "border-l-red-500 bg-red-50" : "border-l-gray-200"
+                } hover:shadow-md transition-all duration-200`}
+              >
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs sm:text-sm font-medium text-gray-600">{status.label}</p>
                       <p className="text-lg sm:text-2xl font-bold text-gray-900">{count}</p>
                     </div>
-                    <div className={`p-2 rounded-lg ${status.color}`}>
-                      {getStatusIcon(status.value)}
-                    </div>
+                    <div className={`p-2 rounded-lg ${status.color}`}>{getStatusIcon(status.value)}</div>
                   </div>
                 </CardContent>
               </Card>
@@ -340,11 +325,7 @@ export function OrdersManager() {
       </motion.div>
 
       {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <Card>
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-4">
@@ -352,7 +333,7 @@ export function OrdersManager() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
-                    placeholder="Buscar por ID, nome ou email do cliente..."
+                    placeholder="Buscar por ID, número do pedido, nome ou email do cliente..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-red-500"
@@ -396,11 +377,8 @@ export function OrdersManager() {
               <Card className="hover:shadow-xl transition-all duration-300 border-0 shadow-md overflow-hidden">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base sm:text-lg font-bold text-gray-900">{order.id}</CardTitle>
-                    <motion.div
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
+                    <CardTitle className="text-base sm:text-lg font-bold text-gray-900">#{order.orderNumber}</CardTitle>
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                       <Badge className={`${getStatusColor(order.status)} flex items-center gap-1 text-xs`}>
                         {getStatusIcon(order.status)}
                         <span className="hidden sm:inline">{order.status}</span>
@@ -421,20 +399,7 @@ export function OrdersManager() {
                     </div>
                     <div className="flex items-start text-xs sm:text-sm text-gray-600">
                       <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="line-clamp-3">
-                        <div className="mb-1">
-                          <div className="font-bold mb-2">
-                            {order.customer.address[0].street}, {order.customer.address[0].number}
-                          </div>
-                          <div >
-                            {order.customer.address[0].neighborhood} - {order.customer.address[0].city}
-                          </div>
-                          <div className="mt-1">
-                            {order.customer.address[0].state}, {order.customer.address[0].cep}
-                          </div>
-                        </div>
-
-                      </span>
+                      <span className="line-clamp-3">{order.deliveryAddress || "Endereço não informado"}</span>
                     </div>
                   </div>
 
@@ -448,16 +413,17 @@ export function OrdersManager() {
                         whileTap={{ scale: 0.9 }}
                         className="text-gray-500 hover:text-gray-700"
                       >
-                        {expandedCards.has(order.id) ? 
-                          <ChevronUp className="h-4 w-4" /> : 
+                        {expandedCards.has(order.id) ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
                           <ChevronDown className="h-4 w-4" />
-                        }
+                        )}
                       </motion.button>
                     </div>
                     <AnimatePresence>
                       <div className="space-y-1">
                         {order.items.slice(0, expandedCards.has(order.id) ? order.items.length : 2).map((item, idx) => (
-                          <motion.div 
+                          <motion.div
                             key={idx}
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
@@ -471,11 +437,7 @@ export function OrdersManager() {
                           </motion.div>
                         ))}
                         {!expandedCards.has(order.id) && order.items.length > 2 && (
-                          <motion.p 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="text-xs text-gray-500"
-                          >
+                          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-gray-500">
                             +{order.items.length - 2} itens...
                           </motion.p>
                         )}
@@ -494,7 +456,6 @@ export function OrdersManager() {
                       <span className="truncate">{order.paymentMethod}</span>
                     </div>
                   </div>
-
                   <div className="flex items-center text-xs text-gray-500">
                     <Calendar className="h-3 w-3 mr-1" />
                     <span>Pedido: {order.createdAt}</span>
@@ -502,11 +463,7 @@ export function OrdersManager() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-2">
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="flex-1"
-                    >
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
                       <Button
                         variant="outline"
                         size="sm"
@@ -520,11 +477,7 @@ export function OrdersManager() {
                         <span className="hidden sm:inline">Ver</span>
                       </Button>
                     </motion.div>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="flex-1"
-                    >
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
                       <Button
                         variant="outline"
                         size="sm"
@@ -545,11 +498,7 @@ export function OrdersManager() {
 
       {/* Empty State */}
       {filteredOrders.length === 0 && !isLoading && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-12"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-12">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -593,7 +542,7 @@ export function OrdersManager() {
                       <Package className="h-6 w-6" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold">{selectedOrder.id}</h3>
+                      <h3 className="text-2xl font-bold">#{selectedOrder.orderNumber}</h3>
                       <p className="text-red-100">Detalhes do Pedido</p>
                     </div>
                   </div>
@@ -606,7 +555,7 @@ export function OrdersManager() {
                     <X className="h-6 w-6" />
                   </motion.button>
                 </div>
-                
+
                 {/* Status Badge */}
                 <div className="mt-4">
                   <Badge className={`${getStatusColor(selectedOrder.status)} text-sm px-3 py-1`}>
@@ -627,33 +576,38 @@ export function OrdersManager() {
                     <h4 className="font-bold text-lg mb-4 text-gray-900">Status do Pedido</h4>
                     <div className="relative">
                       <div className="flex items-center justify-between">
-                        {["Preparando", "Pronto", "Saiu para Entrega", "Entregue"].map((status, index) => {
-                          const isActive = statusOptions.findIndex(s => s.value === selectedOrder.status) >= index + 1
+                        {["Preparando", "Enviado", "Entregue"].map((status, index) => {
+                          const isActive = statusOptions.findIndex((s) => s.value === selectedOrder.status) >= index + 1
                           const isCurrent = selectedOrder.status === status
-                          
+
                           return (
                             <div key={status} className="flex flex-col items-center relative">
-                              <motion.div 
+                              <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
                                 transition={{ delay: 0.2 + index * 0.1 }}
                                 className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                                  isActive || isCurrent 
-                                    ? 'bg-red-600 border-red-600 text-white' 
-                                    : 'bg-gray-200 border-gray-300 text-gray-500'
+                                  isActive || isCurrent
+                                    ? "bg-red-600 border-red-600 text-white"
+                                    : "bg-gray-200 border-gray-300 text-gray-500"
                                 }`}
                               >
                                 {getStatusIcon(status)}
                               </motion.div>
-                              <span className={`text-xs mt-2 text-center max-w-16 ${
-                                isActive || isCurrent ? 'text-red-600 font-medium' : 'text-gray-500'
-                              }`}>
+                              <span
+                                className={`text-xs mt-2 text-center max-w-16 ${
+                                  isActive || isCurrent ? "text-red-600 font-medium" : "text-gray-500"
+                                }`}
+                              >
                                 {status}
                               </span>
-                              {index < 3 && (
-                                <div className={`absolute top-5 left-10 w-full h-0.5 ${
-                                  isActive ? 'bg-red-600' : 'bg-gray-300'
-                                }`} style={{ width: '100px' }} />
+                              {index < 2 && (
+                                <div
+                                  className={`absolute top-5 left-10 w-full h-0.5 ${
+                                    isActive ? "bg-red-600" : "bg-gray-300"
+                                  }`}
+                                  style={{ width: "100px" }}
+                                />
                               )}
                             </div>
                           )
@@ -676,7 +630,7 @@ export function OrdersManager() {
                         </div>
                         Cliente
                       </h4>
-                      
+
                       <Card className="border-l-4 border-l-blue-500">
                         <CardContent className="p-4">
                           <div className="flex items-start space-x-4">
@@ -695,17 +649,9 @@ export function OrdersManager() {
                                 </div>
                                 <div className="flex items-start text-sm text-gray-600">
                                   <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5 flex-shrink-0" />
-                                    <div className="mb-1">
-                          <div className="font-bold mb-2">
-                            {selectedOrder.customer.address[0].street}, {selectedOrder.customer.address[0].number}
-                          </div>
-                          <div >
-                            {selectedOrder.customer.address[0].neighborhood} - {selectedOrder.customer.address[0].city}
-                          </div>
-                          <div className="mt-1">
-                            {selectedOrder.customer.address[0].state}, {selectedOrder.customer.address[0].cep}
-                          </div>
-                        </div>
+                                  <div className="break-words">
+                                    {selectedOrder.deliveryAddress || "Endereço não informado"}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -727,18 +673,26 @@ export function OrdersManager() {
                         </div>
                         Resumo
                       </h4>
-                      
+
                       <Card className="border-l-4 border-l-green-500">
                         <CardContent className="p-4 space-y-3">
                           <div className="flex justify-between items-center py-2 border-b border-gray-100">
                             <span className="text-gray-600">Total do Pedido:</span>
-                            <span className="font-bold text-2xl text-green-600">R$ {selectedOrder.total.toFixed(2)}</span>
+                            <span className="font-bold text-2xl text-green-600">
+                              R$ {selectedOrder.total.toFixed(2)}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center py-1">
                             <span className="text-gray-600">Método de Pagamento:</span>
                             <Badge variant="outline" className="font-medium">
                               <CreditCard className="h-3 w-3 mr-1" />
                               {selectedOrder.paymentMethod}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600">Status do Pagamento:</span>
+                            <Badge variant="outline" className="font-medium">
+                              {selectedOrder.paymentStatus}
                             </Badge>
                           </div>
                           <div className="flex justify-between items-center py-1">
@@ -753,8 +707,14 @@ export function OrdersManager() {
                               <span className="text-gray-600">Previsão de Entrega:</span>
                               <div className="flex items-center text-sm">
                                 <Truck className="h-4 w-4 mr-1 text-gray-500" />
-                                {selectedOrder.estimatedDelivery === null ? "Não disponível" : selectedOrder.estimatedDelivery.toLocaleDateString("pt-BR")}
+                                {new Date(selectedOrder.estimatedDelivery).toLocaleDateString("pt-BR")}
                               </div>
+                            </div>
+                          )}
+                          {selectedOrder.trackingCode && (
+                            <div className="flex justify-between items-center py-1">
+                              <span className="text-gray-600">Código de Rastreamento:</span>
+                              <span className="font-mono text-sm">{selectedOrder.trackingCode}</span>
                             </div>
                           )}
                         </CardContent>
@@ -776,7 +736,7 @@ export function OrdersManager() {
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedOrder.items.map((item, idx) => (
-                        <motion.div 
+                        <motion.div
                           key={idx}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -790,9 +750,12 @@ export function OrdersManager() {
                                 </div>
                                 <div className="flex-1">
                                   <h5 className="font-bold text-gray-900">{item.name}</h5>
+                                  <p className="text-xs text-gray-500">{item.category}</p>
                                   <div className="flex items-center justify-between mt-1">
                                     <span className="text-sm text-gray-600">Qtd: {item.quantity}</span>
-                                    <span className="font-bold text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</span>
+                                    <span className="font-bold text-green-600">
+                                      R$ {(item.price * item.quantity).toFixed(2)}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -832,7 +795,7 @@ export function OrdersManager() {
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg sm:text-xl font-bold flex items-center">
                     <Edit className="h-5 w-5 mr-2" />
-                    Editar Pedido {editingOrder.orderNumber}
+                    Editar Pedido #{editingOrder.orderNumber}
                   </h3>
                   <motion.button
                     whileHover={{ scale: 1.1, rotate: 90 }}
@@ -851,10 +814,12 @@ export function OrdersManager() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                   >
-                    <Label htmlFor="status" className="text-sm font-medium">Status do Pedido</Label>
-                    <Select 
-                      value={editingOrder.status} 
-                      onValueChange={(value) => setEditingOrder(prev => prev ? {...prev, status: value} : null)}
+                    <Label htmlFor="status" className="text-sm font-medium">
+                      Status do Pedido
+                    </Label>
+                    <Select
+                      value={editingOrder.status}
+                      onValueChange={(value) => setEditingOrder((prev) => (prev ? { ...prev, status: value } : null))}
                     >
                       <SelectTrigger className="mt-2">
                         <SelectValue />
@@ -880,17 +845,21 @@ export function OrdersManager() {
                   >
                     <Label className="text-sm font-medium">Informações do Cliente</Label>
                     <div className="mt-2 bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-                      <div><strong>Nome:</strong> {editingOrder.customer.name}</div>
-                      <div><strong>Email:</strong> {editingOrder.customer.email}</div>
-                      <div><strong>Telefone:</strong> {editingOrder.customer.phone}</div>
-                      <div><strong>Endereço:</strong> 
-                      {editingOrder.customer.address.map((line, idx) => { 
-                        return (
-                        <div key={idx} className="mt-1">
-                          {line.street}, {line.number} - {line.neighborhood} - {line.city}, <br />
-                          {line.city} - {line.state}, {line.cep}
-                        </div> 
-                       ) })}</div>
+                      <div>
+                        <strong>Nome:</strong> {editingOrder.customer.name}
+                      </div>
+                      <div>
+                        <strong>Email:</strong> {editingOrder.customer.email}
+                      </div>
+                      <div>
+                        <strong>Telefone:</strong> {editingOrder.customer.phone}
+                      </div>
+                      <div>
+                        <strong>Endereço:</strong>
+                        <div className="mt-1 break-words">
+                          {editingOrder.deliveryAddress || "Endereço não informado"}
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
 
@@ -944,28 +913,13 @@ export function OrdersManager() {
                     transition={{ delay: 0.5 }}
                     className="flex gap-3 pt-4"
                   >
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="flex-1"
-                    >
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowEditModal(false)}
-                        className="w-full"
-                      >
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
+                      <Button variant="outline" onClick={() => setShowEditModal(false)} className="w-full">
                         Cancelar
                       </Button>
                     </motion.div>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="flex-1"
-                    >
-                      <Button
-                        onClick={handleSaveEdit}
-                        className="w-full bg-red-600 hover:bg-red-700 text-white"
-                      >
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
+                      <Button onClick={handleSaveEdit} className="w-full bg-red-600 hover:bg-red-700 text-white">
                         <Save className="h-4 w-4 mr-2" />
                         Salvar
                       </Button>

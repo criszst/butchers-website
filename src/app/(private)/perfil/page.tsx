@@ -1,11 +1,16 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import type { Order } from "@/generated/prisma"
+import type { Order, OrderItem } from "@/generated/prisma"
 import { getUserOrders } from "@/app/actions/order/orders"
-import ProfileTabs from "@/components/profile/ProfileTab"
-import ProfileTab from "@/components/profile/tabs/profile"
+import { updateUserProfile } from "@/app/actions/user-profile"
+import { getUserProfile } from "@/app/actions/user-profile" // Assuming this function is needed to fetch user info
+import ProfileNavigation from "@/components/profile/ProfileNavigation"
+import ProfileDetails from "@/components/profile/tabs/ProfileDetails"
 import OrdersTab from "@/components/profile/tabs/OrdersTab"
+import AddressesTab from "@/components/profile/tabs/AddressesTab"
+import ProfileHeader from "@/components/profile/Header"
 import { toast } from "sonner"
 
 interface ExtendedUser {
@@ -30,11 +35,11 @@ export default function ProfilePage() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState("perfil")
   const [isEditing, setIsEditing] = useState(false)
-  const [orders, setOrders] = useState<Order[]>([])
+ const [orders, setOrders] = useState<Array<Order & { items: OrderItem[] }>>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderDetails, setShowOrderDetails] = useState(false)
+  const [userInfo, setUserInfo] = useState<ExtendedUser | null>(null)
 
-  // Mock data - substitua pelos dados reais
   const stats = {
     orders: orders.length,
     favorites: 0,
@@ -54,27 +59,90 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const loadOrders = async () => {
-      try {
-        const result = await getUserOrders()
-        if (result.success) {
-          setOrders(result.orders)
-        }
-      } catch (error) {
+        try {
+    const result = await getUserOrders()
+    if (result.success) {
+      const ordersWithItems = result.orders.map((order) => ({
+        ...order,
+        items: order.items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          category: item.category,
+
+          orderId: item.orderId,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        })),
+      }))
+      setOrders(ordersWithItems)
+    }
+  }  catch (error) {
         console.error("Erro ao carregar pedidos:", error)
         toast.error("Erro ao carregar pedidos")
       }
     }
 
+    const getUserInfo = async () => {
+      if (session?.user?.email) {
+        try {
+          const userProfile = await getUserProfile(session.user.email)
+          if (userProfile) {
+            setUserInfo({
+              name: userProfile.name,
+              email: userProfile.email,
+              image: userProfile.image,
+              phone: userProfile.phone,
+              bio: userProfile.bio,
+              birthDate: userProfile.birthDate,
+              cpf: userProfile.cpf,
+            })
+          }
+        } catch (error) {
+          console.error("Erro ao carregar perfil:", error)
+          toast.error("Erro ao carregar dados do perfil")
+        }
+      }
+    }
+
     if (session?.user?.email) {
       loadOrders()
+      getUserInfo()
     }
   }, [session])
 
   const handleSave = async (updatedFields: Partial<ExtendedUser>) => {
     try {
-      // Implementar a lógica de salvamento aqui
-      console.log("Salvando:", updatedFields)
-      toast.success("Perfil atualizado com sucesso!")
+      if (!session?.user?.email) {
+        toast.error("Usuário não autenticado")
+        return
+      }
+
+      // Preparar dados para envio
+      const updateData = {
+        name: updatedFields.name || undefined,
+        bio: updatedFields.bio || undefined,
+        birthDate: updatedFields.birthDate || undefined,
+        phone: updatedFields.phone || undefined,
+        cpf: updatedFields.cpf?.replace(/\D/g, "") || undefined, // Remove formatação do CPF
+        image: updatedFields.image || undefined,
+      }
+
+      // Chamar a Server Action
+      const result = await updateUserProfile(updateData)
+
+      if (result.success) {
+        // Atualizar o estado local com os novos dados
+        setUserInfo((prev) => ({
+          ...prev,
+          ...updateData,
+        }))
+
+        toast.success("Perfil atualizado com sucesso!")
+      } else {
+        toast.error("Erro ao salvar perfil")
+      }
     } catch (error) {
       console.error("Erro ao salvar:", error)
       toast.error("Erro ao salvar perfil")
@@ -86,85 +154,38 @@ export default function ProfilePage() {
     setShowOrderDetails(true)
   }
 
-  const user: ExtendedUser | null = session?.user
-    ? {
-        name: session.user.name,
-        email: session.user.email,
-        image: session.user.image,
-        phone: null, // Buscar do banco de dados
-        bio: null, // Buscar do banco de dados
-        birthDate: null, // Buscar do banco de dados
-        cpf: null, // Buscar do banco de dados
-      }
-    : null
-
   return (
-   <div className="container mx-auto px-4 py-8">
-  <div className="flex space-x-4 border-b border-gray-200 mb-6">
-    <button
-      onClick={() => setActiveTab("perfil")}
-      className={`px-4 py-2 font-medium ${
-        activeTab === "perfil"
-          ? "border-b-2 border-black text-black"
-          : "text-gray-500 hover:text-black"
-      }`}
-    >
-      Perfil
-    </button>
-    <button
-      onClick={() => setActiveTab("pedidos")}
-      className={`px-4 py-2 font-medium ${
-        activeTab === "pedidos"
-          ? "border-b-2 border-black text-black"
-          : "text-gray-500 hover:text-black"
-      }`}
-    >
-      Pedidos
-    </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <ProfileHeader userName={userInfo?.name} />
 
-    {/* Se quiser adicionar mais abas, pode seguir o mesmo padrão */}
-  </div>
- 
- 
+      <div className="container mx-auto px-4 py-8">
+        <ProfileNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {activeTab === "perfil" && (
-        <ProfileTabs
-          user={user}
-          isEditing={isEditing}
-          setIsEditing={setIsEditing}
-          onSave={handleSave}
-          stats={stats}
-          achievements={achievements}
-          orders={orders}
-        />
-      )}
-
-      {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
-
-      {/* Modal de detalhes do pedido */}
-      {showOrderDetails && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold">
-                  Detalhes do Pedido #{selectedOrder.id.toString().padStart(4, "0")}
-                </h3>
-                <button onClick={() => setShowOrderDetails(false)} className="text-gray-500 hover:text-gray-700">
-                  ✕
-                </button>
-              </div>
-              {/* Conteúdo do modal aqui */}
-              <div className="space-y-4">
-                <p>Status: {selectedOrder.status}</p>
-                <p>Total: R$ {selectedOrder.total.toFixed(2)}</p>
-                <p>Data: {new Date(selectedOrder.createdAt).toLocaleDateString("pt-BR")}</p>
-                {/* Adicionar mais detalhes conforme necessário */}
+        <div className="transition-all duration-300">
+          {activeTab === "perfil" && (
+            <ProfileDetails
+              user={userInfo}
+              isEditing={isEditing}
+              setIsEditing={setIsEditing}
+              onSave={handleSave}
+              stats={stats}
+              achievements={achievements}
+              orders={orders}
+            />
+          )}
+          {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
+          {activeTab === "enderecos" && <AddressesTab address={[]} />}
+          {activeTab === "configuracoes" && (
+            <div className="pb-20 md:pb-0">
+              <div className="text-center py-12">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Configurações</h3>
+                <p className="text-gray-600">Em breve...</p>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+
+      </div>
     </div>
   )
 }
