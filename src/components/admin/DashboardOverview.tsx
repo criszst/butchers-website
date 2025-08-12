@@ -23,6 +23,7 @@ import {
   getTopProducts,
 } from "@/app/actions/dashboard/analytics"
 import type { DashboardStats, LowStockProduct, RecentOrder, TopProduct } from "@/app/actions/dashboard/analytics"
+import { useRouter } from "next/navigation"
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -39,6 +40,8 @@ export default function DashboardOverview() {
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([])
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  const router = useRouter()
 
   const loadDashboardData = async () => {
     setIsLoading(true)
@@ -205,6 +208,7 @@ export default function DashboardOverview() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => router.push("/admin?tab=orders")}
                 className="text-orange-600 border-orange-600 hover:bg-orange-50 bg-transparent text-xs lg:text-sm"
               >
                 <Eye className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
@@ -275,7 +279,10 @@ export default function DashboardOverview() {
                       </div>
                     ))}
                   </div>
-                  <Button className="w-full mt-3 lg:mt-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-xs lg:text-sm">
+                  <Button
+                    onClick={() => router.push("/admin?tab=products")}
+                    className="w-full mt-3 lg:mt-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-xs lg:text-sm"
+                  >
                     <span className="hidden sm:inline">Gerenciar Estoque</span>
                     <span className="sm:hidden">Gerenciar</span>
                   </Button>

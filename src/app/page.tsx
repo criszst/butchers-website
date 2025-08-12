@@ -2,6 +2,12 @@ import Header from "@/components/header"
 import ShaderHero from "@/components/animations/shader"
 import ProductGridWrapper from "@/components/product/grid/GridWrapper"
 
+import { fal } from "@fal-ai/client";
+
+fal.config({
+  proxyUrl: "/api/fal/proxy",
+});
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
