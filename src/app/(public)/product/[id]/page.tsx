@@ -556,8 +556,13 @@ export default function ProductDetailsPage() {
                         </div>
                       )}
                       <p className="text-gray-500 mt-1">
-                        por {quantity} {product.priceWeightUnit} • {formatPrice(discountedPrice)}/
-                        {product.priceWeightUnit}
+                        {product.priceWeightAmount !== null && product.priceWeightAmount !== undefined ? (
+                          <span>
+                            por {product.priceWeightAmount * quantity} {product.priceWeightUnit} • {formatPrice(discountedPrice)} / {product.priceWeightAmount} {product.priceWeightUnit}
+                          </span>
+                        ) : (
+                          <span>Informação não disponível</span>
+                        )}
                       </p>
                     </div>
                   </div>

@@ -125,7 +125,7 @@ export default function UserDetailsModal({ user, isOpen, onClose, onUserUpdated 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-3">
             <Avatar className="h-10 w-10">
@@ -146,7 +146,7 @@ export default function UserDetailsModal({ user, isOpen, onClose, onUserUpdated 
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {/* Informações Pessoais */}
           <Card>
             <CardHeader>
@@ -194,7 +194,7 @@ export default function UserDetailsModal({ user, isOpen, onClose, onUserUpdated 
           {/* Estatísticas */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 w-full">
                 <ShoppingCart className="h-5 w-5" />
                 <span>Estatísticas de Compras</span>
               </CardTitle>

@@ -1,17 +1,12 @@
 "use client"
-
-import type React from "react"
-
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
-  Edit,
   Trash2,
   Search,
   Filter,
@@ -19,14 +14,15 @@ import {
   Package,
   Star,
   AlertCircle,
-  MoreVertical,
   Loader2,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  DollarSign,
 } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-import { createProduct, getProductsAction, getProductCategoriesAction, deleteProduct } from "@/app/actions/product"
-
+import { getProductsAction, getProductCategoriesAction, deleteProduct } from "@/app/actions/product"
 import { ConfirmDeleteDialog } from "@/components/product/dialog/DeleteProductDialog"
 import { AddProductDialog } from "@/components/product/dialog/AddProductDialog"
 import { UpdateProductDialog } from "@/components/product/dialog/UpdateProductDialog"
@@ -36,49 +32,25 @@ interface Product {
   id: number
   name: string
   description: string
-
   price: number
-  priceWeightAmount: number | null,
-  priceWeightUnit: string | null,
-
+  priceWeightAmount: number | null
+  priceWeightUnit: string | null
   image?: string | null
   category: string
   discount?: number | null
   stock: number
   available: boolean
   createdAt: Date
-  
 }
 
 export default function ProductsManager() {
   const [products, setProducts] = useState<Product[]>([])
-  const [productToView, setProductToView] = useState<Product | null>(null)
-
   const [categories, setCategories] = useState<string[]>([])
-
   const [searchQuery, setSearchQuery] = useState("")
-
   const [selectedCategory, setSelectedCategory] = useState("all")
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false)
-
   const [isLoading, setIsLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    description: "",
-    price: "",
-    category: "",
-    stock: "",
-    image: "",
-    priceWeightAmount: "",
-    priceWeightUnit: "",
-  })
-
-
 
   const fetchProductsAndCategories = useCallback(async () => {
     try {
@@ -107,66 +79,20 @@ export default function ProductsManager() {
     fetchProductsAndCategories()
   }, [fetchProductsAndCategories])
 
+  const handleDeleteProduct = useCallback(
+    async (id: number) => {
+      if (!id) return
 
-  const handleDeleteProduct = useCallback(async (id: number) => {
-    if (!id) return
-
-    const confirmed = <DialogTrigger asChild><Button variant="destructive" size="sm">Deletar</Button></DialogTrigger>
-    if (!confirmed) return
-
-    const result = await deleteProduct(id)
-    if (result) {
-      setSuccess("Produto deletado com sucesso!")
-      fetchProductsAndCategories()
-    } else {
-      setError("Erro ao deletar o produto.")
-    }
-  }, [fetchProductsAndCategories])
-
-
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setError("")
-    setSuccess("")
-
-    try {
-      const result = await createProduct({
-        name: newProduct.name,
-        description: newProduct.description,
-        price: Number.parseFloat(newProduct.price),
-        category: newProduct.category,
-        stock: Number.parseInt(newProduct.stock),
-        image: newProduct.image || undefined,
-
-        priceWeightAmount: Number.parseInt(newProduct.priceWeightAmount) || null,
-        priceWeightUnit: newProduct.priceWeightUnit || null,
-      })
-
-      if (result.success) {
-        setSuccess(result.message)
-        setNewProduct({
-          name: "",
-          description: "",
-          price: "",
-          category: "",
-          stock: "",
-          image: "",
-          priceWeightAmount: "",
-          priceWeightUnit: "",
-        })
-        setIsAddProductOpen(false)
-        await fetchProductsAndCategories()
+      const result = await deleteProduct(id)
+      if (result) {
+        setSuccess("Produto deletado com sucesso!")
+        fetchProductsAndCategories()
       } else {
-        setError(result.message)
+        setError("Erro ao deletar o produto.")
       }
-    } catch (error) {
-      setError("Erro ao criar produto")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+    },
+    [fetchProductsAndCategories],
+  )
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -176,18 +102,18 @@ export default function ProductsManager() {
   }
 
   const getStockStatus = (stock: number) => {
-    if (stock === 0) return { label: "Esgotado", color: "bg-red-100 text-red-800" }
-    if (stock <= 5) return { label: "Baixo", color: "bg-yellow-100 text-yellow-800" }
-    return { label: "Disponível", color: "bg-green-100 text-green-800" }
+    if (stock === 0) return { label: "Sem Estoque", color: "bg-red-100 text-red-800", icon: AlertTriangle }
+    if (stock <= 5) return { label: "Estoque Baixo", color: "bg-yellow-100 text-yellow-800", icon: TrendingDown }
+    return { label: "Disponível", color: "bg-green-100 text-green-800", icon: TrendingUp }
   }
 
   const getRandomImage = () => {
     const meatImages = [
-      "/placeholder.svg?height=60&width=60&text=Picanha",
-      "/placeholder.svg?height=60&width=60&text=Alcatra",
-      "/placeholder.svg?height=60&width=60&text=Costela",
-      "/placeholder.svg?height=60&width=60&text=Filé",
-      "/placeholder.svg?height=60&width=60&text=Fraldinha",
+      "/placeholder.svg?height=200&width=200&text=Picanha",
+      "/placeholder.svg?height=200&width=200&text=Alcatra",
+      "/placeholder.svg?height=200&width=200&text=Costela",
+      "/placeholder.svg?height=200&width=200&text=Filé",
+      "/placeholder.svg?height=200&width=200&text=Fraldinha",
     ]
     return meatImages[Math.floor(Math.random() * meatImages.length)]
   }
@@ -200,89 +126,86 @@ export default function ProductsManager() {
     return matchesSearch && matchesCategory
   })
 
+  // Calcular estatísticas
+  const totalProducts = products.length
+  const totalStockValue = products.reduce((sum, product) => sum + product.price * product.stock, 0)
+  const lowStockProducts = products.filter((product) => product.stock > 0 && product.stock <= 5).length
+  const outOfStockProducts = products.filter((product) => product.stock === 0).length
+
   // Mobile Product Card Component
   const ProductCard = ({ product }: { product: Product }) => {
     const stockStatus = getStockStatus(product.stock)
+    const StatusIcon = stockStatus.icon
 
     return (
-      <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+      <Card className="bg-white border border-gray-200 hover:shadow-lg transition-all duration-200 overflow-hidden">
+        <div className="relative">
+          <img src={product.image || getRandomImage()} alt={product.name} className="w-full h-48 object-cover" />
+          <div className="absolute top-2 right-2">
+            <Badge className={`${stockStatus.color} text-xs`}>
+              <StatusIcon className="h-3 w-3 mr-1" />
+              {stockStatus.label}
+            </Badge>
+          </div>
+        </div>
         <CardContent className="p-4">
-          <div className="flex items-start space-x-3">
-            <img
-              src={product.image || getRandomImage()}
-              alt={product.name}
-              className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
-                  <p className="text-sm text-gray-600 truncate">{product.description}</p>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <Badge variant="outline" className="text-xs">
-                      {product.category}
-                    </Badge>
-                    <Badge className={`text-xs ${stockStatus.color}`}>{stockStatus.label}</Badge>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild >
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                    onSelect={(e) => e.preventDefault()}
-                      className="p-0">
-                      <ViewProductDialog
-                        product={product}
-                        trigger={
-                          <div className="flex items-center w-full text-sm cursor-pointer rounded-sm">
-                          <Button variant="ghost" size="lg" className="text-green-600 hover:text-green-700">
-                            <Eye className="h-4 w-4" />
-                            Ver Preview
-                          </Button>
-                          </div>
-                        }
-                      />
+          <div className="space-y-3">
+            <div>
+              <h3 className="font-semibold text-gray-900 text-lg truncate">{product.name}</h3>
+              <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+            </div>
 
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={(e) => e.preventDefault()}
-                      className="p-0">
-                      <UpdateProductDialog product={product} onSuccess={fetchProductsAndCategories} />
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={(e) => e.preventDefault()}
-                      className="p-0"
-                    >
-                      <ConfirmDeleteDialog
-                        message={`Tem certeza que deseja excluir o produto "${product.name}"?`}
-                        onConfirm={() => handleDeleteProduct(product.id)}
-                        trigger={
-                          <div className="flex items-center w-full text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
-                            <Button variant="ghost" size="lg" className="text-red-600 hover:text-red-700">
-                              <Trash2 className="h-7 w-7" />
-                              Excluir
-                            </Button>
-                          </div>
-                        }
-                      />
-                    </DropdownMenuItem>
-
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            <div className="flex items-center justify-between">
+              <Badge variant="outline" className="text-xs">
+                {product.category}
+              </Badge>
+              <div className="flex items-center space-x-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className={`h-3 w-3 ${i < 4 ? "text-yellow-400 fill-current" : "text-gray-300"}`} />
+                ))}
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-                <div>
-                  <p className="text-gray-500">Preço</p>
-                  <p className="font-semibold text-green-600">{formatPrice(product.price)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Estoque</p>
-                  <p className="font-semibold text-gray-900">{product.stock} un.</p>
-                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-gray-500 text-xs">Preço</p>
+                <p className="font-bold text-green-600 text-lg">{formatPrice(product.price)}</p>
+                {product.priceWeightAmount && (
+                  <p className="text-xs text-gray-500">
+                    por {product.priceWeightAmount}
+                    {product.priceWeightUnit}
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Estoque</p>
+                <p className="font-semibold text-gray-900">{product.stock} un.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t">
+              <ViewProductDialog
+                product={product}
+                trigger={
+                  <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50">
+                    <Eye className="h-4 w-4 mr-1" />
+                    Ver
+                  </Button>
+                }
+              />
+
+              <div className="flex items-center space-x-1">
+                <UpdateProductDialog product={product} onSuccess={fetchProductsAndCategories} />
+
+                <ConfirmDeleteDialog
+                  message={`Tem certeza que deseja excluir o produto "${product.name}"?`}
+                  onConfirm={() => handleDeleteProduct(product.id)}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  }
+                />
               </div>
             </div>
           </div>
@@ -301,7 +224,7 @@ export default function ProductsManager() {
   }
 
   return (
-    <div className="space-y-4 lg:space-y-6">
+    <div className="space-y-6">
       {/* Success/Error Messages */}
       {error && (
         <Alert className="border-red-200 bg-red-50">
@@ -316,19 +239,22 @@ export default function ProductsManager() {
         </Alert>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
-        <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Gerenciar Produtos</h2>
-          <p className="text-sm lg:text-base text-gray-600">Adicione, edite e gerencie o catálogo de produtos</p>
+      {/* Header com gradiente laranja/vermelho */}
+      <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl p-6 text-white">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold">Gestão de Produtos</h1>
+            <p className="text-red-100 mt-1">Gerencie o estoque do seu açougue de forma eficiente</p>
+            <p className="text-sm text-red-200 mt-1">{totalProducts} produtos cadastrados</p>
+          </div>
+          <AddProductDialog onSuccess={fetchProductsAndCategories} />
         </div>
-        <AddProductDialog onSuccess={fetchProductsAndCategories} />
       </div>
 
-      {/* Filters */}
+      {/* Filtros */}
       <Card className="bg-white border border-gray-200">
         <CardContent className="p-4">
-          <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-4">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -336,33 +262,93 @@ export default function ProductsManager() {
                   placeholder="Buscar produtos..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 border-gray-300 focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full lg:w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as Categorias</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full lg:w-48 border-gray-300">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Categorias</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" className="lg:hidden bg-transparent">
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Products Display */}
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total de Produtos</p>
+                <p className="text-2xl font-bold text-gray-900">{totalProducts}</p>
+                <Badge className="bg-blue-100 text-blue-800 text-xs mt-1">estável</Badge>
+              </div>
+              <Package className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Valor Total do Estoque</p>
+                <p className="text-2xl font-bold text-green-600">{formatPrice(totalStockValue)}</p>
+                <Badge className="bg-green-100 text-green-800 text-xs mt-1">positivo</Badge>
+              </div>
+              <DollarSign className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Estoque Baixo</p>
+                <p className="text-2xl font-bold text-yellow-600">{lowStockProducts}</p>
+                <Badge className="bg-yellow-100 text-yellow-800 text-xs mt-1">atenção</Badge>
+              </div>
+              <TrendingDown className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Sem Estoque</p>
+                <p className="text-2xl font-bold text-red-600">{outOfStockProducts}</p>
+                <Badge className="bg-red-100 text-red-800 text-xs mt-1">crítico</Badge>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Lista de Produtos */}
       <Card className="bg-white border border-gray-200">
         <CardHeader className="border-b border-gray-100">
-          <CardTitle className="flex items-center text-base lg:text-lg">
-            <Package className="h-4 w-4 lg:h-5 lg:w-5 mr-2 text-orange-600" />
+          <CardTitle className="flex items-center text-lg">
+            <Package className="h-5 w-5 mr-2 text-orange-600" />
             Produtos ({filteredProducts.length})
           </CardTitle>
         </CardHeader>
@@ -379,13 +365,11 @@ export default function ProductsManager() {
             </div>
           ) : (
             <>
-              {/* Mobile View */}
-              <div className="lg:hidden">
-                <div className="divide-y divide-gray-100">
+              {/* Mobile View - Grid de Cards */}
+              <div className="lg:hidden p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {filteredProducts.map((product) => (
-                    <div key={product.id} className="p-4">
-                      <ProductCard product={product} />
-                    </div>
+                    <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
               </div>
@@ -407,8 +391,9 @@ export default function ProductsManager() {
                   <TableBody>
                     {filteredProducts.map((product) => {
                       const stockStatus = getStockStatus(product.stock)
-                      return (
+                      const StatusIcon = stockStatus.icon
 
+                      return (
                         <TableRow key={product.id} className="hover:bg-gray-50">
                           <TableCell>
                             <div className="flex items-center space-x-3">
@@ -427,13 +412,24 @@ export default function ProductsManager() {
                             <Badge variant="outline">{product.category}</Badge>
                           </TableCell>
                           <TableCell>
-                            <span className="font-semibold text-green-600">{formatPrice(product.price)}</span>
+                            <div>
+                              <span className="font-semibold text-green-600">{formatPrice(product.price)}</span>
+                              {product.priceWeightAmount && (
+                                <p className="text-xs text-gray-500">
+                                  por {product.priceWeightAmount}
+                                  {product.priceWeightUnit}
+                                </p>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <span className="text-gray-900">{product.stock} un.</span>
                           </TableCell>
                           <TableCell>
-                            <Badge className={stockStatus.color}>{stockStatus.label}</Badge>
+                            <Badge className={stockStatus.color}>
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {stockStatus.label}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-1">
@@ -453,30 +449,24 @@ export default function ProductsManager() {
                                 trigger={
                                   <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
                                     <Eye className="h-4 w-4" />
-                                    Ver
                                   </Button>
                                 }
                               />
 
                               <UpdateProductDialog product={product} onSuccess={fetchProductsAndCategories} />
 
-
                               <ConfirmDeleteDialog
                                 message={`Tem certeza que deseja excluir o produto "${product.name}"?`}
                                 onConfirm={() => handleDeleteProduct(product.id)}
                                 trigger={
-                                  <div className="flex items-center w-full px-2 py-1.5 text-sm text-red-600 cursor-pointer hover:bg-red-50 rounded-sm">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Excluir
-                                  </div>
+                                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 }
                               />
-
-
                             </div>
                           </TableCell>
                         </TableRow>
-
                       )
                     })}
                   </TableBody>
@@ -484,7 +474,6 @@ export default function ProductsManager() {
               </div>
             </>
           )}
-
         </CardContent>
       </Card>
     </div>
