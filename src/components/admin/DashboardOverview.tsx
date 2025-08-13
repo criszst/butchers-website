@@ -133,14 +133,14 @@ export default function DashboardOverview() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-        <Card className="bg-gradient-to-r from-red-600 to-orange-600 text-white border-0 hover:shadow-lg transition-shadow">
+        <Card className="bg-gradient-to-r from-red-300 to-orange-500 text-white border-0 hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium opacity-90">Receita Total</CardTitle>
             <DollarSign className="h-3 w-3 lg:h-4 lg:w-4 opacity-90" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-lg lg:text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
-            <div className={`flex items-center space-x-1 text-xs opacity-90 ${getGrowthColor(stats.revenueGrowth)}`}>
+            <div className={`flex items-center space-x-1 text-xs opacity-90  ${getGrowthColor(stats.revenueGrowth)}`}>
               {getGrowthIcon(stats.revenueGrowth)}
               <span>
                 {stats.revenueGrowth >= 0 ? "+" : ""}

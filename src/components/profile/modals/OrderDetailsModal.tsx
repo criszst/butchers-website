@@ -251,9 +251,11 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                   </div>
                 </motion.div>
 
-                <div className="grid lg:grid-cols-2 gap-6 md:gap-8">
-                  {/* Customer Details */}
-                  <motion.div
+                <div className="grid lg:grid-cols-1 gap-6 md:gap-8">
+                  {location.pathname.includes("/perfil") ? (
+                    <></>
+                  ) : (
+                      <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
@@ -299,6 +301,10 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                       </CardContent>
                     </Card>
                   </motion.div>
+                  )
+                  }
+                  {/* Customer Details */}
+                
 
                   {/* Order Summary */}
                   <motion.div

@@ -42,6 +42,7 @@ export default function SalesChart({ period = "30days", onPeriodChange }: SalesC
     try {
       const data = await getSalesChartData(period)
       setChartData(data)
+      console.log("Chart data loaded:", data)
     } catch (error) {
       console.error("Erro ao carregar dados do gráfico:", error)
     } finally {
@@ -124,7 +125,7 @@ export default function SalesChart({ period = "30days", onPeriodChange }: SalesC
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="date" tickFormatter={formatDate} stroke="#666" fontSize={12} />
             <YAxis stroke="#666" fontSize={12} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip  />} />
             <Line
               type="monotone"
               dataKey="revenue"
