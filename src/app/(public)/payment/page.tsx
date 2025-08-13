@@ -9,8 +9,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
-  ArrowLeft,
   CreditCard,
   Banknote,
   DollarSign,
@@ -27,6 +27,9 @@ import {
   LogIn,
   Eye,
   Check,
+  Home,
+  Tag,
+  X,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -55,10 +58,20 @@ export default function PaymentPage() {
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showProductModal, setShowProductModal] = useState(false)
+  const [couponCode, setCouponCode] = useState("")
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null)
 
   const subtotal = cartTotal
   const deliveryFee = subtotal > 50 ? 0 : 8.9
-  const total = subtotal + deliveryFee
+  const couponDiscount = appliedCoupon ? appliedCoupon.discount : 0
+  const total = subtotal + deliveryFee - couponDiscount
+
+  const availableCoupons = [
+    { code: "PRIMEIRA", discount: 20.0, description: "Primeira compra" },
+    { code: "ACOUGUE20", discount: 15.0, description: "Desconto de R$ 15,00" },
+    { code: "FRETE", discount: 8.9, description: "Frete grátis" },
+    { code: "SEGUNDA", discount: 10.0, description: "Segunda sem carne" },
+  ]
 
   const handleQuantityChange = async (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -71,6 +84,22 @@ export default function PaymentPage() {
   const handleProductClick = (product: any) => {
     setSelectedProduct(product)
     setShowProductModal(true)
+  }
+
+  const handleApplyCoupon = () => {
+    const coupon = availableCoupons.find((c) => c.code.toLowerCase() === couponCode.toLowerCase())
+    if (coupon) {
+      setAppliedCoupon(coupon)
+      setCouponCode("")
+      toast.success(`Cupom ${coupon.code} aplicado! Desconto de R$ ${coupon.discount.toFixed(2)}`)
+    } else {
+      toast.error("Cupom inválido")
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    toast.success("Cupom removido")
   }
 
   // Check authentication and load addresses
@@ -104,23 +133,18 @@ export default function PaymentPage() {
   }, [session, status])
 
   const handleSubmitOrder = async () => {
-    console.log("=== INICIANDO SUBMIT ORDER ===")
-
     if (!session) {
-      console.log("Sem sessão")
       setShowLoginPrompt(true)
       return
     }
 
     if (!selectedAddress) {
-      console.log("Sem endereço selecionado")
       toast.error("Selecione um endereço de entrega")
       setShowAddressModal(true)
       return
     }
 
     if (items.length === 0) {
-      console.log(" Carrinho vazio")
       toast.error("Carrinho está vazio")
       return
     }
@@ -153,25 +177,21 @@ export default function PaymentPage() {
           cep: selectedAddress.cep,
         },
         deliveryFee,
+        couponDiscount,
       }
 
-      console.log("📦 Dados do pedido preparados:", orderData)
-
       const result = await createOrder(orderData)
-      console.log("📋 Resultado do createOrder:", result)
 
       if (result.success) {
-        console.log("✅ Pedido criado com sucesso!")
         setOrderNumber(result.orderNumber || "")
         setOrderSuccess(true)
         await clearCart()
         toast.success("Pedido realizado com sucesso!")
       } else {
-        console.log("❌ Erro ao criar pedido:", result.message)
         toast.error(result.message || "Erro ao processar pedido")
       }
     } catch (error) {
-      console.error("❌ Erro no handleSubmitOrder:", error)
+      console.error("Erro no handleSubmitOrder:", error)
       toast.error("Erro interno. Tente novamente.")
     } finally {
       setIsProcessing(false)
@@ -196,7 +216,7 @@ export default function PaymentPage() {
         <Header />
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-red-600" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-red-500" />
             <p className="text-gray-600">Carregando...</p>
           </div>
         </div>
@@ -215,14 +235,14 @@ export default function PaymentPage() {
             animate={{ scale: 1, opacity: 1 }}
             className="max-w-md w-full"
           >
-            <Card className="text-center shadow-xl">
+            <Card className="text-center shadow-lg">
               <CardContent className="p-8">
-                <LogIn className="h-16 w-16 mx-auto text-red-600 mb-4" />
+                <LogIn className="h-16 w-16 mx-auto text-red-500 mb-4" />
                 <h2 className="text-2xl font-bold mb-4">Login Necessário</h2>
                 <p className="text-gray-600 mb-6">Você precisa estar logado para finalizar seu pedido.</p>
                 <div className="space-y-3">
                   <Link href="/login">
-                    <Button className="w-full bg-red-600 hover:bg-red-700 text-white">Fazer Login</Button>
+                    <Button className="w-full bg-red-500 hover:bg-red-600 text-white">Fazer Login</Button>
                   </Link>
                   <Link href="/register">
                     <Button variant="outline" className="w-full bg-transparent">
@@ -250,7 +270,7 @@ export default function PaymentPage() {
               <h2 className="text-2xl font-bold mb-4">Carrinho vazio</h2>
               <p className="text-gray-600 mb-6">Adicione produtos para continuar</p>
               <Link href="/">
-                <Button className="bg-red-600 hover:bg-red-700 text-white">Explorar Produtos</Button>
+                <Button className="bg-red-500 hover:bg-red-600 text-white">Explorar Produtos</Button>
               </Link>
             </CardContent>
           </Card>
@@ -278,270 +298,361 @@ export default function PaymentPage() {
     <>
       <Header />
       <div className="min-h-screen bg-gray-50">
-        <div className="container py-4 lg:py-8">
-          {/* Breadcrumb */}
-          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
-            <Link href="/cart" className="hover:text-red-600 transition-colors flex items-center">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Carrinho
-            </Link>
-            <span>/</span>
-            <span className="text-gray-800 font-medium">Pagamento</span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
-            {/* Left Column - Shopping Cart */}
-            <div>
-              <Card className="shadow-lg border-0">
-                <CardHeader className="border-b">
-                  <CardTitle className="text-2xl font-bold text-gray-800">Carrinho de Compras</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {/* Cart Items */}
-                  <div className="space-y-4 mb-6">
-                    {items.map((item, index) => (
-                      <motion.div
-                        key={item.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors"
-                      >
-                        <div
-                          className="relative w-16 h-16 bg-white rounded-lg overflow-hidden cursor-pointer"
-                          onClick={() => handleProductClick(item.product)}
-                        >
-                          <Image
-                            src={item.product.image || "/placeholder.svg?height=64&width=64"}
-                            alt={item.product.name}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                            <Eye className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800">{item.product.name}</h4>
-                          <p className="text-sm text-gray-600 capitalize">{item.product.category}</p>
-                          <p className="text-sm text-gray-500">R$ {item.product.price.toFixed(2)}/kg</p>
-                        </div>
-                        {/* Quantity Controls */}
-                        <div className="flex items-center space-x-2">
-                          <motion.button
-                            onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
-                            className="w-8 h-8 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-colors"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <Minus className="h-3 w-3 text-gray-600" />
-                          </motion.button>
-                          <span className="text-sm font-medium w-8 text-center">{item.quantity}kg</span>
-                          <motion.button
-                            onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
-                            className="w-8 h-8 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-colors"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <Plus className="h-3 w-3 text-gray-600" />
-                          </motion.button>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-red-600">R$ {(item.product.price * item.quantity).toFixed(2)}</p>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  {/* Totals */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Subtotal</span>
-                      <span>R$ {subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span className="flex items-center">
-                        <Truck className="h-4 w-4 mr-1" />
-                        Entrega
-                      </span>
-                      <span className={deliveryFee === 0 ? "text-green-600 font-medium" : ""}>
-                        {deliveryFee === 0 ? "Grátis" : `R$ ${deliveryFee.toFixed(2)}`}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between text-xl font-bold text-gray-800">
-                      <span>Total</span>
-                      <span className="text-red-600">R$ {total.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {/* Continue Shopping */}
-                  <Link href="/">
-                    <Button variant="outline" className="w-full mt-6 border-gray-300 hover:bg-gray-50 bg-transparent">
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Continuar Comprando
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column - Address & Payment */}
-            <div className="space-y-6">
+        <div className="container py-6 lg:py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+            {/* Left Column - Forms */}
+            <div className="lg:col-span-2 space-y-6">
               {/* Delivery Address */}
-              <Card className="shadow-lg border-0">
-                <CardHeader className="border-b">
-                  <CardTitle className="flex items-center text-xl font-bold text-gray-800">
-                    <MapPin className="h-5 w-5 mr-2 text-red-600" />
-                    Endereço de Entrega
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {selectedAddress ? (
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-green-800">{selectedAddress.name}</p>
-                          <p className="text-sm text-green-600">
-                            {selectedAddress.street}, {selectedAddress.number}
-                            {selectedAddress.complement && `, ${selectedAddress.complement}`}
-                          </p>
-                          <p className="text-xs text-green-600">
-                            {selectedAddress.neighborhood}, {selectedAddress.city} - {selectedAddress.state}
-                          </p>
-                          <p className="text-xs text-green-600">CEP: {selectedAddress.cep}</p>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <Card className="shadow-sm border-gray-200">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
+                      <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                        <MapPin className="h-4 w-4 text-white" />
+                      </div>
+                      Endereço de Entrega
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedAddress ? (
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center mb-2">
+                              <p className="font-medium text-green-800">{selectedAddress.name}</p>
+                              <Badge className="ml-2 bg-green-100 text-green-800 text-xs">Padrão</Badge>
+                            </div>
+                            <p className="text-sm text-green-700">
+                              {selectedAddress.street}, {selectedAddress.number}
+                              {selectedAddress.complement && `, ${selectedAddress.complement}`}
+                            </p>
+                            <p className="text-sm text-green-700">
+                              {selectedAddress.neighborhood}, {selectedAddress.city} - {selectedAddress.state}
+                            </p>
+                            <p className="text-sm text-green-700">CEP: {selectedAddress.cep}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAddressModal(true)}
+                            className="border-green-300 text-green-700 hover:bg-green-100 bg-transparent text-xs"
+                          >
+                            Alterar
+                          </Button>
                         </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-600 mb-4">Nenhum endereço cadastrado</p>
                         <Button
-                          variant="outline"
-                          size="sm"
                           onClick={() => setShowAddressModal(true)}
-                          className="border-green-300 text-green-700 hover:bg-green-100 bg-transparent"
+                          className="bg-red-500 hover:bg-red-600 text-white"
                         >
-                          Alterar
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar Endereço
                         </Button>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <p className="text-gray-600 mb-4">Nenhum endereço cadastrado</p>
-                      <Button
-                        onClick={() => setShowAddressModal(true)}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar Endereço
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {/* Payment Method */}
-              <Card className="shadow-lg border-0">
-                <CardHeader className="border-b">
-                  <CardTitle className="flex items-center text-xl font-bold text-gray-800">
-                    <CreditCard className="h-5 w-5 mr-2 text-red-600" />
-                    Forma de Pagamento
-                    <Badge className="ml-2 bg-red-100 text-red-800">Na Entrega</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200">
-                    <p className="text-sm text-blue-800 font-medium mb-1">💳 Pagamento na Entrega</p>
-                    <p className="text-xs text-blue-600">
-                      Você pagará diretamente ao entregador quando receber seu pedido.
-                    </p>
-                  </div>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                <Card className="shadow-sm border-gray-200">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
+                      <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3">
+                        <CreditCard className="h-4 w-4 text-white" />
+                      </div>
+                      Forma de Pagamento
+                      <Badge className="ml-auto bg-blue-100 text-blue-800 text-xs">Na Entrega</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-blue-50 p-3 rounded-lg mb-4 border border-blue-200">
+                      <p className="text-sm text-blue-800 font-medium">💳 Pagamento na Entrega</p>
+                      <p className="text-xs text-blue-600">
+                        Você pagará diretamente ao entregador quando receber seu pedido.
+                      </p>
+                    </div>
 
-                  <RadioGroup value={paymentType} onValueChange={setPaymentType} className="space-y-4">
-                    <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <RadioGroupItem value="dinheiro" id="dinheiro" />
-                      <DollarSign className="h-5 w-5 text-green-600" />
-                      <div className="flex-1">
-                        <Label htmlFor="dinheiro" className="font-medium cursor-pointer">
-                          Dinheiro
-                        </Label>
-                        <p className="text-sm text-gray-600">Pagamento em espécie</p>
+                    <RadioGroup value={paymentType} onValueChange={setPaymentType} className="space-y-3">
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <RadioGroupItem value="dinheiro" id="dinheiro" />
+                        <DollarSign className="h-4 w-4 text-green-500" />
+                        <div className="flex-1">
+                          <Label htmlFor="dinheiro" className="font-medium cursor-pointer text-sm">
+                            Dinheiro
+                          </Label>
+                          <p className="text-xs text-gray-600">Pagamento em espécie</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <RadioGroupItem value="credito" id="credito" />
+                        <CreditCard className="h-4 w-4 text-blue-500" />
+                        <div className="flex-1">
+                          <Label htmlFor="credito" className="font-medium cursor-pointer text-sm">
+                            Cartão de Crédito
+                          </Label>
+                          <p className="text-xs text-gray-600">Visa, Mastercard, Elo</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <RadioGroupItem value="debito" id="debito" />
+                        <Banknote className="h-4 w-4 text-purple-500" />
+                        <div className="flex-1">
+                          <Label htmlFor="debito" className="font-medium cursor-pointer text-sm">
+                            Cartão de Débito
+                          </Label>
+                          <p className="text-xs text-gray-600">Débito direto da conta</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <RadioGroupItem value="vr" id="vr" />
+                        <Smartphone className="h-4 w-4 text-orange-500" />
+                        <div className="flex-1">
+                          <Label htmlFor="vr" className="font-medium cursor-pointer text-sm">
+                            Vale Refeição/Alimentação
+                          </Label>
+                          <p className="text-xs text-gray-600">VR, VA, Sodexo, Ticket</p>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Coupon Code */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                <Card className="shadow-sm border-gray-200">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                        <Tag className="h-4 w-4 text-white" />
+                      </div>
+                      Código Promocional
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {appliedCoupon ? (
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-green-800">Cupom aplicado: {appliedCoupon.code}</p>
+                            <p className="text-sm text-green-600">Desconto de R$ {appliedCoupon.discount.toFixed(2)}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveCoupon}
+                            className="text-green-700 hover:text-green-800 hover:bg-green-100"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex space-x-2">
+                          <Input
+                            placeholder="Digite seu cupom de desconto"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button
+                            onClick={handleApplyCoupon}
+                            disabled={!couponCode.trim()}
+                            className="bg-green-500 hover:bg-green-600 text-white px-6"
+                          >
+                            Aplicar
+                          </Button>
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          <p className="mb-2">Cupons disponíveis:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {availableCoupons.map((coupon) => (
+                              <button
+                                key={coupon.code}
+                                onClick={() => setCouponCode(coupon.code)}
+                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs transition-colors"
+                              >
+                                {coupon.code}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Right Column - Order Summary */}
+            <div className="lg:sticky lg:top-6 lg:self-start">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                <Card className="shadow-sm border-gray-200">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
+                      <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                        <Package className="h-4 w-4 text-white" />
+                      </div>
+                      Resumo do Pedido
+                      <Badge className="ml-auto bg-red-100 text-red-800 text-xs">
+                        {itemCount} {itemCount === 1 ? "item" : "itens"}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Products List */}
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {items.map((item, index) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors group"
+                        >
+                          <div
+                            className="relative flex-shrink-0 cursor-pointer"
+                            onClick={() => handleProductClick(item.product)}
+                          >
+                            <Image
+                              src={item.product.image || "/placeholder.svg?height=50&width=50"}
+                              alt={item.product.name}
+                              width={50}
+                              height={50}
+                              className="rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center rounded-lg">
+                              <Eye className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-gray-800 truncate">{item.product.name}</p>
+                            <p className="text-xs text-gray-600 capitalize">{item.product.category}</p>
+                            <p className="text-xs text-gray-500">R$ {item.product.price.toFixed(2)}/kg</p>
+                          </div>
+                          {/* Quantity Controls */}
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+                              className="w-6 h-6 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-colors"
+                            >
+                              <Minus className="h-3 w-3 text-gray-600" />
+                            </button>
+                            <span className="text-xs font-medium w-8 text-center">{item.quantity}kg</span>
+                            <button
+                              onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                              className="w-6 h-6 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-colors"
+                            >
+                              <Plus className="h-3 w-3 text-gray-600" />
+                            </button>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-red-600 text-sm">
+                              R$ {(item.product.price * item.quantity).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Separator />
+
+                    {/* Totals */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Subtotal</span>
+                        <span>R$ {subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span className="flex items-center">
+                          <Truck className="h-3 w-3 mr-1" />
+                          Entrega
+                        </span>
+                        <span className={deliveryFee === 0 ? "text-green-600 font-medium" : ""}>
+                          {deliveryFee === 0 ? "Grátis" : `R$ ${deliveryFee.toFixed(2)}`}
+                        </span>
+                      </div>
+                      {appliedCoupon && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>Desconto ({appliedCoupon.code})</span>
+                          <span>-R$ {appliedCoupon.discount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="flex justify-between text-lg font-bold text-gray-800">
+                        <span>Total</span>
+                        <span className="text-red-600">R$ {total}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <RadioGroupItem value="credito" id="credito" />
-                      <CreditCard className="h-5 w-5 text-blue-600" />
-                      <div className="flex-1">
-                        <Label htmlFor="credito" className="font-medium cursor-pointer">
-                          Cartão de Crédito
-                        </Label>
-                        <p className="text-sm text-gray-600">Visa, Mastercard, Elo</p>
+                    {/* Delivery Time */}
+                    <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="font-medium text-blue-800 text-sm">Tempo de entrega</p>
+                        <p className="text-blue-600 text-xs">45-60 minutos</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <RadioGroupItem value="debito" id="debito" />
-                      <Banknote className="h-5 w-5 text-purple-600" />
-                      <div className="flex-1">
-                        <Label htmlFor="debito" className="font-medium cursor-pointer">
-                          Cartão de Débito
-                        </Label>
-                        <p className="text-sm text-gray-600">Débito direto da conta</p>
+                    {/* Checkout Button */}
+                    <Button
+                      onClick={handleSubmitOrder}
+                      disabled={!selectedAddress || isProcessing || items.length === 0}
+                      className={`w-full py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                        selectedAddress && !isProcessing && items.length > 0
+                          ? "bg-red-500 hover:bg-red-600 text-white shadow-md hover:shadow-lg"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Finalizar Pedido
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Continue Shopping */}
+                    <Link href="/">
+                      <Button
+                        variant="outline"
+                        className="w-full border-gray-300 hover:bg-gray-50 bg-transparent text-sm"
+                      >
+                        <Home className="h-4 w-4 mr-2" />
+                        Continuar Comprando
+                      </Button>
+                    </Link>
+
+                    {/* Security Info */}
+                    <div className="flex items-center justify-center space-x-4 text-xs text-gray-500 pt-2">
+                      <div className="flex items-center">
+                        <Shield className="h-3 w-3 mr-1" />
+                        <span>Seguro</span>
+                      </div>
+                      <div className="flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        <span>Verificado</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        <span>45-60 min</span>
                       </div>
                     </div>
-
-                    <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <RadioGroupItem value="vr" id="vr" />
-                      <Smartphone className="h-5 w-5 text-orange-600" />
-                      <div className="flex-1">
-                        <Label htmlFor="vr" className="font-medium cursor-pointer">
-                          Vale Refeição/Alimentação
-                        </Label>
-                        <p className="text-sm text-gray-600">VR, VA, Sodexo, Ticket</p>
-                      </div>
-                    </div>
-                  </RadioGroup>
-                </CardContent>
-              </Card>
-
-              {/* Checkout Button */}
-              <Button
-                onClick={handleSubmitOrder}
-                disabled={!selectedAddress || isProcessing || items.length === 0}
-                className={`w-full py-4 text-lg font-bold rounded-lg transition-all duration-300 ${
-                  selectedAddress && !isProcessing && items.length > 0
-                    ? "bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Processando Pedido...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-5 w-5 mr-2" />
-                    Finalizar Pedido - R$ {total.toFixed(2)}
-                  </>
-                )}
-              </Button>
-
-              {/* Security Info */}
-              <div className="flex items-center justify-center space-x-4 text-xs text-gray-500">
-                <div className="flex items-center">
-                  <Shield className="h-3 w-3 mr-1" />
-                  <span>Seguro</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  <span>Verificado</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-3 w-3 mr-1" />
-                  <span>45-60 min</span>
-                </div>
-              </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
           </div>
         </div>

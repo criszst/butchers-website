@@ -53,7 +53,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
     { id: "orders", label: "Pedidos", icon: ShoppingCart },
     { id: "users", label: "Usuários", icon: Users },
     { id: "suppliers", label: "Fornecedores", icon: Truck },
-    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "analytics", label: "Análises", icon: BarChart3 },
     { id: "settings", label: "Configurações", icon: Settings },
   ]
 
@@ -93,12 +93,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
     }
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      toast.success(`Buscando por: ${searchQuery}`)
-    }
-  }
+
 
   return (
     <>
@@ -129,18 +124,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
             {/* Ações Desktop */}
             <div className="hidden md:flex items-center space-x-4">
               {/* Desktop Search com animação */}
-              <div className="w-72 group">
-                <form onSubmit={handleSearch} className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 transition-all duration-300 group-hover:text-orange-500 group-focus-within:text-orange-600" />
-                  <Input
-                    type="text"
-                    placeholder="Buscar produtos, pedidos, usuários..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg text-sm transition-all duration-300 hover:border-orange-300 hover:shadow-md focus:shadow-lg"
-                  />
-                </form>
-              </div>
+  
 
               {/* Notificações com animação */}
               <DropdownMenu>
@@ -242,7 +226,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
                     <p className="text-xs text-muted-foreground truncate">{session?.user?.email}</p>
                   </div>
                   <DropdownMenuItem asChild className="transition-all duration-200 hover:bg-orange-50">
-                    <Link href="/profile">
+                    <Link href="/perfil">
                       <div className="flex items-center">
                         <User className="mr-2 h-4 w-4 transition-transform duration-300 hover:scale-110" />
                         Perfil
@@ -360,33 +344,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
             </div>
           </div>
 
-          {/* Mobile Search com animação de entrada/saída */}
-          <div
-            className={`md:hidden overflow-hidden transition-all duration-500 ease-in-out ${
-              isMobileSearchOpen ? "max-h-20 pb-3 opacity-100" : "max-h-0 pb-0 opacity-0"
-            }`}
-          >
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 transition-all duration-300" />
-              <Input
-                type="text"
-                placeholder="Buscar produtos, pedidos, usuários..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-10 py-2 w-full transition-all duration-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                autoFocus={isMobileSearchOpen}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 transition-all duration-300 hover:bg-red-100 hover:text-red-600 hover:rotate-90"
-                onClick={() => setIsMobileSearchOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </form>
-          </div>
+
         </div>
 
         {/* Desktop Tabs com animações */}
@@ -401,7 +359,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className="h-12 px-0 bg-transparent border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:bg-transparent rounded-none text-gray-600 data-[state=active]:text-orange-600 hover:text-orange-500 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 group relative"
+                      className="h-12 px-6 bg-transparent border-b-4 rounded-12 border-transparent data-[state=active]:border-orange-500 data-[state=active]:bg-transparent  text-gray-600 data-[state=active]:text-orange-600 hover:text-orange-500 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 group relative"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
                       <div className="flex items-center space-x-2 transition-all duration-300">

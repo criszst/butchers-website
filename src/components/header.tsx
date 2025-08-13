@@ -86,11 +86,13 @@ export default function Header() {
   ]
 
   const userMenuItems = [
+   
     { href: "/perfil", label: "Meu Perfil", icon: User },
     { href: "/pedidos", label: "Meus Pedidos", icon: Package, badge: "3" },
     { href: "/favoritos", label: "Favoritos", icon: Heart },
     { href: "/notificacoes", label: "Notificações", icon: Bell, hasNotification: true },
     { href: "/configuracoes", label: "Configurações", icon: Settings },
+     { href: "/admin", label: "Admin", icon: Crown, isAdmin: true },
   ]
 
   return (
@@ -325,22 +327,7 @@ export default function Header() {
                               )
                             })}
                             <div className="border-t border-gray-100 my-2"></div>
-                            {isAdmin && (
-                              <motion.div
-                                initial={{ x: -20, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                transition={{ delay: userMenuItems.length * 0.05 }}
-                              >
-                                <Link
-                                  href="/admin"
-                                  className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors group"
-                                  onClick={() => setIsUserMenuOpen(false)}
-                                >
-                                  <Crown className="h-4 w-4 text-gray-500 group-hover:text-yellow-600 transition-colors" />
-                                  <span className="group-hover:text-gray-900">Admin</span>
-                                </Link>
-                              </motion.div>
-                            )}
+
                             <motion.button
                               onClick={() => signOut({ callbackUrl: "/" })}
                               className="flex items-center space-x-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left group"
