@@ -1,25 +1,15 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import type React from "react"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Loader2, Edit } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Loader2, Edit, Info, Calculator } from "lucide-react"
 import { updateProduct } from "@/app/actions/product"
 
 interface Product {
@@ -77,6 +67,21 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
     setUpdatedProduct((prev) => ({ ...prev, [field]: value }))
   }
 
+  const formatStockDisplay = () => {
+    const stock = Number.parseFloat(updatedProduct.stock)
+    const amount = Number.parseInt(updatedProduct.priceWeightAmount)
+    const unit = updatedProduct.priceWeightUnit
+
+    if (!stock || !amount || !unit) return ""
+
+    const totalAmount = stock * amount
+    if (unit === "kg") {
+      return totalAmount >= 1000 ? `${(totalAmount / 1000).toFixed(1)} kg` : `${totalAmount} g`
+    } else {
+      return `${totalAmount} g`
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -89,7 +94,7 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
         description: updatedProduct.description,
         price: Number.parseFloat(updatedProduct.price),
         category: updatedProduct.category,
-        stock: Number.parseInt(updatedProduct.stock),
+        stock: Number.parseFloat(updatedProduct.stock),
         image: updatedProduct.image || undefined,
         priceWeightAmount: Number.parseInt(updatedProduct.priceWeightAmount) || null,
         priceWeightUnit: updatedProduct.priceWeightUnit || null,
@@ -112,12 +117,12 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="lg" className="text-blue-500 hover:text-blue-700">
-          <Edit className="h-6 w-6" />
+        <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+          <Edit className="h-4 w-4 mr-1" />
           Editar
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl w-full mx-4">
+      <DialogContent className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
         </DialogHeader>
@@ -125,11 +130,34 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
         {error && <p className="text-red-600 text-sm">{error}</p>}
         {success && <p className="text-green-600 text-sm">{success}</p>}
 
-        <form onSubmit={handleSubmit} className="space-y-6 py-4 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          {/* Exemplo de Como Funciona */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center text-blue-800">
+                <Calculator className="h-4 w-4 mr-2" />
+                Sistema de Preços Atual
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-blue-700">
+              {updatedProduct.price && updatedProduct.priceWeightAmount && updatedProduct.priceWeightUnit && (
+                <div className="bg-white p-3 rounded border">
+                  <p>
+                    <strong>Configuração:</strong> R$ {updatedProduct.price} por {updatedProduct.priceWeightAmount}
+                    {updatedProduct.priceWeightUnit}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Cliente pode comprar qualquer quantidade e o preço será calculado proporcionalmente
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-4">
               <div>
-                <Label htmlFor="name">Nome do Produto</Label>
+                <Label htmlFor="name">Nome do Produto *</Label>
                 <Input
                   id="name"
                   value={updatedProduct.name}
@@ -139,11 +167,8 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
               </div>
 
               <div>
-                <Label htmlFor="category">Categoria</Label>
-                <Select
-                  value={updatedProduct.category}
-                  onValueChange={(value) => handleInputChange("category", value)}
-                >
+                <Label htmlFor="category">Categoria *</Label>
+                <Select value={updatedProduct.category} onValueChange={(value) => handleInputChange("category", value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
@@ -158,58 +183,94 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="price">Preço</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    value={updatedProduct.price}
-                    onChange={(e) => handleInputChange("price", e.target.value)}
-                    required
-                  />
-                  <Select
-                    value={updatedProduct.priceWeightUnit}
-                    onValueChange={(value) => handleInputChange("priceWeightUnit", value)}
-                  >
-                    <SelectTrigger className="w-28">
-                      <SelectValue placeholder="Unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Kilo">Kg</SelectItem>
-                      <SelectItem value="Grama">Gr</SelectItem>
-                    </SelectContent>
-                  </Select>
+              {/* Sistema de Preços */}
+              <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-800 flex items-center text-sm">
+                  <Info className="h-4 w-4 mr-2" />
+                  Configuração de Preços
+                </h4>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label htmlFor="price" className="text-xs">
+                      Preço (R$) *
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      value={updatedProduct.price}
+                      onChange={(e) => handleInputChange("price", e.target.value)}
+                      required
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="priceWeightAmount" className="text-xs">
+                      Quantidade *
+                    </Label>
+                    <Input
+                      id="priceWeightAmount"
+                      type="number"
+                      value={updatedProduct.priceWeightAmount}
+                      onChange={(e) => handleInputChange("priceWeightAmount", e.target.value)}
+                      placeholder="1000"
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="priceWeightUnit" className="text-xs">
+                      Unidade *
+                    </Label>
+                    <Select
+                      value={updatedProduct.priceWeightUnit}
+                      onValueChange={(value) => handleInputChange("priceWeightUnit", value)}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Un." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="g">g</SelectItem>
+                        <SelectItem value="kg">kg</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="priceWeightAmount">Preço por unidade (ex: 500g)</Label>
-                <Input
-                  id="priceWeightAmount"
-                  type="number"
-                  value={updatedProduct.priceWeightAmount}
-                  onChange={(e) => handleInputChange("priceWeightAmount", e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder="Ex: 500"
-                />
-              </div>
+              {/* Estoque */}
+              <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-800 text-sm">Controle de Estoque</h4>
 
-              <div>
-                <Label htmlFor="stock">Estoque</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  value={updatedProduct.stock}
-                  onChange={(e) => handleInputChange("stock", e.target.value)}
-                  required
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="stock" className="text-xs">
+                      Quantidade *
+                    </Label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      step="0.1"
+                      value={updatedProduct.stock}
+                      onChange={(e) => handleInputChange("stock", e.target.value)}
+                      required
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Em unidades</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Total Disponível</Label>
+                    <div className="h-9 px-3 py-2 bg-white border rounded-md flex items-center">
+                      <span className="text-sm font-medium text-gray-700">{formatStockDisplay() || "Configure"}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-4">
               <div>
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="description">Descrição *</Label>
                 <Textarea
                   id="description"
                   value={updatedProduct.description}
@@ -226,9 +287,7 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                   onChange={(e) => handleInputChange("image", e.target.value)}
                   placeholder="https://exemplo.com/imagem.jpg"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Deixe em branco para manter a imagem atual
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Deixe em branco para manter a imagem atual</p>
               </div>
             </div>
           </div>

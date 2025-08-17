@@ -25,7 +25,6 @@ import {
   Plus,
   Minus,
   LogIn,
-  Eye,
   Check,
   Home,
   Tag,
@@ -37,11 +36,11 @@ import Header from "@/components/header"
 import { createOrder } from "@/app/actions/order/orders"
 import { getUserAddresses } from "@/app/actions/address"
 import { AddressModal } from "@/components/address/AddressModal"
-import { ProductDetailModal } from "@/components/product/modals/ProductDetail"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
 import { PaymentStatus, type Address } from "@/generated/prisma"
-import { SuccessPage } from "@/components/checkout/SuccessPage"
+import SuccessPage from "@/components/checkout/SuccessPage"
+import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
 
 export default function PaymentPage() {
   const router = useRouter()
@@ -56,8 +55,7 @@ export default function PaymentPage() {
   const [showAddressModal, setShowAddressModal] = useState(false)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true)
-  const [selectedProduct, setSelectedProduct] = useState(null)
-  const [showProductModal, setShowProductModal] = useState(false)
+
   const [couponCode, setCouponCode] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null)
 
@@ -77,29 +75,48 @@ export default function PaymentPage() {
     if (newQuantity <= 0) {
       await removeItem(productId)
     } else {
-      await updateQuantity(productId, newQuantity)
+      // Sempre trabalhar em kg com mínimo de 0.1kg
+      const minQuantity = 0.1
+      const adjustedQuantity = Math.max(newQuantity, minQuantity)
+      await updateQuantity(productId, adjustedQuantity)
     }
   }
 
-  const handleProductClick = (product: any) => {
-    setSelectedProduct(product)
-    setShowProductModal(true)
+  const formatQuantityDisplay = (quantity: number): string => {
+    // Sempre exibir em kg
+    return `${quantity.toFixed(3)}kg`
   }
 
-  const handleApplyCoupon = () => {
-    const coupon = availableCoupons.find((c) => c.code.toLowerCase() === couponCode.toLowerCase())
-    if (coupon) {
-      setAppliedCoupon(coupon)
-      setCouponCode("")
-      toast.success(`Cupom ${coupon.code} aplicado! Desconto de R$ ${coupon.discount.toFixed(2)}`)
-    } else {
-      toast.error("Cupom inválido")
+  const calculateItemPrice = (item: any) => {
+    const product = item.product
+
+    // Se não tem priceWeightAmount, usar preço direto
+    if (!product.priceWeightAmount) {
+      return product.price * item.quantity
     }
+
+    // Sempre trabalhar considerando que está em kg
+    // Se priceWeightAmount é 1kg, então o preço é por kg
+    // item.quantity já está em kg
+    const pricePerKg = product.price / (product.priceWeightAmount || 1)
+
+    return pricePerKg * item.quantity
   }
+
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null)
-    toast.success("Cupom removido")
+    setCouponCode("")
+  }
+
+  const handleApplyCoupon = () => {
+    const coupon = availableCoupons.find((c) => c.code === couponCode.toUpperCase())
+    if (coupon) {
+      setAppliedCoupon(coupon)
+      toast.success(`Cupom ${coupon.code} aplicado com sucesso!`)
+    } else {
+      toast.error("Cupom inválido")
+    }
   }
 
   // Check authentication and load addresses
@@ -156,12 +173,12 @@ export default function PaymentPage() {
         items: items.map((item) => ({
           productId: item.product.id,
           name: item.product.name,
-          quantity: item.quantity,
+          quantity: Number(item.quantity.toFixed(3)),
           price: item.product.price,
           category: item.product.category,
         })),
         total,
-        paymentMethod: "entrega",
+        paymentMethod: paymentType,
         paymentType,
         PaymentStatus: PaymentStatus.Pendente,
         customerData: {
@@ -294,9 +311,24 @@ export default function PaymentPage() {
     )
   }
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price)
+  }
+
+  const formatPriceDisplay = (product: any) => {
+    const amount = product.priceWeightAmount || 1
+    const unit = product.priceWeightUnit || "kg"
+
+    return `${formatPrice(product.price)} por ${amount} kg`
+  }
+
   return (
     <>
       <Header />
+
       <div className="min-h-screen bg-gray-50">
         <div className="container py-6 lg:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
@@ -505,7 +537,7 @@ export default function PaymentPage() {
                       </div>
                       Resumo do Pedido
                       <Badge className="ml-auto bg-red-100 text-red-800 text-xs">
-                        {itemCount} {itemCount === 1 ? "item" : "itens"}
+                        {itemCount.toFixed(1)} {itemCount === 1 ? "item" : "itens"}
                       </Badge>
                     </CardTitle>
                   </CardHeader>
@@ -517,37 +549,63 @@ export default function PaymentPage() {
                           key={item.id}
                           className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors group"
                         >
-                          <div
-                            className="relative flex-shrink-0 cursor-pointer"
-                            onClick={() => handleProductClick(item.product)}
-                          >
-                            <Image
-                              src={item.product.image || "/placeholder.svg?height=50&width=50"}
-                              alt={item.product.name}
-                              width={50}
-                              height={50}
-                              className="rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform"
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center rounded-lg">
-                              <Eye className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
+                          <div className="relative">
+                            {item.product.image ? (
+                              <Image
+                                src={item.product.image || "/placeholder.svg"}
+                                alt={item.product.name}
+                                width={50}
+                                height={50}
+                                className="rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <MeatImagePlaceholder size="sm" className="w-12 h-12" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm text-gray-800 truncate">{item.product.name}</p>
                             <p className="text-xs text-gray-600 capitalize">{item.product.category}</p>
-                            <p className="text-xs text-gray-500">R$ {item.product.price.toFixed(2)}/kg</p>
+                            <p className="text-xs text-gray-500">{formatPriceDisplay(item.product)}</p>
                           </div>
                           {/* Quantity Controls */}
                           <div className="flex items-center space-x-1">
                             <button
-                              onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+                              onClick={() => {
+                                const product = item.product
+                                const decrement = product.priceWeightUnit === "kg" ? 0.1 : 50
+                                handleQuantityChange(product.id, Math.max(item.quantity - decrement, decrement))
+                              }}
                               className="w-6 h-6 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-colors"
                             >
                               <Minus className="h-3 w-3 text-gray-600" />
                             </button>
-                            <span className="text-xs font-medium w-8 text-center">{item.quantity}kg</span>
+                            <div className="text-center min-w-[60px]">
+                              <Input
+                                inputMode="numeric"
+                                step="0.1"
+                                min="0"
+                                max={item.product.stock}
+                                value={item.quantity.toFixed(3)}
+                                onChange={(e) => {
+                                  const value = Number.parseFloat(e.target.value);
+                                  if (value < 0) {
+                                    handleQuantityChange(item.product.id, 0);
+                                  } else {
+                                    handleQuantityChange(item.product.id, value || 0);
+                                  }
+                                }}
+                                className="w-16 h-8 text-xs text-center border-gray-200 p-1"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatQuantityDisplay(item.quantity)}
+                              </p>
+                            </div>
                             <button
-                              onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                              onClick={() => {
+                                const product = item.product
+                                const increment = product.priceWeightUnit === "kg" ? 0.1 : 50
+                                handleQuantityChange(product.id, item.quantity + increment)
+                              }}
                               className="w-6 h-6 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-colors"
                             >
                               <Plus className="h-3 w-3 text-gray-600" />
@@ -555,7 +613,7 @@ export default function PaymentPage() {
                           </div>
                           <div className="text-right">
                             <p className="font-semibold text-red-600 text-sm">
-                              R$ {(item.product.price * item.quantity).toFixed(2)}
+                              {formatPrice(calculateItemPrice(item))}
                             </p>
                           </div>
                         </div>
@@ -568,7 +626,7 @@ export default function PaymentPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Subtotal</span>
-                        <span>R$ {subtotal.toFixed(2)}</span>
+                        <span>{formatPrice(subtotal)}</span>
                       </div>
                       <div className="flex justify-between text-sm text-gray-600">
                         <span className="flex items-center">
@@ -576,19 +634,19 @@ export default function PaymentPage() {
                           Entrega
                         </span>
                         <span className={deliveryFee === 0 ? "text-green-600 font-medium" : ""}>
-                          {deliveryFee === 0 ? "Grátis" : `R$ ${deliveryFee.toFixed(2)}`}
+                          {deliveryFee === 0 ? "Grátis" : formatPrice(deliveryFee)}
                         </span>
                       </div>
                       {appliedCoupon && (
                         <div className="flex justify-between text-sm text-green-600">
                           <span>Desconto ({appliedCoupon.code})</span>
-                          <span>-R$ {appliedCoupon.discount.toFixed(2)}</span>
+                          <span>-{formatPrice(appliedCoupon.discount)}</span>
                         </div>
                       )}
                       <Separator />
                       <div className="flex justify-between text-lg font-bold text-gray-800">
                         <span>Total</span>
-                        <span className="text-red-600">R$ {total}</span>
+                        <span className="text-red-600">{formatPrice(total)}</span>
                       </div>
                     </div>
 
@@ -605,11 +663,10 @@ export default function PaymentPage() {
                     <Button
                       onClick={handleSubmitOrder}
                       disabled={!selectedAddress || isProcessing || items.length === 0}
-                      className={`w-full py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                        selectedAddress && !isProcessing && items.length > 0
+                      className={`w-full py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${selectedAddress && !isProcessing && items.length > 0
                           ? "bg-red-500 hover:bg-red-600 text-white shadow-md hover:shadow-lg"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      }`}
+                        }`}
                     >
                       {isProcessing ? (
                         <>
@@ -663,12 +720,6 @@ export default function PaymentPage() {
         isOpen={showAddressModal}
         onClose={() => setShowAddressModal(false)}
         onAddressCreated={handleAddressCreated}
-      />
-
-      <ProductDetailModal
-        isOpen={showProductModal}
-        onClose={() => setShowProductModal(false)}
-        product={selectedProduct}
       />
     </>
   )

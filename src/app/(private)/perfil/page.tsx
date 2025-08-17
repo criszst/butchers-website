@@ -2,15 +2,18 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
+import { useRouter, useSearchParams } from "next/navigation"
 import type { Order, OrderItem } from "@/generated/prisma"
 import { getUserOrders } from "@/app/actions/order/orders"
 import { updateUserProfile } from "@/app/actions/user-profile"
-import { getUserProfile } from "@/app/actions/user-profile" // Assuming this function is needed to fetch user info
+import { getUserProfile } from "@/app/actions/user-profile"
 import ProfileNavigation from "@/components/profile/ProfileNavigation"
 import ProfileDetails from "@/components/profile/tabs/ProfileDetails"
 import OrdersTab from "@/components/profile/tabs/OrdersTab"
 import AddressesTab from "@/components/profile/tabs/AddressesTab"
+import NotificationsTab from "@/components/profile/tabs/NotificationsTab"
 import ProfileHeader from "@/components/profile/Header"
+import { useOrderUpdates } from "@/hooks/useOrderUpdate"
 import { toast } from "sonner"
 
 interface ExtendedUser {
@@ -33,12 +36,43 @@ interface Achievement {
 
 export default function ProfilePage() {
   const { data: session } = useSession()
+
   const [activeTab, setActiveTab] = useState("perfil")
   const [isEditing, setIsEditing] = useState(false)
- const [orders, setOrders] = useState<Array<Order & { items: OrderItem[] }>>([]);
+   const [orders, setOrders] = useState<Array<Order & { items: OrderItem[] }>>([]);
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderDetails, setShowOrderDetails] = useState(false)
   const [userInfo, setUserInfo] = useState<ExtendedUser | null>(null)
+
+
+  const { orders: realtimeOrders, isConnected } = useOrderUpdates(session?.user?.email || "")
+
+ 
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace("#", "")
+      if (hash && ["perfil", "pedidos", "enderecos", "notificacoes", "configuracoes"].includes(hash)) {
+        setActiveTab(hash)
+      }
+    }
+
+    // Check initial hash
+    handleHashChange()
+
+    // Listen for hash changes
+    window.addEventListener("hashchange", handleHashChange)
+
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange)
+    }
+  }, [])
+
+  // Update URL when tab changes
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab)
+    window.history.pushState(null, "", `/perfil#${newTab}`)
+  }
 
   const stats = {
     orders: orders.length,
@@ -59,26 +93,12 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const loadOrders = async () => {
-        try {
-    const result = await getUserOrders()
-    if (result.success) {
-      const ordersWithItems = result.orders.map((order) => ({
-        ...order,
-        items: order.items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          category: item.category,
-
-          orderId: item.orderId,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-        })),
-      }))
-      setOrders(ordersWithItems)
-    }
-  }  catch (error) {
+      try {
+        const result = await getUserOrders()
+        if (result.success) {
+          setOrders(result.orders)
+        }
+      } catch (error) {
         console.error("Erro ao carregar pedidos:", error)
         toast.error("Erro ao carregar pedidos")
       }
@@ -112,6 +132,24 @@ export default function ProfilePage() {
     }
   }, [session])
 
+  
+ useEffect(() => {
+  if (realtimeOrders.length > 0) {
+    const ordersWithItems = realtimeOrders.map((order) => ({
+      ...order,
+      items: [], // or some other default value
+    }));
+    setOrders(ordersWithItems);
+  }
+}, [realtimeOrders]);
+
+  // Show connection status
+  useEffect(() => {
+    if (isConnected) {
+      toast.success("Conectado - atualizações em tempo real ativas")
+    }
+  }, [isConnected])
+
   const handleSave = async (updatedFields: Partial<ExtendedUser>) => {
     try {
       if (!session?.user?.email) {
@@ -119,21 +157,18 @@ export default function ProfilePage() {
         return
       }
 
-      // Preparar dados para envio
       const updateData = {
         name: updatedFields.name || undefined,
         bio: updatedFields.bio || undefined,
         birthDate: updatedFields.birthDate || undefined,
         phone: updatedFields.phone || undefined,
-        cpf: updatedFields.cpf?.replace(/\D/g, "") || undefined, // Remove formatação do CPF
+        cpf: updatedFields.cpf?.replace(/\D/g, "") || undefined,
         image: updatedFields.image || undefined,
       }
 
-      // Chamar a Server Action
       const result = await updateUserProfile(updateData)
 
       if (result.success) {
-        // Atualizar o estado local com os novos dados
         setUserInfo((prev) => ({
           ...prev,
           ...updateData,
@@ -159,7 +194,21 @@ export default function ProfilePage() {
       <ProfileHeader userName={userInfo?.name} />
 
       <div className="container mx-auto px-4 py-8">
-        <ProfileNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+        <ProfileNavigation activeTab={activeTab} setActiveTab={handleTabChange} />
+
+        {/* Connection Status Indicator */}
+        {activeTab === "pedidos" && (
+          <div className="mb-4">
+            <div
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                isConnected ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? "bg-green-500" : "bg-yellow-500"}`} />
+              {isConnected ? "Atualizações em tempo real ativas" : "Conectando..."}
+            </div>
+          </div>
+        )}
 
         <div className="transition-all duration-300">
           {activeTab === "perfil" && (
@@ -175,6 +224,7 @@ export default function ProfilePage() {
           )}
           {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
           {activeTab === "enderecos" && <AddressesTab address={[]} />}
+          {activeTab === "notificacoes" && <NotificationsTab />}
           {activeTab === "configuracoes" && (
             <div className="pb-20 md:pb-0">
               <div className="text-center py-12">
@@ -184,7 +234,6 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-
       </div>
     </div>
   )

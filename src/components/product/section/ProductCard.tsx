@@ -4,10 +4,13 @@ import Image from "next/image"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, Heart, Eye, Star, Loader2, Clock, Award } from "lucide-react"
+import { ShoppingCart, Heart, Eye, Loader2, Clock, Award } from "lucide-react"
 import type { Product } from "@/generated/prisma"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
+
+import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
+
 
 interface ProductCardProps {
   product: Product
@@ -30,18 +33,32 @@ export function ProductCard({
 }: ProductCardProps) {
   const router = useRouter()
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | null) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-    }).format(price)
+    }).format(price ?? 0)
   }
+
+  
 
   const discountedPrice = product.discount ? product.price - (product.price * product.discount) / 100 : product.price
 
-  // Always use list view on mobile, grid view on desktop
   const isMobile = typeof window !== "undefined" && window.innerWidth < 1024
   const effectiveViewMode = isMobile ? "list" : viewMode
+
+
+  const formatPriceDisplay = () => {
+    const price = product.discount ? product.price - (product.price * product.discount) / 100 : product.price
+    const amount = product.priceWeightAmount || 1
+    const unit = product.priceWeightUnit || "kg"
+
+    if (unit === "kg") {
+      return `${formatPrice(price)} por ${amount} kg (${amount * 1000} gramas)`
+    } else {
+      return `${formatPrice(price)} por ${amount} gramas (${(amount / 1000).toFixed(1)} kg)`
+    }
+  }
 
   if (effectiveViewMode === "list") {
     return (
@@ -50,15 +67,19 @@ export function ProductCard({
           {/* Image Section */}
           <div className="relative lg:w-64 flex-shrink-0">
             <div className="aspect-square lg:aspect-[4/3] overflow-hidden">
-              <Image
-                src={product.image || getRandomImage?.() || "/placeholder.svg?height=300&width=300"}
-                alt={product.name}
-                width={300}
-                height={300}
-                className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${
-                  product.stock === 0 ? "grayscale" : ""
-                }`}
-              />
+            {product.image ? (
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  width={300}
+                  height={300}
+                  className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${
+                    product.stock === 0 ? "grayscale" : ""
+                  }`}
+                />
+              ) : (
+                <MeatImagePlaceholder className="w-full h-full object-cover" />
+            )}
             </div>
 
             {/* Badges */}
@@ -69,7 +90,7 @@ export function ProductCard({
               {product.stock <= 5 && product.stock > 0 && (
                 <Badge className="bg-orange-600 text-white text-xs">
                   <Clock className="h-3 w-3 mr-1" />
-                  Últimas
+                  Últimas {product.stock}
                 </Badge>
               )}
               {product.stock === 0 && <Badge className="bg-gray-600 text-white text-xs">Esgotado</Badge>}
@@ -91,18 +112,6 @@ export function ProductCard({
           {/* Content Section */}
           <div className="flex-1 p-4 lg:p-6 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <Badge variant="outline" className="text-xs font-medium">
-                  {product.category}
-                </Badge>
-                <div className="flex items-center space-x-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`h-3 w-3 ${i < 4 ? "text-yellow-400 fill-current" : "text-gray-300"}`} />
-                  ))}
-                  <span className="text-xs text-gray-600 ml-1">(4.5)</span>
-                </div>
-              </div>
-
               <h3 className="font-bold text-lg lg:text-xl mb-2 group-hover:text-red-600 transition-colors line-clamp-2">
                 {product.name}
               </h3>
@@ -121,14 +130,14 @@ export function ProductCard({
             {/* Price and Actions */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <div className="flex items-center space-x-2 mr-2">
+                <div className="flex items-center space-x-2">
                   <span className="text-xl lg:text-2xl font-bold text-red-600">{formatPrice(discountedPrice)}</span>
                   {product.discount && product.discount > 0 && (
                     <span className="text-sm line-through text-gray-400">{formatPrice(product.price)}</span>
                   )}
                 </div>
                 <span className="text-xs text-gray-500">
-                  por {product.priceWeightAmount} {product.priceWeightUnit}
+                  por {formatPrice(product.priceWeightAmount)}
                 </span>
               </div>
 
@@ -192,7 +201,7 @@ export function ProductCard({
         {product.stock <= 5 && product.stock > 0 && (
           <Badge className="absolute top-3 left-3 z-20 bg-orange-600 text-white text-xs">
             <Clock className="h-3 w-3 mr-1" />
-            Últimas unidades
+            Últimas {product.stock}
           </Badge>
         )}
 
@@ -244,18 +253,6 @@ export function ProductCard({
         </CardHeader>
 
         <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-2">
-            <Badge variant="outline" className="text-xs font-medium">
-              {product.category}
-            </Badge>
-            <div className="flex items-center space-x-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className={`h-3 w-3 ${i < 4 ? "text-yellow-400 fill-current" : "text-gray-300"}`} />
-              ))}
-              <span className="text-xs text-gray-600 ml-1">(4.5)</span>
-            </div>
-          </div>
-
           <h3 className="font-bold text-lg mb-2 group-hover:text-red-600 transition-colors line-clamp-2">
             {product.name}
           </h3>
@@ -287,44 +284,41 @@ export function ProductCard({
         </CardContent>
 
         <CardFooter className="p-6 pt-0">
- 
- <div className="relative row-2 w-full ">
-          <Button
-            className={`w-full font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-lg ${
-              product.stock === 0
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-            }`}
-            onClick={onAddToCart}
-            disabled={product.stock === 0 || isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Adicionando...
-              </>
-            ) : product.stock === 0 ? (
-              "Produto Esgotado"
-            ) : (
-              <>
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Adicionar ao Carrinho
-              </>
-            )}
-          </Button>
+          <div className="w-full space-y-2">
+            <Button
+              className={`w-full font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-lg ${
+                product.stock === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+              }`}
+              onClick={onAddToCart}
+              disabled={product.stock === 0 || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adicionando...
+                </>
+              ) : product.stock === 0 ? (
+                "Produto Esgotado"
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Adicionar ao Carrinho
+                </>
+              )}
+            </Button>
 
-                   <Button
-            className="flex items-center mt-2 w-full text-black hover:bg-red-100 hover:border-red-300 bg-transparent transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-lg"
-            onClick={() => router.push(`/product/${product.id}`)}
-          >
-            <Eye className="h-4 w-4 mr-2 " />
-            <span className="text-sm ">
-            Ver Detalhes
-            </span>
-          </Button>
+            <Button
+              variant="outline"
+              className="w-full text-gray-700 hover:bg-red-50 hover:border-red-300 bg-transparent transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-lg"
+              onClick={() => router.push(`/product/${product.id}`)}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              <span className="text-sm">Ver Detalhes</span>
+            </Button>
           </div>
         </CardFooter>
-        
       </Card>
     </motion.div>
   )

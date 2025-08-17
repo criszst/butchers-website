@@ -23,14 +23,33 @@ export default function CartPage() {
   const taxaEntrega = total > 50 ? 0 : 8.9
   const totalFinal = total + taxaEntrega
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price)
+  }
+
+  const formatPriceDisplay = (product: any) => {
+    const amount = product.priceWeightAmount || 1
+    const unit = product.priceWeightUnit || "kg"
+
+    if (unit === "kg") {
+      return `${formatPrice(product.price)} por ${amount} kg (${amount * 1000} gramas)`
+    }
+  }
+
+
   const handleQuantityChange = async (productId: number, newQuantity: number) => {
-    setIsUpdating(productId)
-    try {
-      await updateQuantity(productId, newQuantity)
-    } catch (error) {
-      toast.error("Erro ao atualizar quantidade")
-    } finally {
-      setIsUpdating(null)
+    if (newQuantity <= 0) {
+      await removeItem(productId)
+    } else {
+      const product = items.find((item) => item.product.id === productId)?.product
+      if (product) {
+        // Mínimo de 0.1kg
+        const adjustedQuantity = Math.max(newQuantity, 0.1)
+        await updateQuantity(productId, adjustedQuantity)
+      }
     }
   }
 
@@ -38,7 +57,6 @@ export default function CartPage() {
     setRemovingItems((prev) => new Set(prev).add(productId))
     try {
       await removeItem(productId)
-      toast.success("Item removido do carrinho")
     } catch (error) {
       toast.error("Erro ao remover item")
     } finally {
@@ -48,6 +66,29 @@ export default function CartPage() {
         return newSet
       })
     }
+  }
+
+  const formatWeightDisplay = (quantity: number, unit?: string | null) => {
+    if (!unit) return `${quantity}`
+
+    if (unit === "kg") {
+      return quantity >= 1 ? `${quantity.toFixed(1)}kg` : `${(quantity * 1000).toFixed(0)}g`
+    } else {
+      return `${quantity.toFixed(0)}g`
+    }
+  }
+
+  const calculateItemPrice = (item: any) => {
+    const product = item.product
+
+    // Se não há priceWeightAmount, usar preço direto
+    if (!product.priceWeightAmount) {
+      return product.price * item.quantity
+    }
+
+    // Como só trabalhamos com kg, calcular direto
+    const pricePerKg = product.price / product.priceWeightAmount
+    return pricePerKg * item.quantity
   }
 
   if (isLoading) {
@@ -132,9 +173,8 @@ export default function CartPage() {
               {items.map((item, index) => (
                 <Card
                   key={item.id}
-                  className={`bg-white shadow-sm hover:shadow-md transition-all duration-300 border-0 ${
-                    removingItems.has(item.product.id) ? "animate-pulse opacity-50" : ""
-                  }`}
+                  className={`bg-white shadow-sm hover:shadow-md transition-all duration-300 border-0 ${removingItems.has(item.product.id) ? "animate-pulse opacity-50" : ""
+                    }`}
                 >
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
@@ -164,12 +204,9 @@ export default function CartPage() {
                         <p className="text-xs lg:text-sm text-gray-600 capitalize mb-2">{item.product.category}</p>
                         <div className="flex items-center justify-center sm:justify-start space-x-2">
                           <span className="font-bold text-red-600 text-sm lg:text-base">
-                            R$ {item.product.price.toFixed(2)}
+                            {formatPrice(item.product.price)}
                           </span>
-                          <span className="text-xs text-gray-500">
-                            /{item.product.priceWeightAmount}
-                            {item.product.priceWeightUnit}
-                          </span>
+                          <span className="text-xs text-gray-500">{formatPriceDisplay(item.product)}</span>
                         </div>
                       </div>
 
@@ -180,17 +217,34 @@ export default function CartPage() {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                            onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
-                            disabled={isUpdating === item.product.id || item.quantity <= 1}
+                            onClick={() => {
+                              const product = item.product
+                              const decrement = 0.1 // Sempre decrementar 0.1kg
+                              handleQuantityChange(product.id, Math.max(item.quantity - decrement, 0.1))
+                            }}
+                            disabled={isUpdating === item.product.id}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
 
-                          <div className="min-w-[3rem] text-center">
+                          <div className="min-w-[4rem] text-center">
                             {isUpdating === item.product.id ? (
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent mx-auto"></div>
                             ) : (
-                              <span className="font-semibold text-sm">{item.product.priceWeightAmount} {item.product.priceWeightUnit}</span>
+                              <div>
+                                <Input
+                                  inputMode="numeric"
+                                  step="0.1"
+                                  min="0.1"
+                                  max={item.product.stock}
+                                  value={item.quantity.toFixed(3)}
+                                  onChange={(e) => handleQuantityChange(item.product.id, parseFloat(e.target.value) || 0)}
+                                  className="w-16 h-8 text-xs text-center border-gray-200 p-1"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {formatWeightDisplay(item.quantity, item.product.priceWeightUnit)}
+                                </p>
+                              </div>
                             )}
                           </div>
 
@@ -198,7 +252,11 @@ export default function CartPage() {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                            onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                            onClick={() => {
+                              const product = item.product
+                              const increment = 0.1 // Sempre incrementar 0.1kg
+                              handleQuantityChange(product.id, item.quantity + increment)
+                            }}
                             disabled={isUpdating === item.product.id}
                           >
                             <Plus className="h-3 w-3" />
@@ -220,7 +278,7 @@ export default function CartPage() {
                         {/* Subtotal */}
                         <div className="text-right sm:text-center">
                           <div className="font-bold text-green-600 text-sm lg:text-base">
-                            R$ {(item.product.price * item.quantity).toFixed(2)}
+                            {formatPrice(calculateItemPrice(item))}
                           </div>
                         </div>
                       </div>
@@ -273,8 +331,8 @@ export default function CartPage() {
                       <div className="space-y-3">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">
-                            Faltam <span className="font-bold text-red-600">R$ {(50 - total).toFixed(2)}</span> para
-                            frete grátis
+                            Faltam <span className="font-bold text-red-600">{formatPrice(50 - total)}</span> para frete
+                            grátis
                           </p>
                         </div>
                         <div className="relative">
@@ -285,8 +343,8 @@ export default function CartPage() {
                             />
                           </div>
                           <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>R$ 0</span>
-                            <span>R$ 50</span>
+                            <span>{formatPrice(0)}</span>
+                            <span>{formatPrice(50)}</span>
                           </div>
                         </div>
                       </div>
@@ -297,15 +355,15 @@ export default function CartPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm lg:text-base">
                       <span className="text-gray-600">Subtotal</span>
-                      <span className="font-semibold">R$ {total.toFixed(2)}</span>
+                      <span className="font-semibold">{formatPrice(total)}</span>
                     </div>
                     <div className="flex justify-between text-sm lg:text-base">
                       <span className="text-gray-600 flex items-center space-x-1">
-                        <Truck className="h-4 w-4" />
+                        <Truck className="h-4 w-4 lg:h-5 lg:w-5" />
                         <span>Entrega</span>
                       </span>
                       <span className={`font-semibold ${taxaEntrega === 0 ? "text-green-600" : ""}`}>
-                        {taxaEntrega === 0 ? "Grátis" : `R$ ${taxaEntrega.toFixed(2)}`}
+                        {taxaEntrega === 0 ? "Grátis" : formatPrice(taxaEntrega)}
                       </span>
                     </div>
                   </div>
@@ -315,7 +373,7 @@ export default function CartPage() {
                   {/* Total */}
                   <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
                     <span className="font-bold text-lg lg:text-xl text-gray-800">Total</span>
-                    <span className="font-bold text-xl lg:text-2xl text-green-600">R$ {totalFinal.toFixed(2)}</span>
+                    <span className="font-bold text-xl lg:text-2xl text-green-600">{formatPrice(totalFinal)}</span>
                   </div>
 
                   {/* Action Buttons */}

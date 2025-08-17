@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowLeft, Heart, Star, Minus, Plus, ShoppingCart, Loader2, Share2, Truck, Shield, Clock } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ArrowLeft, Heart, Star, ShoppingCart, Loader2, Share2, Truck, Shield, Clock } from "lucide-react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -15,6 +17,7 @@ import { useCart } from "@/components/cart/context"
 import { toast } from "sonner"
 import { getProductById, getRelatedProducts } from "@/app/actions/product"
 import Header from "@/components/header"
+import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
 
 export default function ProductDetailsPage() {
   const params = useParams()
@@ -24,7 +27,7 @@ export default function ProductDetailsPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState<number | "">("") // Começar vazio
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
 
@@ -41,6 +44,8 @@ export default function ProductDetailsPage() {
         const result = await getProductById(productId)
         if (result.success && result.product) {
           setProduct(result.product)
+
+
 
           // Fetch related products
           const relatedResult = await getRelatedProducts(productId, result.product.category, 4)
@@ -63,10 +68,23 @@ export default function ProductDetailsPage() {
   const handleAddToCart = async () => {
     if (!product) return
 
+    const numQuantity = typeof quantity === "string" ? parseFloat(quantity) : quantity
+
+    if (!numQuantity || numQuantity <= 0) {
+      toast.error("Por favor, informe uma quantidade válida")
+      return
+    }
+
+    // Mínimo de 0.1kg
+    if (numQuantity < 0.1) {
+      toast.error("Quantidade mínima é 0,1kg")
+      return
+    }
+
     setIsAddingToCart(true)
     try {
-      for (let i = 0; i < quantity; i++) {
-        await addItem({
+      await addItem(
+        {
           id: product.id,
           name: product.name,
           price: product.price,
@@ -75,9 +93,10 @@ export default function ProductDetailsPage() {
           available: product.available,
           priceWeightAmount: product.priceWeightAmount,
           priceWeightUnit: product.priceWeightUnit,
-        })
-      }
-      toast.success(`${quantity}${product.priceWeightUnit} de ${product.name} adicionado ao carrinho!`)
+          stock: product.stock,
+        },
+        numQuantity,
+      )
     } catch (error) {
       toast.error("Erro ao adicionar produto ao carrinho")
     } finally {
@@ -92,6 +111,27 @@ export default function ProductDetailsPage() {
     }).format(price)
   }
 
+  const calculateTotalPrice = () => {
+    if (!product || !product.priceWeightAmount || !quantity) return 0
+
+    const numQuantity = typeof quantity === "string" ? Number.parseFloat(quantity) : quantity
+    if (!numQuantity) return 0
+
+    // Calculate price per unit weight
+    const pricePerKg = product.price / product.priceWeightAmount
+    return pricePerKg * numQuantity
+  }
+
+  const formatQuantityDisplay = () => {
+    if (!product || !quantity) return ""
+
+    const numQuantity = typeof quantity === "string" ? parseFloat(quantity) : quantity
+    if (!numQuantity) return ""
+
+    // Sempre mostrar em kg, mas converter para gramas se for menos de 1kg
+    return numQuantity >= 1 ? `${numQuantity.toFixed(1)}kg` : `${(numQuantity * 1000).toFixed(0)}g`
+  }
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -104,7 +144,7 @@ export default function ProductDetailsPage() {
         // User cancelled sharing
       }
     } else {
-      // Fallback: copy to clipboard
+
       navigator.clipboard.writeText(window.location.href)
       toast.success("Link copiado para a área de transferência!")
     }
@@ -221,12 +261,16 @@ export default function ProductDetailsPage() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2, type: "spring" }}
               >
-                <Image
-                  src={product.image || "/placeholder.svg?height=256&width=256"}
-                  alt={product.name}
-                  fill
-                  className="object-cover rounded-2xl shadow-2xl"
-                />
+                {product.image ? (
+                  <Image
+                    src={product.image || "/placeholder.svg"}
+                    alt={product.name}
+                    fill
+                    className="object-cover rounded-2xl shadow-2xl"
+                  />
+                ) : (
+                  <MeatImagePlaceholder size="lg" className="w-64 h-64" />
+                )}
               </motion.div>
             </div>
 
@@ -235,7 +279,8 @@ export default function ProductDetailsPage() {
               <div className="absolute bottom-4 left-4">
                 <Badge className="bg-orange-600 text-white">
                   <Clock className="h-3 w-3 mr-1" />
-                  Últimas {product.stock} unidades
+                  Últimas {product.stock}
+                  {product.priceWeightUnit} disponíveis
                 </Badge>
               </div>
             )}
@@ -282,17 +327,19 @@ export default function ProductDetailsPage() {
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-3xl font-bold text-gray-900">{formatPrice(discountedPrice * quantity)}</span>
+                  <span className="text-3xl font-bold text-gray-900">{formatPrice(calculateTotalPrice())}</span>
                   {product.discount && product.discount > 0 && (
                     <div className="flex items-center space-x-2 mt-1">
                       <span className="text-sm line-through text-gray-400">
-                        {formatPrice(product.price * quantity)}
+                        {formatPrice(calculateTotalPrice() / (1 - product.discount / 100))}
                       </span>
                       <Badge className="bg-green-600 text-white text-xs">-{product.discount}% OFF</Badge>
                     </div>
                   )}
                   <p className="text-sm text-gray-500 mt-1">
-                    por {quantity} {product.priceWeightUnit} • {formatPrice(discountedPrice)}/{product.priceWeightUnit}
+                    {quantity ? `por ${formatQuantityDisplay()} • ` : ""}
+                    {formatPrice(discountedPrice)}/{product.priceWeightAmount}
+                    {product.priceWeightUnit}
                   </p>
                 </div>
               </div>
@@ -318,26 +365,39 @@ export default function ProductDetailsPage() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <h3 className="font-semibold text-gray-900 mb-3">Quantidade</h3>
-              <div className="flex items-center justify-center space-x-4">
-                <motion.button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  disabled={quantity <= 1}
-                >
-                  <Minus className="h-5 w-5 text-gray-600" />
-                </motion.button>
-                <span className="text-2xl font-bold text-gray-900 w-16 text-center">{quantity}</span>
-                <motion.button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Plus className="h-5 w-5 text-gray-600" />
-                </motion.button>
+              <h3 className="font-semibold text-gray-900 mb-3">Quantidade Desejada</h3>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="quantity">
+                    Quantidade ({product.priceWeightUnit === "kg" ? "em kg" : "em gramas"})
+                  </Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                     step="0.1"
+                    min="0.1"
+                    max={product.stock}
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value === "" ? "" : Number.parseFloat(e.target.value) || "")}
+                    className="text-center text-lg font-bold"
+                    placeholder='0.5 para 500 gramas / ou 1 para 1kg'
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">
+                    {quantity ? (
+                      <>
+                        Você está comprando: <span className="font-bold text-red-600">{formatQuantityDisplay()}</span>
+                      </>
+                    ) : (
+                      "Informe a quantidade desejada"
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Estoque disponível: {product.stock}
+                    {product.priceWeightUnit}
+                  </p>
+                </div>
               </div>
             </motion.div>
 
@@ -352,15 +412,19 @@ export default function ProductDetailsPage() {
                 <h3 className="font-semibold text-gray-900 mb-4">Produtos Relacionados</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {relatedProducts.map((relatedProduct) => (
-                    <Link key={relatedProduct.id} href={`/product/${relatedProduct.id}`}>
+                    <Link key={relatedProduct.id} href={`/produto/${relatedProduct.id}`}>
                       <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
                         <div className="relative w-full h-20 mb-2">
-                          <Image
-                            src={relatedProduct.image || "/placeholder.svg?height=80&width=80"}
-                            alt={relatedProduct.name}
-                            fill
-                            className="object-cover rounded-md"
-                          />
+                          {relatedProduct.image ? (
+                            <Image
+                              src={relatedProduct.image || "/placeholder.svg"}
+                              alt={relatedProduct.name}
+                              fill
+                              className="object-cover rounded-md"
+                            />
+                          ) : (
+                            <MeatImagePlaceholder size="sm" className="w-full h-20" />
+                          )}
                         </div>
                         <h4 className="text-xs font-medium text-gray-900 mb-1 line-clamp-2">{relatedProduct.name}</h4>
                         <p className="text-xs font-bold text-red-600">{formatPrice(relatedProduct.price)}</p>
@@ -397,7 +461,7 @@ export default function ProductDetailsPage() {
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg">
             <Button
               onClick={handleAddToCart}
-              disabled={isAddingToCart || !product.available || product.stock === 0}
+              disabled={isAddingToCart || !product.available || product.stock === 0 || !quantity}
               className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
             >
               {isAddingToCart ? (
@@ -407,10 +471,12 @@ export default function ProductDetailsPage() {
                 </>
               ) : product.stock === 0 ? (
                 "Produto Esgotado"
+              ) : !quantity ? (
+                "Selecione uma quantidade"
               ) : (
                 <>
                   <ShoppingCart className="h-5 w-5 mr-2" />
-                  Adicionar ao Carrinho
+                  Adicionar {formatQuantityDisplay()} - {formatPrice(calculateTotalPrice())}
                 </>
               )}
             </Button>
@@ -424,7 +490,7 @@ export default function ProductDetailsPage() {
         <div className="hidden lg:block">
           <div className="container py-8">
             {/* Breadcrumb */}
-            <div className="flex items-center space-x-2 text-sm text-gray-600 mb-8 ml-17">
+            <div className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
               <Link href="/" className="hover:text-red-600 transition-colors">
                 Início
               </Link>
@@ -445,13 +511,17 @@ export default function ProductDetailsPage() {
                 transition={{ delay: 0.1 }}
               >
                 <div className="relative aspect-square bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl p-8 flex items-center justify-center overflow-hidden">
-                  <Image
-                    src={product.image || "/placeholder.svg?height=500&width=500"}
-                    alt={product.name}
-                    width={500}
-                    height={500}
-                    className="object-cover rounded-xl shadow-2xl"
-                  />
+                  {product.image ? (
+                    <Image
+                      src={product.image || "/placeholder.svg"}
+                      alt={product.name}
+                      width={500}
+                      height={500}
+                      className="object-cover rounded-xl shadow-2xl"
+                    />
+                  ) : (
+                    <MeatImagePlaceholder size="lg" className="w-96 h-96" />
+                  )}
 
                   {/* Favorite Button */}
                   <motion.button
@@ -516,26 +586,42 @@ export default function ProductDetailsPage() {
 
                   {/* Quantity Selector */}
                   <div className="mb-8">
-                    <h3 className="font-semibold text-gray-900 mb-4 text-lg">Quantidade</h3>
-                    <div className="flex items-center space-x-4">
-                      <motion.button
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        disabled={quantity <= 1}
-                      >
-                        <Minus className="h-5 w-5 text-gray-600" />
-                      </motion.button>
-                      <span className="text-2xl font-bold text-gray-900 w-16 text-center">{quantity}</span>
-                      <motion.button
-                        onClick={() => setQuantity(quantity + 1)}
-                        className="w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <Plus className="h-5 w-5 text-gray-600" />
-                      </motion.button>
+                    <h3 className="font-semibold text-gray-900 mb-4 text-lg">Quantidade Desejada</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="quantity-desktop">
+                          Quantidade ({product.priceWeightUnit === "kg" ? "em kg" : "em gramas"})
+                        </Label>
+                        <Input
+                          id="quantity-desktop"
+                          type="number"
+                          step={product.priceWeightUnit === "kg" ? "0.1" : "50"}
+                          min={product.priceWeightUnit === "kg" ? "0.1" : "50"}
+                          max={product.stock}
+                          value={quantity}
+                          onChange={(e) =>
+                            setQuantity(e.target.value === "" ? "" : Number.parseFloat(e.target.value) || "")
+                          }
+                          className="text-center text-xl font-bold w-32"
+                          placeholder={product.priceWeightUnit === "kg" ? "0.5" : "500"}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-gray-600">
+                          {quantity ? (
+                            <>
+                              Você está comprando:{" "}
+                              <span className="font-bold text-red-600">{formatQuantityDisplay()}</span>
+                            </>
+                          ) : (
+                            "Informe a quantidade desejada"
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Estoque disponível: {product.stock}
+                          {product.priceWeightUnit}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -544,32 +630,26 @@ export default function ProductDetailsPage() {
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <span className="text-4xl font-bold text-gray-900">
-                        {formatPrice(discountedPrice * quantity)}
-                      </span>
+                      <span className="text-4xl font-bold text-gray-900">{formatPrice(calculateTotalPrice())}</span>
                       {product.discount && product.discount > 0 && (
                         <div className="flex items-center space-x-2 mt-2">
                           <span className="text-lg line-through text-gray-400">
-                            {formatPrice(product.price * quantity)}
+                            {formatPrice(calculateTotalPrice() / (1 - product.discount / 100))}
                           </span>
                           <Badge className="bg-green-600 text-white">-{product.discount}% OFF</Badge>
                         </div>
                       )}
                       <p className="text-gray-500 mt-1">
-                        {product.priceWeightAmount !== null && product.priceWeightAmount !== undefined ? (
-                          <span>
-                            por {product.priceWeightAmount * quantity} {product.priceWeightUnit} • {formatPrice(discountedPrice)} / {product.priceWeightAmount} {product.priceWeightUnit}
-                          </span>
-                        ) : (
-                          <span>Informação não disponível</span>
-                        )}
+                        {quantity ? `por ${formatQuantityDisplay()} • ` : ""}
+                        {formatPrice(discountedPrice)}/{product.priceWeightAmount}
+                        {product.priceWeightUnit}
                       </p>
                     </div>
                   </div>
 
                   <Button
                     onClick={handleAddToCart}
-                    disabled={isAddingToCart || !product.available || product.stock === 0}
+                    disabled={isAddingToCart || !product.available || product.stock === 0 || !quantity}
                     className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     {isAddingToCart ? (
@@ -579,10 +659,12 @@ export default function ProductDetailsPage() {
                       </>
                     ) : product.stock === 0 ? (
                       "Produto Esgotado"
+                    ) : !quantity ? (
+                      "Selecione uma quantidade"
                     ) : (
                       <>
                         <ShoppingCart className="h-5 w-5 mr-2" />
-                        Adicionar ao Carrinho
+                        Adicionar {formatQuantityDisplay()} - {formatPrice(calculateTotalPrice())}
                       </>
                     )}
                   </Button>
@@ -617,16 +699,20 @@ export default function ProductDetailsPage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-8">Produtos Relacionados</h3>
                 <div className="grid grid-cols-4 gap-6">
                   {relatedProducts.map((relatedProduct) => (
-                    <Link key={relatedProduct.id} href={`/product/${relatedProduct.id}`}>
+                    <Link key={relatedProduct.id} href={`/produto/${relatedProduct.id}`}>
                       <Card className="hover:shadow-lg transition-shadow">
                         <CardContent className="p-4">
                           <div className="relative w-full h-40 mb-4">
-                            <Image
-                              src={relatedProduct.image || "/placeholder.svg?height=160&width=160"}
-                              alt={relatedProduct.name}
-                              fill
-                              className="object-cover rounded-lg"
-                            />
+                            {relatedProduct.image ? (
+                              <Image
+                                src={relatedProduct.image || "/placeholder.svg"}
+                                alt={relatedProduct.name}
+                                fill
+                                className="object-cover rounded-lg"
+                              />
+                            ) : (
+                              <MeatImagePlaceholder size="md" className="w-full h-40" />
+                            )}
                           </div>
                           <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">{relatedProduct.name}</h4>
                           <p className="text-lg font-bold text-red-600">{formatPrice(relatedProduct.price)}</p>

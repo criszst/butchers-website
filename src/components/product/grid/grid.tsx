@@ -32,7 +32,6 @@ export default function ProductGrid({ products }: ProductGridProps) {
 
   const { addItem, isLoading } = useCart()
 
- 
   const productsFiltrados = products.filter((product) => {
     const correspondeNome = product.name.toLowerCase().includes(termoBusca.toLowerCase())
     const correspondeCategoria = categoriaSelecionada === "todas" || product.category === categoriaSelecionada
@@ -116,16 +115,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
 
     setLoadingProducts((prev) => [...prev, product.id])
     try {
-      await addItem({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        category: product.category,
-        available: product.available,
-        priceWeightAmount: product.priceWeightAmount,
-        priceWeightUnit: product.priceWeightUnit,
-      })
+      await addItem(product, Number(product.priceWeightAmount))
     } catch (error) {
       toast.error("Erro ao adicionar produto ao carrinho")
     } finally {
@@ -395,7 +385,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
                     product={product}
                     viewMode={viewMode}
                     isFavorite={favoritos.includes(product.id)}
-                    isLoading={loadingProducts.includes(product.id)}
+                    isLoading={loadingProducts.includes(product.id) || isLoading}
                     onToggleFavorite={() => toggleFavorito(product.id)}
                     onAddToCart={() => handleAddToCart(product)}
                     getRandomImage={getRandomImage}

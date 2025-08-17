@@ -44,6 +44,24 @@ module.exports = {
         pathname: '**'
       },
 
+      {
+        protocol: 'https',
+        hostname: 'www.casadecarnespine.com.br',
+        pathname: '**'
+      },
+
+      {
+        protocol: 'https',
+        hostname: 'www.arenaatacado.com.br',
+        pathname: '**'
+      },
+
+      {
+        protocol: 'https',
+        hostname: 'bretas.vtexassets.com',
+        pathname: '**'
+      },
+
     ],
 }
 } satisfies NextConfig;

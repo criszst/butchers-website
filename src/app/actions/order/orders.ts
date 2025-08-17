@@ -38,7 +38,27 @@ interface CreateOrderData {
   discount?: number
 }
 
-export async function createOrder(orderData: CreateOrderData) {
+// Sistema de fila para evitar pedidos simultâneos
+const orderQueue = new Map<string, Promise<any>>()
+
+// Tipos de erro específicos
+export type OrderErrorType =
+  | "product_validation_error"
+  | "price_change_error"
+  | "insufficient_stock"
+  | "duplicate_order"
+  | "server_error"
+
+export interface OrderResult {
+  success: boolean
+  message: string
+  orderId?: string
+  orderNumber?: string
+  errorType?: OrderErrorType
+  errorDetails?: any
+}
+
+export async function createOrder(orderData: CreateOrderData): Promise<OrderResult> {
   try {
     console.log("=== INÍCIO CREATE ORDER ===")
     console.log("Dados recebidos:", JSON.stringify(orderData, null, 2))
@@ -48,7 +68,11 @@ export async function createOrder(orderData: CreateOrderData) {
 
     if (!session?.user?.email) {
       console.log("❌ Usuário não autenticado")
-      return { success: false, message: "Usuário não autenticado" }
+      return {
+        success: false,
+        message: "Usuário não autenticado",
+        errorType: "server_error",
+      }
     }
 
     const user = await prisma.user.findUnique({
@@ -58,23 +82,71 @@ export async function createOrder(orderData: CreateOrderData) {
 
     if (!user) {
       console.log("❌ Usuário não encontrado no banco")
-      return { success: false, message: "Usuário não encontrado" }
+      return {
+        success: false,
+        message: "Usuário não encontrado",
+        errorType: "server_error",
+      }
     }
 
-    // Validar se há itens no pedido
-    if (!orderData.items || orderData.items.length === 0) {
-      console.log("❌ Nenhum item no pedido")
-      return { success: false, message: "Nenhum item no pedido" }
+    // Sistema de fila - evita pedidos simultâneos do mesmo usuário
+    const queueKey = `order_${user.id}`
+    if (orderQueue.has(queueKey)) {
+      console.log("❌ Pedido já em processamento para este usuário")
+      return {
+        success: false,
+        message: "Já existe um pedido sendo processado. Aguarde um momento.",
+        errorType: "duplicate_order",
+      }
     }
 
-    // Buscar produtos e validar disponibilidade
-    const productIds = orderData.items.map((item) => item.productId)
-    console.log("IDs dos produtos:", productIds)
+    // Adicionar à fila
+    const orderPromise = processOrder(orderData, user)
+    orderQueue.set(queueKey, orderPromise)
 
-    const products = await prisma.product.findMany({
+    try {
+      const result = await orderPromise
+      return result
+    } finally {
+      // Remover da fila após processamento
+      orderQueue.delete(queueKey)
+    }
+  } catch (error: any) {
+    console.error("❌ ERRO COMPLETO:", error)
+    console.error("Stack trace:", error.stack)
+    return {
+      success: false,
+      message: `Erro interno do servidor: ${error.message}`,
+      errorType: "server_error",
+    }
+  }
+}
+
+async function processOrder(orderData: CreateOrderData, user: any): Promise<OrderResult> {
+  // Validar se há itens no pedido
+  if (!orderData.items || orderData.items.length === 0) {
+    console.log("❌ Nenhum item no pedido")
+    return {
+      success: false,
+      message: "Nenhum item no pedido",
+      errorType: "product_validation_error",
+    }
+  }
+
+  // Buscar produtos e validar disponibilidade com lock
+  const productIds = orderData.items.map((item) => item.productId)
+  console.log("IDs dos produtos:", productIds)
+
+  return await prisma.$transaction(async (tx) => {
+    // Buscar produtos com lock para evitar condições de corrida
+    const products = await tx.product.findMany({
       where: { id: { in: productIds } },
     })
     console.log("Produtos encontrados:", products.length)
+
+    // Validações rigorosas
+    const validationErrors: string[] = []
+    const priceChanges: Array<{ product: string; oldPrice: number; newPrice: number }> = []
 
     for (const item of orderData.items) {
       const product = products.find((p) => p.id === item.productId)
@@ -83,34 +155,100 @@ export async function createOrder(orderData: CreateOrderData) {
         disponivel: product?.available,
         estoque: product?.stock,
         quantidadeSolicitada: item.quantity,
+        precoAtual: product?.price,
+        precoCarrinho: item.price,
       })
 
       if (!product) {
-        console.log(`❌ Produto ${item.productId} não encontrado`)
-        return {
-          success: false,
-          message: `Produto ${item.name} não encontrado`,
-        }
+        validationErrors.push(`Produto ${item.name} não foi encontrado`)
+        continue
       }
 
       if (!product.available) {
-        console.log(`❌ Produto ${item.productId} não disponível`)
-        return {
-          success: false,
-          message: `Produto ${item.name} não está disponível`,
-        }
+        validationErrors.push(`Produto ${item.name} não está mais disponível`)
+        continue
       }
 
       if (product.stock < item.quantity) {
-        console.log(`❌ Estoque insuficiente para produto ${item.productId}`)
-        return {
-          success: false,
-          message: `Produto ${item.name} não tem estoque suficiente. Disponível: ${product.stock}`,
-        }
+        validationErrors.push(
+          `Produto ${item.name} tem apenas ${product.stock}kg disponível (solicitado: ${item.quantity}kg)`,
+        )
+        continue
+      }
+
+      // Verificar mudanças de preço (tolerância de 5%)
+       const priceDifference = Math.abs(product.price - item.price) / item.price
+      if (priceDifference > 0.05) {
+        priceChanges.push({
+          product: item.name,
+          oldPrice: item.price,
+          newPrice: product.price,
+        })
+      }
+    }
+
+
+    // Se há erros de validação de produtos
+    if (validationErrors.length > 0) {
+      console.log("❌ Erros de validação:", validationErrors)
+      return {
+        success: false,
+        message: validationErrors.join("; "),
+        errorType: "product_validation_error",
+        errorDetails: { validationErrors },
+      }
+    }
+
+    // Se há mudanças significativas de preço
+    if (priceChanges.length > 0) {
+      console.log("❌ Mudanças de preço detectadas:", priceChanges)
+      return {
+        success: false,
+        message: "Os preços de alguns produtos foram atualizados. Por favor, revise seu carrinho.",
+        errorType: "price_change_error",
+        errorDetails: { priceChanges },
       }
     }
 
     console.log("✅ Todos os produtos validados")
+
+       const recalculatedTotal =
+      orderData.items.reduce((sum, item) => {
+        const product = products.find((p) => p.id === item.productId)!
+        
+        // Se não tem priceWeightAmount, usar preço direto por kg
+        if (!product.priceWeightAmount) {
+          return sum + product.price * item.quantity
+        }
+
+        // Calcular preço por grama
+         // Calcular preço por kg baseado no priceWeightAmount
+        const priceWeightAmount = product.priceWeightAmount || 1
+        const pricePerKg = product.price / priceWeightAmount
+        
+        // item.quantity já está em kg
+        return sum + pricePerKg * item.quantity
+      }, 0) +
+      orderData.deliveryFee -
+      (orderData.discount || 0)
+
+    if (Math.abs(recalculatedTotal - orderData.total) > 5) {
+      console.log("❌ Divergência no total do pedido")
+      console.log("Total recalculado:", recalculatedTotal)
+      console.log("Total recebido:", orderData.total)
+      console.log("Diferença:", Math.abs(recalculatedTotal - orderData.total))
+
+      return {
+        success: false,
+        message: "Houve uma divergência no valor total. Por favor, atualize seu carrinho.",
+        errorType: "price_change_error",
+        errorDetails: {
+          expectedTotal: recalculatedTotal,
+          receivedTotal: orderData.total,
+          difference: Math.abs(recalculatedTotal - orderData.total),
+        },
+      }
+    }
 
     const readableOrderNumber = generateOrderNumber(user.name || "XX")
     console.log("Criando pedido...")
@@ -120,22 +258,26 @@ export async function createOrder(orderData: CreateOrderData) {
       orderData.customerData.complement ? `, ${orderData.customerData.complement}` : ""
     }, ${orderData.customerData.neighborhood}, ${orderData.customerData.city} - ${orderData.customerData.state}, ${orderData.customerData.cep}`
 
-    const order = await prisma.order.create({
+    // Criar pedido e atualizar estoque em uma única transação
+     const order = await tx.order.create({
       data: {
         userId: user.id,
-        total: orderData.total,
+        total: recalculatedTotal,
         status: "Preparando",
         paymentMethod: orderData.paymentMethod,
         paymentStatus: orderData.PaymentStatus || "Pendente",
         orderNumber: readableOrderNumber,
         deliveryAddress: deliveryAddress,
         items: {
-          create: orderData.items.map((item) => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            category: item.category,
-          })),
+          create: orderData.items.map((item) => {
+            const product = products.find((p) => p.id === item.productId)!
+            return {
+              name: item.name,
+              quantity: item.quantity, // quantidade em kg
+              price: product.price, // preço base por unidade de peso (kg)
+              category: item.category,
+            }
+          }),
         },
       },
       include: {
@@ -145,9 +287,17 @@ export async function createOrder(orderData: CreateOrderData) {
 
     console.log("✅ Pedido criado com ID:", order.id)
 
+    // Atualizar estoque dos produtos
     console.log("Atualizando estoque...")
     for (const item of orderData.items) {
-      await prisma.product.update({
+      const product = products.find((p) => p.id === item.productId)!
+
+      // Verificação dupla do estoque antes de atualizar
+      if (product.stock < item.quantity) {
+        throw new Error(`Estoque insuficiente para ${item.name}`)
+      }
+
+      await tx.product.update({
         where: { id: item.productId },
         data: {
           stock: {
@@ -158,8 +308,9 @@ export async function createOrder(orderData: CreateOrderData) {
       console.log(`✅ Estoque atualizado para produto ${item.productId}`)
     }
 
+    // Verificar e criar endereço se necessário
     console.log("Verificando endereço...")
-    const existingAddress = await prisma.address.findFirst({
+    const existingAddress = await tx.address.findFirst({
       where: {
         userId: user.id,
         street: orderData.customerData.street,
@@ -173,7 +324,7 @@ export async function createOrder(orderData: CreateOrderData) {
 
     if (!existingAddress) {
       console.log("Criando novo endereço...")
-      await prisma.address.create({
+      await tx.address.create({
         data: {
           userId: user.id,
           name: orderData.customerData.nome || "Endereço de entrega",
@@ -191,18 +342,20 @@ export async function createOrder(orderData: CreateOrderData) {
       console.log("✅ Novo endereço criado")
     }
 
+    // Limpar carrinho
     console.log("Limpando carrinho...")
-    const deletedItems = await prisma.cartItem.deleteMany({
+    const deletedItems = await tx.cartItem.deleteMany({
       where: { userId: user.id },
     })
     console.log(`✅ ${deletedItems.count} itens removidos do carrinho`)
 
-    revalidatePath("/")
-    revalidatePath("/profile")
-
     const orderNumber = order.orderNumber || order.id.toString().padStart(8, "0").toUpperCase()
     console.log("✅ Pedido finalizado com sucesso:", orderNumber)
     console.log("=== FIM CREATE ORDER ===")
+
+    // Revalidar páginas após a transação
+    revalidatePath("/")
+    revalidatePath("/profile")
 
     return {
       success: true,
@@ -210,14 +363,7 @@ export async function createOrder(orderData: CreateOrderData) {
       orderId: order.id,
       orderNumber,
     }
-  } catch (error: any) {
-    console.error("❌ ERRO COMPLETO:", error)
-    console.error("Stack trace:", error.stack)
-    return {
-      success: false,
-      message: `Erro interno do servidor: ${error.message}`,
-    }
-  }
+  })
 }
 
 export async function getAllOrders() {
@@ -281,6 +427,34 @@ export async function getAllOrders() {
 export async function updateOrderStatusByOrderNumber(orderId: string, newStatus: string) {
   try {
     console.log("Atualizando status do pedido:", orderId, "para", newStatus)
+
+    // Validar transições de status válidas
+    const validTransitions: { [key: string]: string[] } = {
+      Preparando: ["Enviado", "Cancelado"],
+      Enviado: ["Entregue", "Cancelado"],
+      Entregue: [],
+      Cancelado: [],
+    }
+
+    const currentOrder = await prisma.order.findUnique({
+      where: { orderNumber: orderId },
+      select: { status: true },
+    })
+
+    if (!currentOrder) {
+      return {
+        success: false,
+        message: "Pedido não encontrado",
+      }
+    }
+
+    const allowedStatuses = validTransitions[currentOrder.status] || []
+    if (!allowedStatuses.includes(newStatus)) {
+      return {
+        success: false,
+        message: `Não é possível alterar status de "${currentOrder.status}" para "${newStatus}"`,
+      }
+    }
 
     await prisma.order.update({
       where: { orderNumber: orderId },
@@ -354,43 +528,58 @@ export async function cancelOrder(orderId: string) {
       return { success: false, message: "Usuário não encontrado" }
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: true },
+    return await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      })
+
+      if (!order) {
+        return { success: false, message: "Pedido não encontrado" }
+      }
+
+      if (order.userId !== user.id && !user.isAdmin) {
+        return { success: false, message: "Acesso negado" }
+      }
+
+      if (order.status === "Entregue" || order.status === "Cancelado") {
+        return { success: false, message: "Este pedido não pode ser cancelado" }
+      }
+
+      // Atualizar status do pedido
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: "Cancelado",
+          updatedAt: new Date(),
+        },
+      })
+
+      // Restaurar estoque dos produtos (se possível identificar os produtos)
+      for (const item of order.items) {
+        // Tentar encontrar o produto pelo nome (não é ideal, mas funciona)
+        const product = await tx.product.findFirst({
+          where: { name: item.name },
+        })
+
+        if (product) {
+          await tx.product.update({
+            where: { id: product.id },
+            data: {
+              stock: {
+                increment: item.quantity,
+              },
+            },
+          })
+          console.log(`✅ Estoque restaurado para: ${item.name} - Qtd: ${item.quantity}`)
+        }
+      }
+
+      revalidatePath("/profile")
+      revalidatePath("/admin")
+
+      return { success: true, message: "Pedido cancelado com sucesso" }
     })
-
-    if (!order) {
-      return { success: false, message: "Pedido não encontrado" }
-    }
-
-    if (order.userId !== user.id && !user.isAdmin) {
-      return { success: false, message: "Acesso negado" }
-    }
-
-    if (order.status === "Entregue" || order.status === "Cancelado") {
-      return { success: false, message: "Este pedido não pode ser cancelado" }
-    }
-
-    // Atualizar status do pedido
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status: "Cancelado",
-        updatedAt: new Date(),
-      },
-    })
-
-    // Restaurar estoque dos produtos
-    for (const item of order.items) {
-      // Aqui você precisaria buscar o produto pelo nome ou ter uma referência ao productId
-      // Como o schema atual não tem productId no OrderItem, vamos pular esta parte
-      console.log(`Deveria restaurar estoque para: ${item.name} - Qtd: ${item.quantity}`)
-    }
-
-    revalidatePath("/profile")
-    revalidatePath("/admin")
-
-    return { success: true, message: "Pedido cancelado com sucesso" }
   } catch (error) {
     console.error("Erro ao cancelar pedido:", error)
     return { success: false, message: "Erro interno do servidor" }

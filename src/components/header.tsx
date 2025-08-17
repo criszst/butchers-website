@@ -32,7 +32,6 @@ import { motion, AnimatePresence } from "framer-motion"
 export default function Header() {
   const { itemCount } = useCart()
   const [isMiniCartOpen, setIsMiniCartOpen] = useState(false)
-  const [lastAddedItem, setLastAddedItem] = useState(null)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -42,23 +41,23 @@ export default function Header() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      getUserProfile(session?.user?.email as string).then((user) => {
-        if (user?.isAdmin) {
-          setAdmin(true)
-        }
-      })
+      if (session?.user?.email) {
+        getUserProfile(session.user.email).then((user) => {
+          if (user?.isAdmin) {
+            setAdmin(true)
+          }
+        })
+      }
     }
     fetchUser()
   }, [session?.user?.email])
 
-  const openMiniCart = (item?: any) => {
-    if (item) setLastAddedItem(item)
+  const openMiniCart = () => {
     setIsMiniCartOpen(true)
   }
 
   const closeMiniCart = () => {
     setIsMiniCartOpen(false)
-    setLastAddedItem(null)
   }
 
   useEffect(() => {
@@ -86,13 +85,12 @@ export default function Header() {
   ]
 
   const userMenuItems = [
-   
-    { href: "/perfil", label: "Meu Perfil", icon: User },
-    { href: "/pedidos", label: "Meus Pedidos", icon: Package, badge: "3" },
+    { href: "/perfil#perfil", label: "Meu Perfil", icon: User },
+    { href: "/perfil#pedidos", label: "Meus Pedidos", icon: Package, badge: "3" },
     { href: "/favoritos", label: "Favoritos", icon: Heart },
-    { href: "/notificacoes", label: "Notificações", icon: Bell, hasNotification: true },
-    { href: "/configuracoes", label: "Configurações", icon: Settings },
-     { href: "/admin", label: "Admin", icon: Crown, isAdmin: true },
+    { href: "/perfil#notificacoes", label: "Notificações", icon: Bell, hasNotification: true },
+    { href: "/perfil#configuracoes", label: "Configurações", icon: Settings },
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Crown, isAdmin: true }] : []),
   ]
 
   return (
@@ -227,8 +225,8 @@ export default function Header() {
               </nav>
 
               {/* Cart Button */}
-              <motion.div  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <EnhancedCartButton  onClick={() => openMiniCart()} />
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <EnhancedCartButton onClick={() => openMiniCart()} />
               </motion.div>
 
               {/* User Menu */}
@@ -414,7 +412,7 @@ export default function Header() {
                     placeholder="Buscar produtos..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2  rounded-lg border-2 border-gray-200 focus:border-red-500 transition-all duration-300"
+                    className="pl-10 pr-4 py-2 rounded-lg border-2 border-gray-200 focus:border-red-500 transition-all duration-300"
                   />
                 </div>
               </motion.div>
@@ -544,7 +542,7 @@ export default function Header() {
       </AnimatePresence>
 
       {/* Mini Cart */}
-      <MiniCart isOpen={isMiniCartOpen} onClose={closeMiniCart} lastAddedItem={lastAddedItem} />
+      <MiniCart isOpen={isMiniCartOpen} onClose={closeMiniCart} />
     </>
   )
 }

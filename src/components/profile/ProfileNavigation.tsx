@@ -1,5 +1,5 @@
 "use client"
-import { User, Package, MapPin, Settings } from "lucide-react"
+import { User, Package, MapPin, Settings, Bell } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ProfileNavigationProps {
@@ -24,6 +24,12 @@ const tabs = [
     id: "enderecos",
     label: "Endereços",
     icon: MapPin,
+    color: "text-orange-600",
+  },
+  {
+    id: "notificacoes",
+    label: "Notificações",
+    icon: Bell,
     color: "text-orange-600",
   },
   {

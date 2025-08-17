@@ -98,7 +98,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
   return (
     <>
       {/* Header Principal */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm backdrop-blur-sm bg-white/200 transition-all duration-300">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm backdrop-blur-sm  transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between py-3">
             {/* Logo com animação */}

@@ -34,6 +34,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion"
 import { getAllOrders, updateOrderStatusByOrderNumber } from "@/app/actions/order/orders"
 import { toast } from "sonner"
+import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
 
 // Interface corrigida para corresponder ao retorno da action
 interface Order {
@@ -83,6 +84,14 @@ export function OrdersManager() {
     { value: "Entregue", label: "Entregue", color: "bg-green-100 text-green-800" },
     { value: "Cancelado", label: "Cancelado", color: "bg-red-100 text-red-800" },
   ]
+
+  const formatQuantityDisplay = (quantity: number) => {
+    if (quantity >= 1) {
+      return `${quantity}kg`
+    } else {
+      return `${(quantity * 1000).toFixed(0)}g`
+    }
+  }
 
   const loadOrders = async () => {
     try {
@@ -314,6 +323,7 @@ export function OrdersManager() {
                     <div>
                       <p className="text-xs sm:text-sm font-medium text-gray-600">{status.label}</p>
                       <p className="text-lg sm:text-2xl font-bold text-gray-900">{count}</p>
+                      <Badge className="bg-blue-100 text-blue-800 text-xs mt-1">estável</Badge>
                     </div>
                     <div className={`p-2 rounded-lg ${status.color}`}>{getStatusIcon(status.value)}</div>
                   </div>
@@ -431,7 +441,7 @@ export function OrdersManager() {
                             className="flex justify-between text-xs text-gray-600"
                           >
                             <span className="truncate mr-2">
-                              {item.quantity}x {item.name}
+                              {formatQuantityDisplay(item.quantity)} {item.name}
                             </span>
                             <span className="font-medium">R$ {(item.price * item.quantity).toFixed(2)}</span>
                           </motion.div>
@@ -746,13 +756,15 @@ export function OrdersManager() {
                             <CardContent className="p-4">
                               <div className="flex items-center space-x-4">
                                 <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
-                                  <Package2 className="h-6 w-6 text-white" />
+                                  <MeatImagePlaceholder size="sm" className="w-12 h-12" />
                                 </div>
                                 <div className="flex-1">
                                   <h5 className="font-bold text-gray-900">{item.name}</h5>
                                   <p className="text-xs text-gray-500">{item.category}</p>
                                   <div className="flex items-center justify-between mt-1">
-                                    <span className="text-sm text-gray-600">Qtd: {item.quantity}</span>
+                                    <span className="text-sm text-gray-600">
+                                      Qtd: {formatQuantityDisplay(item.quantity)}
+                                    </span>
                                     <span className="font-bold text-green-600">
                                       R$ {(item.price * item.quantity).toFixed(2)}
                                     </span>
@@ -875,7 +887,7 @@ export function OrdersManager() {
                         <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm">
                           <div>
                             <div className="font-medium">{item.name}</div>
-                            <div className="text-gray-600">Quantidade: {item.quantity}</div>
+                            <div className="text-gray-600">Quantidade: {formatQuantityDisplay(item.quantity)}</div>
                           </div>
                           <div className="font-bold text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</div>
                         </div>

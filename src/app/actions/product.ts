@@ -2,35 +2,46 @@
 
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
-import { Prisma, Product } from "@/generated/prisma"
-
-import ProductData from "@/interfaces/product"
+import type { Prisma } from "@/generated/prisma"
+import type ProductData from "@/interfaces/product"
 
 export async function createProduct(data: ProductData) {
-    if (!data.name || !data.description || !data.category) {
-      return {
-        success: false,
-        message: "Nome, descrição e categoria são obrigatórios",
-      }
+  if (!data.name || !data.description || !data.category) {
+    return {
+      success: false,
+      message: "Nome, descrição e categoria são obrigatórios",
     }
+  }
 
-    
-  
-    if (data.price <= 0) {
-      return {
-        success: false,
-        message: "O preço deve ser maior que zero",
-      }
+  if (data.price <= 0) {
+    return {
+      success: false,
+      message: "O preço deve ser maior que zero",
     }
+  }
 
-    if (data.stock < 0) {
-      return {
-        success: false,
-        message: "O estoque não pode ser negativo",
-      }
+  if (data.stock < 0) {
+    return {
+      success: false,
+      message: "O estoque não pode ser negativo",
     }
+  }
 
-    // TODO: Price Per Kilo equals to 1 (kg) usually
+  if (!data.priceWeightAmount || data.priceWeightAmount <= 0) {
+    return {
+      success: false,
+      message: "A quantidade da unidade de peso deve ser maior que zero",
+    }
+  }
+
+  if (!data.priceWeightUnit || !["g", "kg"].includes(data.priceWeightUnit)) {
+    return {
+      success: false,
+      message: "A unidade de peso deve ser 'g' ou 'kg'",
+    }
+  }
+
+  try {
     const product = await prisma.product.create({
       data: {
         name: data.name,
@@ -41,7 +52,8 @@ export async function createProduct(data: ProductData) {
         image: data.image || null,
         available: true,
         priceWeightAmount: data.priceWeightAmount,
-        priceWeightUnit: data.priceWeightUnit
+        priceWeightUnit: data.priceWeightUnit,
+        discount: data.discount || 0,
       },
     })
 
@@ -53,19 +65,25 @@ export async function createProduct(data: ProductData) {
       message: "Produto criado com sucesso!",
       product,
     }
+  } catch (error) {
+    console.error("Erro ao criar produto:", error)
+    return {
+      success: false,
+      message: "Erro interno do servidor",
+    }
+  }
 }
 
-export async function updateProduct(id: number, data: Prisma.ProductUpdateInput): 
-    Promise<{ success: boolean; message: string }> {
-
-
+export async function updateProduct(
+  id: number,
+  data: Prisma.ProductUpdateInput,
+): Promise<{ success: boolean; message: string }> {
   if (!data.name || !data.description || !data.category) {
     return {
       success: false,
       message: "Nome, descrição e categoria são obrigatórios",
     }
   }
-
 
   if (data.price !== undefined && data.price !== null) {
     const priceNumber = Number(data.price)
@@ -86,40 +104,88 @@ export async function updateProduct(id: number, data: Prisma.ProductUpdateInput)
       }
     }
   }
+
+  if (data.priceWeightAmount !== undefined && data.priceWeightAmount !== null) {
+    const weightAmount = Number(data.priceWeightAmount)
+    if (isNaN(weightAmount) || weightAmount <= 0) {
+      return {
+        success: false,
+        message: "A quantidade da unidade de peso deve ser maior que zero",
+      }
+    }
+  }
+
+  if (data.priceWeightUnit !== undefined && data.priceWeightUnit !== null) {
+    if (!["g", "kg"].includes(data.priceWeightUnit as string)) {
+      return {
+        success: false,
+        message: "A unidade de peso deve ser 'g' ou 'kg'",
+      }
+    }
+  }
+
+  try {
     await prisma.product.update({
       where: { id },
       data,
     })
 
+    revalidatePath("/admin")
+    revalidatePath("/")
+
     return {
       success: true,
       message: "Produto atualizado com sucesso",
     }
-
-}
-export async function deleteProduct(id: number) {
-  if (!id) return {
+  } catch (error) {
+    console.error("Erro ao atualizar produto:", error)
+    return {
       success: false,
-      message: "Nome, descrição e categoria são obrigatórios",
+      message: "Erro interno do servidor",
+    }
   }
+}
 
-  return await prisma.product.delete({
+export async function deleteProduct(id: number) {
+  if (!id)
+    return {
+      success: false,
+      message: "ID do produto é obrigatório",
+    }
+
+  try {
+    await prisma.product.delete({
       where: { id },
     })
-}
 
+    revalidatePath("/admin")
+    revalidatePath("/")
+
+    return {
+      success: true,
+      message: "Produto deletado com sucesso",
+    }
+  } catch (error) {
+    console.error("Erro ao deletar produto:", error)
+    return {
+      success: false,
+      message: "Erro interno do servidor",
+    }
+  }
+}
 
 export async function getProductsAction(filters?: {
   search?: string
   category?: string
 }) {
-
-  if(!filters) return {
+  if (!filters)
+    return {
       success: false,
       products: [],
-      message: 'Filtros faltando...',
-  }
+      message: "Filtros faltando...",
+    }
 
+  try {
     const where: any = {}
 
     if (filters?.search) {
@@ -148,18 +214,18 @@ export async function getProductsAction(filters?: {
       orderBy: { createdAt: "desc" },
     })
 
-    if (!products) {
-      return {
-        success: false,
-        products: [],
-        message: "Nenhum produto encontrado",
-      }
-    }
-
     return {
       success: true,
       products,
     }
+  } catch (error) {
+    console.error("Erro ao buscar produtos:", error)
+    return {
+      success: false,
+      products: [],
+      message: "Erro interno do servidor",
+    }
+  }
 }
 
 export async function getProductCategoriesAction() {
@@ -215,16 +281,11 @@ export async function getProductById(id: number) {
   }
 }
 
-
 export async function getRelatedProducts(productId: number, category: string, limit = 4) {
   try {
     const relatedProducts = await prisma.product.findMany({
       where: {
-        AND: [
-          { id: { not: productId } },
-          { category: category }, 
-          { available: true },
-        ],
+        AND: [{ id: { not: productId } }, { category: category }, { available: true }],
       },
       take: limit,
       orderBy: { createdAt: "desc" },

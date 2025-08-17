@@ -1,209 +1,386 @@
 "use client"
 
 import type React from "react"
-
-import { createContext, useContext, useEffect, useState, useCallback } from "react"
-import { addToCart, removeFromCart, getCartItems, updateCartItemQuantity } from "@/app/actions/cart/cart"
-import { useSession } from "next-auth/react"
+import { createContext, useContext, useReducer, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 interface Product {
   id: number
   name: string
   price: number
-  image: string | null
+  image?: string | null
   category: string
+  stock: number
   available: boolean
-  priceWeightAmount: number | null
-  priceWeightUnit: string | null
+  priceWeightAmount?: number | null
+  priceWeightUnit?: string | null
 }
 
 interface CartItem {
   id: string
-  quantity: number
   product: Product
+  quantity: number // Quantidade em gramas
 }
 
-interface CartContextType {
+interface CartState {
   items: CartItem[]
-  addItem: (product: Product, quantity?: number) => Promise<void>
-    removeItem: (productId: number) => Promise<void> 
-    updateQuantity: (productId: number, quantity: number) => Promise<void>
-  clearCart: () => Promise<void>
+  total: number
+  itemCount: number
+  lastAddedItem: Product | null
+}
+
+type CartAction =
+  | { type: "ADD_ITEM"; payload: { product: Product; quantity: number } }
+  | { type: "REMOVE_ITEM"; payload: { productId: number } }
+  | { type: "UPDATE_QUANTITY"; payload: { productId: number; quantity: number } }
+  | { type: "CLEAR_CART" }
+  | { type: "REFRESH_CART" }
+  | { type: "SET_CART"; payload: CartItem[] }
+  | { type: "SET_LAST_ADDED_ITEM"; payload: Product | null }
+
+const CartContext = createContext<{
+  items: CartItem[]
   total: number
   itemCount: number
   isLoading: boolean
   lastAddedItem: Product | null
+  addItem: (product: Product, quantity?: number) => Promise<void>
+  removeItem: (productId: number) => Promise<void>
+  updateQuantity: (productId: number, quantity: number) => Promise<void>
+  clearCart: () => Promise<void>
   refreshCart: () => Promise<void>
+} | null>(null)
+
+
+
+const formatWeightDisplay = (kilos: number): string => {
+  if (kilos < 1000) {
+    return `${(kilos * 1000).toFixed(1)}kg`
+  }
+  return `${kilos.toFixed(0)}g`
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined)
+const calculateItemPrice = (item: CartItem): number => {
+  const product = item.product
+
+  
+  if (!product.priceWeightAmount || !product.priceWeightUnit) {
+    return product.price * item.quantity
+  }
+
+  // APENAS KG
+  const pricePerKg = product.price / product.priceWeightAmount
+  return pricePerKg * item.quantity
+}
+
+function cartReducer(state: CartState, action: CartAction): CartState {
+  switch (action.type) {
+    case "ADD_ITEM": {
+      const { product, quantity } = action.payload
+      const existingItemIndex = state.items.findIndex((item) => item.product.id === product.id)
+
+      let newItems: CartItem[]
+      if (existingItemIndex > -1) {
+        newItems = state.items.map((item, index) =>
+          index === existingItemIndex ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock) } : item,
+        )
+      } else {
+        const newItem: CartItem = {
+          id: `${product.id}-${Date.now()}`,
+          product,
+          quantity: Math.min(quantity, product.stock),
+        }
+        newItems = [...state.items, newItem]
+      }
+
+      const total = newItems.reduce((sum, item) => sum + calculateItemPrice(item), 0)
+      const itemCount = newItems.length
+
+      return {
+        items: newItems,
+        total,
+        itemCount,
+        lastAddedItem: product,
+      }
+    }
+
+    case "REMOVE_ITEM": {
+      const newItems = state.items.filter((item) => item.product.id !== action.payload.productId)
+
+      const total = newItems.reduce((sum, item) => sum + calculateItemPrice(item), 0)
+      const itemCount = newItems.length
+
+      return {
+        ...state,
+        items: newItems,
+        total,
+        itemCount,
+      }
+    }
+
+    case "UPDATE_QUANTITY": {
+      const { productId, quantity } = action.payload
+      const newItems = state.items
+        .map((item) =>
+          item.product.id === productId
+            ? { ...item, quantity: Math.min(Math.max(0, quantity), item.product.stock) }
+            : item,
+        )
+        .filter((item) => item.quantity > 0)
+
+      const total = newItems.reduce((sum, item) => sum + calculateItemPrice(item), 0)
+      const itemCount = newItems.length
+
+      return {
+        ...state,
+        items: newItems,
+        total,
+        itemCount,
+      }
+    }
+
+    case "CLEAR_CART":
+      return {
+        items: [],
+        total: 0,
+        itemCount: 0,
+        lastAddedItem: null,
+      }
+
+    case "REFRESH_CART": {
+      const total = state.items.reduce((sum, item) => sum + calculateItemPrice(item), 0)
+      const itemCount = state.items.length
+      return { ...state, total, itemCount }
+    }
+
+    case "SET_CART": {
+      const items = action.payload
+      const total = items.reduce((sum, item) => sum + calculateItemPrice(item), 0)
+      const itemCount = items.length
+      return {
+        ...state,
+        items,
+        total,
+        itemCount,
+      }
+    }
+
+    case "SET_LAST_ADDED_ITEM": {
+      return {
+        ...state,
+        lastAddedItem: action.payload,
+      }
+    }
+
+    default:
+      return state
+  }
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
-  const [total, setTotal] = useState(0)
-  const [itemCount, setItemCount] = useState(0)
+  const [state, dispatch] = useReducer(cartReducer, {
+    items: [],
+    total: 0,
+    itemCount: 0,
+    lastAddedItem: null,
+  })
+
   const [isLoading, setIsLoading] = useState(false)
-  const [lastAddedItem, setLastAddedItem] = useState<Product | null>(null)
-  const { data: session, status } = useSession()
 
-  // Função para atualizar o resumo do carrinho
-  const updateCartSummary = useCallback((cartItems: CartItem[]) => {
-    const newTotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-    const newItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-
-    setTotal(newTotal)
-    setItemCount(newItemCount)
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cart")
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart)
+        dispatch({ type: "SET_CART", payload: parsedCart })
+      } catch (error) {
+        console.error("Error loading cart from localStorage:", error)
+        localStorage.removeItem("cart")
+      }
+    }
   }, [])
 
-  // Função para carregar itens do carrinho
-  const refreshCart = useCallback(async () => {
-    if (status === "loading" || !session?.user) return
-
-    setIsLoading(true)
-    try {
-      const cartItems = await getCartItems()
-      setItems(cartItems)
-      updateCartSummary(cartItems)
-    } catch (error) {
-      console.error("Erro ao carregar carrinho:", error)
-      toast.error("Erro ao carregar carrinho")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [session, status, updateCartSummary])
-
-  // Carregar carrinho quando o usuário estiver autenticado
+  // Save cart to localStorage whenever it changes
   useEffect(() => {
-    refreshCart()
-  }, [refreshCart])
+    localStorage.setItem("cart", JSON.stringify(state.items))
+  }, [state.items])
 
-  // Adicionar item ao carrinho
-  const addItem = useCallback(
-    async (product: Product, quantity = 1) => {
-      if (!session?.user) {
-        toast.error("Faça login para adicionar itens ao carrinho")
+  // Clear lastAddedItem after 5 seconds
+  useEffect(() => {
+    if (state.lastAddedItem) {
+      const timer = setTimeout(() => {
+        dispatch({ type: "SET_LAST_ADDED_ITEM", payload: null })
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [state.lastAddedItem])
+
+  const addItem = async (product: Product, quantity = 1) => {
+    try {
+      setIsLoading(true)
+
+      // Validate product availability
+      if (!product.available) {
+        toast.error(`❌ ${product.name} não está disponível no momento`, {
+          description: "Este produto foi temporariamente removido do estoque.",
+          duration: 4000,
+        })
         return
       }
 
-      setIsLoading(true)
-      try {
-        const result = await addToCart(product.id, quantity)
-
-        if (result.success) {
-          await refreshCart()
-          setLastAddedItem(product)
-          toast.success(result.message)
-
-          // Limpar lastAddedItem após 3 segundos
-          setTimeout(() => setLastAddedItem(null), 3000)
-        } else {
-          toast.error(result.message)
-        }
-      } catch (error) {
-        console.error("Erro ao adicionar item:", error)
-        toast.error("Erro ao adicionar item ao carrinho")
-      } finally {
-        setIsLoading(false)
+      if (product.stock === 0) {
+        toast.error(`😔 ${product.name} está esgotado`, {
+          description: "Produto fora de estoque. Tente novamente mais tarde.",
+          duration: 4000,
+        })
+        return
       }
-    },
-    [session, refreshCart],
-  )
 
-  // Remover item do carrinho
-  const removeItem = useCallback(
-    async (productId: number) => {
-      if (!session?.user) return
-
-      setIsLoading(true)
-      try {
-        const result = await removeFromCart(productId)
-
-        if (result.success) {
-          await refreshCart()
-          toast.success(result.message)
-        } else {
-          toast.error(result.message)
-        }
-      } catch (error) {
-        console.error("Erro ao remover item:", error)
-        toast.error("Erro ao remover item do carrinho")
-      } finally {
-        setIsLoading(false)
+      if (product.stock < quantity) {
+        const displayStock = formatWeightDisplay(product.stock)
+        toast.error(`⚠️ Estoque insuficiente para ${product.name}`, {
+          description: `Temos apenas ${displayStock} disponível. Ajuste a quantidade.`,
+          duration: 4000,
+        })
+        return
       }
-    },
-    [session, refreshCart],
-  )
 
-  // Atualizar quantidade
-  const updateQuantity = useCallback(
-    async (productId: number, quantity: number) => {
-      if (!session?.user) return
+      // Check if adding this quantity would exceed stock
+      const existingItem = state.items.find((item) => item.product.id === product.id)
+      const currentQuantity = existingItem ? existingItem.quantity : 0
+      const totalQuantity = currentQuantity + quantity
 
-      setIsLoading(true)
-      try {
-        const result = await updateCartItemQuantity(productId, quantity)
-
-        if (result.success) {
-          await refreshCart()
+      if (totalQuantity > product.stock) {
+        const availableQuantity = product.stock - currentQuantity
+        if (availableQuantity > 0) {
+          dispatch({ type: "ADD_ITEM", payload: { product, quantity: availableQuantity } })
+          const displayAvailable = formatWeightDisplay(availableQuantity)
+          const displayStock = formatWeightDisplay(product.stock)
+          toast.warning(`⚠️ Quantidade ajustada para ${product.name}`, {
+            description: `Adicionado apenas ${displayAvailable} devido ao estoque limitado (${displayStock} disponível).`,
+            duration: 5000,
+          })
         } else {
-          toast.error(result.message)
+          const displayStock = formatWeightDisplay(product.stock)
+          toast.error(`🛒 ${product.name} já está no carrinho`, {
+            description: `Você já tem a quantidade máxima disponível (${displayStock}) no carrinho.`,
+            duration: 4000,
+          })
         }
-      } catch (error) {
-        console.error("Erro ao atualizar quantidade:", error)
-        toast.error("Erro ao atualizar quantidade")
-      } finally {
-        setIsLoading(false)
+        return
       }
-    },
-    [session, refreshCart],
-  )
 
-  // Limpar carrinho
-  const clearCartHandler = useCallback(async () => {
-    if (!session?.user) return
+      dispatch({ type: "ADD_ITEM", payload: { product, quantity } })
+      const displayQuantity = formatWeightDisplay(quantity)
 
-    setIsLoading(true)
+      toast.success(`✅ ${product.name} adicionado ao carrinho!`, {
+        description: `${displayQuantity} adicionado com sucesso.`,
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error adding item to cart:", error)
+      toast.error("❌ Erro ao adicionar produto ao carrinho", {
+        description: "Tente novamente em alguns instantes.",
+        duration: 4000,
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const removeItem = async (productId: number) => {
     try {
-      const { clearCart } = await import("@/app/actions/cart/cart")
-      const result = await clearCart()
-
-      if (result.success) {
-        setItems([])
-        setTotal(0)
-        setItemCount(0)
-        toast.success(result.message)
-      } else {
-        toast.error(result.message)
+      setIsLoading(true)
+      const item = state.items.find((item) => item.product.id === productId)
+      dispatch({ type: "REMOVE_ITEM", payload: { productId } })
+      if (item) {
+        toast.success(`🗑️ ${item.product.name} removido do carrinho`)
       }
     } catch (error) {
-      console.error("Erro ao limpar carrinho:", error)
+      console.error("Error removing item from cart:", error)
+      toast.error("Erro ao remover item do carrinho")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const updateQuantity = async (productId: number, quantity: number) => {
+    try {
+      setIsLoading(true)
+      const item = state.items.find((item) => item.product.id === productId)
+      if (!item) return
+
+      if (quantity > item.product.stock) {
+        const displayStock = formatWeightDisplay(item.product.stock)
+        toast.warning(`⚠️ Estoque limitado para ${item.product.name}`, {
+          description: `Temos apenas ${displayStock} disponível. Quantidade ajustada automaticamente.`,
+          duration: 4000,
+        })
+        dispatch({ type: "UPDATE_QUANTITY", payload: { productId, quantity: item.product.stock } })
+        return 
+      }
+
+      dispatch({ type: "UPDATE_QUANTITY", payload: { productId, quantity } })
+    } catch (error) {
+      console.error("Error updating item quantity:", error)
+      toast.error("Erro ao atualizar quantidade")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const clearCart = async () => {
+    try {
+      setIsLoading(true)
+      dispatch({ type: "CLEAR_CART" })
+      toast.success("🧹 Carrinho limpo com sucesso")
+    } catch (error) {
+      console.error("Error clearing cart:", error)
       toast.error("Erro ao limpar carrinho")
     } finally {
       setIsLoading(false)
     }
-  }, [session])
-
-  const value: CartContextType = {
-    items,
-    addItem,
-    removeItem,
-    updateQuantity,
-    clearCart: clearCartHandler,
-    total,
-    itemCount,
-    isLoading,
-    lastAddedItem,
-    refreshCart,
   }
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
+  const refreshCart = async () => {
+    try {
+      setIsLoading(true)
+      // In a real app, you might want to fetch updated product data here
+      dispatch({ type: "REFRESH_CART" })
+      toast.success("🔄 Carrinho atualizado")
+    } catch (error) {
+      console.error("Error refreshing cart:", error)
+      toast.error("Erro ao atualizar carrinho")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <CartContext.Provider
+      value={{
+        items: state.items,
+        total: state.total,
+        itemCount: state.itemCount,
+        isLoading,
+        lastAddedItem: state.lastAddedItem,
+        addItem,
+        removeItem,
+        updateQuantity,
+        clearCart,
+        refreshCart,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  )
 }
 
-export const useCart = () => {
+export function useCart() {
   const context = useContext(CartContext)
   if (!context) {
-    throw new Error("useCart deve ser usado dentro de CartProvider")
+    throw new Error("useCart must be used within a CartProvider")
   }
   return context
 }

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { ShoppingCart, X, Plus, Minus, ArrowRight, CheckCircle, Trash2, Gift } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { ShoppingCart, X, ArrowRight, CheckCircle, Trash2, Gift, Minus, Plus } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/components/cart/context"
@@ -15,10 +16,48 @@ interface MiniCartProps {
   lastAddedItem?: any
 }
 
-export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartProps) {
-  const { items, updateQuantity, removeItem, total, itemCount } = useCart()
+const formatWeightDisplay = (quantity: number, unit?: string | null) => {
+  if (!unit) return `${quantity}`
+
+  if (unit === "kg") {
+    return quantity >= 1 ? `${quantity.toFixed(1)}kg` : `${(quantity * 1000).toFixed(0)}g`
+  } else {
+    return `${quantity.toFixed(0)}g`
+  }
+}
+
+export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
+  const { items, updateQuantity, removeItem, total, itemCount, lastAddedItem } = useCart()
   const [showSuccess, setShowSuccess] = useState(false)
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
+  const [isUpdating, setIsUpdating] = useState<number | null>(null)
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price)
+  }
+
+  const handleQuantityChange = async (productId: number, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      await removeItem(productId)
+    } else {
+      const product = items.find((item) => item.product.id === productId)?.product
+      if (product) {
+        // Mínimo de 0.1kg
+        const adjustedQuantity = Math.max(newQuantity, 0.1)
+        await updateQuantity(productId, adjustedQuantity)
+      }
+    }
+  }
+
+  const formatPriceDisplay = (product: any) => {
+    const amount = product.priceWeightAmount || 1
+    const unit = product.priceWeightUnit || "kg"
+
+    return `${formatPrice(product.price)} por ${amount} kg`
+  }
 
   useEffect(() => {
     if (lastAddedItem && isOpen) {
@@ -54,6 +93,12 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
     }
   }
 
+  const calculateItemPrice = (item: any) => {
+    const priceWeightInGrams = item.product.priceWeightAmount
+    const pricePerGram = item.product.price / priceWeightInGrams
+    return pricePerGram * item.quantity
+  }
+
   const taxaEntrega = total > 50 ? 0 : 8.9
   const totalFinal = total + taxaEntrega
 
@@ -73,7 +118,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
 
           {/* Mini Cart */}
           <motion.div
-            className="fixed top-0 right-0 h-full w-full sm:w-120 bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed top-0 right-0 h-full w-full sm:w-[480px] lg:w-[520px] bg-white shadow-2xl z-50 flex flex-col"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -81,19 +126,19 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
           >
             {/* Header */}
             <motion.div
-              className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-red-600 to-orange-600 text-white"
+              className="flex items-center justify-between p-4 lg:p-6 border-b bg-gradient-to-r from-red-600 to-orange-600 text-white"
               initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
             >
               <div className="flex items-center space-x-3">
                 <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 0.5, delay: 0.2 }}>
-                  <ShoppingCart className="h-10 w-10" />
+                  <ShoppingCart className="h-6 w-6 lg:h-7 lg:w-7" />
                 </motion.div>
                 <div>
-                  <h3 className="font-bold text-lg">Meu Carrinho</h3>
-                  <p className="text-xs text-red-100">
-                    {itemCount} {itemCount === 1 ? "item" : "itens"}
+                  <h3 className="font-bold text-lg lg:text-xl">Meu Carrinho</h3>
+                  <p className="text-xs lg:text-sm text-red-100">
+                    {itemCount} {itemCount === 1 ? "produto" : "produtos"}
                   </p>
                 </div>
               </div>
@@ -113,7 +158,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
             <AnimatePresence>
               {showSuccess && lastAddedItem && (
                 <motion.div
-                  className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200"
+                  className="p-4 lg:p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200"
                   initial={{ y: -50, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: -50, opacity: 0 }}
@@ -129,7 +174,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                     </motion.div>
                     <div className="flex-1">
                       <motion.p
-                        className="text-sm font-bold text-green-800"
+                        className="text-sm lg:text-base font-bold text-green-800"
                         initial={{ x: -20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         transition={{ delay: 0.2 }}
@@ -137,7 +182,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                         🎉 Produto adicionado!
                       </motion.p>
                       <motion.p
-                        className="text-xs text-green-600"
+                        className="text-xs lg:text-sm text-green-600"
                         initial={{ x: -20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         transition={{ delay: 0.3 }}
@@ -154,7 +199,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
             <div className="flex-1 overflow-y-auto">
               {items.length === 0 ? (
                 <motion.div
-                  className="flex flex-col items-center justify-center h-full text-center p-6"
+                  className="flex flex-col items-center justify-center h-full text-center p-6 lg:p-8"
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
@@ -170,16 +215,16 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                       repeatType: "reverse",
                     }}
                   >
-                    <ShoppingCart className="h-20 w-20 text-gray-300 mb-4" />
+                    <ShoppingCart className="h-20 w-20 lg:h-24 lg:w-24 text-gray-300 mb-4" />
                   </motion.div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Carrinho vazio</h3>
-                  <p className="text-gray-600 mb-6 leading-relaxed">
+                  <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-2">Carrinho vazio</h3>
+                  <p className="text-gray-600 mb-6 leading-relaxed lg:text-lg">
                     Que tal adicionar alguns produtos deliciosos ao seu carrinho?
                   </p>
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
                       onClick={onClose}
-                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 lg:px-8 lg:py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <Gift className="h-4 w-4 mr-2" />
                       Explorar Produtos
@@ -187,18 +232,17 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                   </motion.div>
                 </motion.div>
               ) : (
-                <div className="p-4 space-y-4">
+                <div className="p-4 lg:p-2 space-y-4 lg:space-y-6">
                   <AnimatePresence>
                     {items.map((item, index) => (
                       <motion.div
                         key={item.id}
-                        className={`flex items-center space-x-3 p-4 rounded-xl border-2 transition-all duration-300 ${
-                          lastAddedItem?.id === item.id && showSuccess
-                            ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-lg"
-                            : removingItems.has(item.product.id)
-                              ? "bg-red-50 border-red-200 opacity-50"
-                              : "bg-gray-50 hover:bg-gray-100 border-gray-200 hover:border-red-200 hover:shadow-md"
-                        }`}
+                        className={`flex items-center space-x-3 lg:space-x-4 p-4 lg:p-5 rounded-xl border-2 transition-all duration-300 ${lastAddedItem?.id === item.product.id && showSuccess
+                          ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-lg"
+                          : removingItems.has(item.product.id)
+                            ? "bg-red-50 border-red-200 opacity-50"
+                            : "bg-gray-50 hover:bg-gray-100 border-gray-200 hover:border-red-200 hover:shadow-md"
+                          }`}
                         initial={{ opacity: 0, x: 50 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -50, scale: 0.8 }}
@@ -212,13 +256,13 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                         <div className="relative">
                           <motion.div whileHover={{ scale: 1.05 }} className="relative">
                             <Image
-                              src={item.product.image || "/placeholder.svg?height=60&width=60"}
+                              src={item.product.image || "/placeholder.svg?height=80&width=80"}
                               alt={item.product.name}
-                              width={60}
-                              height={60}
+                              width={80}
+                              height={80}
                               className="rounded-lg object-cover shadow-sm"
                             />
-                            {lastAddedItem?.id === item.id && showSuccess && (
+                            {lastAddedItem?.id === item.product.id && showSuccess && (
                               <motion.div
                                 className="absolute -top-2 -right-2 bg-green-600 text-white rounded-full p-1 shadow-lg"
                                 initial={{ scale: 0, rotate: -180 }}
@@ -232,42 +276,69 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm text-gray-800 truncate">{item.product.name}</h4>
-                          <p className="text-xs text-gray-600 capitalize mb-1">{item.product.category}</p>
+                          <h4 className="font-semibold text-sm lg:text-base text-gray-800 truncate">
+                            {item.product.name}
+                          </h4>
+                          <p className="text-xs lg:text-sm text-gray-600 capitalize mb-1">{item.product.category}</p>
                           <div className="flex items-center justify-between">
-                            <span className="font-bold text-red-600 text-sm">
-                              R$ {item.product.price.toFixed(2)}/{item.product.priceWeightAmount} {item.product.priceWeightUnit}	
+                            <span className="font-bold text-red-600 text-sm lg:text-base">
+                              {formatPriceDisplay(item.product)}
                             </span>
-                            <span className="font-bold text-green-600 text-sm">
-                              R$ {(item.product.price * item.quantity).toFixed(2)}
+                            <span className="font-bold text-green-600 text-sm lg:text-base">
+                              {formatPrice(calculateItemPrice(item))}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex flex-col items-center space-y-2">
-                          <div className="flex items-center space-x-1 bg-white rounded-lg p-1 shadow-sm border">
-                            <motion.div whileTap={{ scale: 0.9 }}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 hover:bg-red-50 hover:text-red-600"
-                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                            </motion.div>
-                            <span className="text-xs font-bold w-8 text-center">{item.product.priceWeightAmount} {item.product.priceWeightUnit}</span>
-                            <motion.div whileTap={{ scale: 0.9 }}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 hover:bg-red-50 hover:text-red-600"
-                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </motion.div>
+                          <div className="bg-white rounded-lg p-2 shadow-sm border flex flex-wrap justify-center items-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0 hover:bg-red-50 hover:text-red-600 md:mr-2"
+                              onClick={() => {
+                                const product = item.product
+                                const decrement = 0.1 // Sempre decrementar 0.1kg
+                                handleQuantityChange(product.id, Math.max(item.quantity - decrement, 0.1))
+                              }}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+
+                            <div className="min-w-[4rem] text-center md:mx-2">
+                              {isUpdating === item.product.id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent mx-auto"></div>
+                              ) : (
+                                <div>
+                                  <Input
+                                    inputMode="numeric"
+                                    step="0.1"
+                                    min="0.1"
+                                    max={item.product.stock}
+                                    value={item.quantity.toFixed(2)}
+                                    onChange={(e) => handleQuantityChange(item.product.id, parseFloat(e.target.value) || 0)}
+                                    className="w-16 h-8 text-xs text-center border-gray-200 p-1 appearance-none"
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {formatWeightDisplay(item.quantity, item.product.priceWeightUnit)}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 md:ml-2"
+                              onClick={() => {
+                                const product = item.product
+                                const increment = 0.1 // Sempre incrementar 0.1kg
+                                handleQuantityChange(product.id, item.quantity + increment)
+                              }}
+                              disabled={isUpdating === item.product.id}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
                           </div>
                           <motion.div whileTap={{ scale: 0.9 }}>
                             <Button
@@ -292,7 +363,7 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
             {/* Footer */}
             {items.length > 0 && (
               <motion.div
-                className="border-t bg-white p-4 space-y-4 shadow-lg"
+                className="border-t bg-white p-4 lg:p-6 space-y-4 lg:space-y-6 shadow-lg"
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
@@ -301,18 +372,18 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
                 <div className="text-center">
                   {total >= 50 ? (
                     <motion.div
-                      className="flex max-h-max mh-auto items-center justify-center space-x-2 text-green-600 p-3 bg-green-50 rounded-lg"
+                      className="flex items-center justify-center space-x-2 text-green-600 p-3 lg:p-4 bg-green-50 rounded-lg"
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <CheckCircle className="h-5 w-5" />
-                      <span className="text-sm font-bold">🎉 Frete grátis garantido!</span>
+                      <span className="text-sm lg:text-base font-bold">🎉 Frete grátis garantido!</span>
                     </motion.div>
                   ) : (
-                    <div className="p-3 bg-orange-50 rounded-lg">
-                      <p className="text-sm text-gray-700 mb-2">
-                        Faltam <span className="font-bold text-red-600">R$ {(50 - total).toFixed(2)}</span> para frete
+                    <div className="p-3 lg:p-4 bg-orange-50 rounded-lg">
+                      <p className="text-sm lg:text-base text-gray-700 mb-2">
+                        Faltam <span className="font-bold text-red-600">{formatPrice(50 - total)}</span> para frete
                         grátis
                       </p>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -331,14 +402,14 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
 
                 {/* Calculations */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm lg:text-base">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold">R$ {total.toFixed(2)}</span>
+                    <span className="font-semibold">{formatPrice(total)}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm lg:text-base">
                     <span className="text-gray-600">Taxa de Entrega</span>
                     <span className={`font-semibold ${taxaEntrega === 0 ? "text-green-600" : ""}`}>
-                      {taxaEntrega === 0 ? "Grátis" : `R$ ${taxaEntrega.toFixed(2)}`}
+                      {taxaEntrega === 0 ? "Grátis" : formatPrice(taxaEntrega)}
                     </span>
                   </div>
                 </div>
@@ -347,29 +418,29 @@ export default function MiniCart({ isOpen, onClose, lastAddedItem }: MiniCartPro
 
                 {/* Total */}
                 <motion.div
-                  className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200"
+                  className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200"
                   whileHover={{ scale: 1.02 }}
                 >
-                  <span className="font-bold text-lg">Total:</span>
-                  <span className="text-2xl font-bold text-green-600">R$ {totalFinal.toFixed(2)}</span>
+                  <span className="font-bold text-lg lg:text-xl">Total:</span>
+                  <span className="text-2xl lg:text-3xl font-bold text-green-600">{formatPrice(totalFinal)}</span>
                 </motion.div>
 
                 {/* Action Buttons */}
-                <div className="space-y-3 ">
+                <div className="space-y-3">
                   <Link href="/cart" onClick={onClose}>
-                    <motion.div whileHover={{ scale: 1.02 }} className="pb-2" whileTap={{ scale: 0.98 }}>
-                      <Button className="w-full  bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 lg:py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
                         Ver Carrinho Completo
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
                     </motion.div>
                   </Link>
 
-                  <Link href="/payment" onClick={onClose}>
+                  <Link href="/pagamento" onClick={onClose}>
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
                         variant="outline"
-                        className="w-full border-2 border-red-600 text-red-600 hover:bg-red-50 bg-transparent py-3 rounded-xl font-semibold transition-all duration-300"
+                        className="w-full border-2 border-red-600 text-red-600 hover:bg-red-50 bg-transparent py-3 lg:py-4 rounded-xl font-semibold transition-all duration-300"
                       >
                         Finalizar Pedido
                       </Button>
