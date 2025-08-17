@@ -49,7 +49,7 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
   const formatStockDisplay = () => {
     if (!formData.stock || !formData.priceWeightUnit) return ""
 
-    let total = formData.stock
+    const total = formData.stock
 
 
     return `${total.toFixed(2)} kg`
