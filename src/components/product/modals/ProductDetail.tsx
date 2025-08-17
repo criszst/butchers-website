@@ -45,6 +45,7 @@ export function ProductDetailModal({
           available: product.available,
           priceWeightAmount: product.priceWeightAmount,
           priceWeightUnit: product.priceWeightUnit,
+          stock: product.stock,
         })
       }
       toast.success(`${quantity}kg de ${product.name} adicionado ao carrinho!`)
