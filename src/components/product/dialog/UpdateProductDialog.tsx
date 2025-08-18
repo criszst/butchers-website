@@ -76,9 +76,7 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
 
     const totalAmount = stock * amount
     if (unit === "kg") {
-      return totalAmount >= 1000 ? `${(totalAmount / 1000).toFixed(1)} kg` : `${totalAmount} g`
-    } else {
-      return `${totalAmount} g`
+      return totalAmount < 1000 ? `${(totalAmount).toFixed(2)} kg` : `${totalAmount / 1000} gramas`
     }
   }
 
@@ -230,7 +228,6 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                         <SelectValue placeholder="Un." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="g">g</SelectItem>
                         <SelectItem value="kg">kg</SelectItem>
                       </SelectContent>
                     </Select>
@@ -256,7 +253,7 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                       required
                       className="text-sm"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Em unidades</p>
+                    <p className="text-xs text-gray-500 mt-1">Em {updatedProduct.priceWeightUnit === 'kg' ? 'Kilos' : 'Unidades'}</p>
                   </div>
                   <div>
                     <Label className="text-xs">Total Disponível</Label>

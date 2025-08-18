@@ -128,9 +128,12 @@ export default function ProductsManager() {
 
   // Calcular estatísticas
   const totalProducts = products.length
+  
   const totalStockValue = products.reduce((sum, product) => sum + product.price * product.stock, 0)
-  const lowStockProducts = products.filter((product) => product.stock > 0 && product.stock <= 5).length
-  const outOfStockProducts = products.filter((product) => product.stock === 0).length
+ const lowStockProducts = products.filter((product) => product.stock > 0 && product.stock / 1000 <= 5).length;
+const outOfStockProducts = products.filter((product) => product.stock / 1000 === 0).length;
+
+
 
   // Mobile Product Card Component
   const ProductCard = ({ product }: { product: Product }) => {
@@ -179,7 +182,7 @@ export default function ProductsManager() {
               </div>
               <div>
                 <p className="text-gray-500 text-xs">Estoque</p>
-                <p className="font-semibold text-gray-900">{product.stock} un.</p>
+                <p className="font-semibold text-gray-900">{product.stock} {product.priceWeightUnit}</p>
               </div>
             </div>
 
@@ -423,7 +426,7 @@ export default function ProductsManager() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className="text-gray-900">{product.stock} un.</span>
+                            <span className="text-gray-900">{product.stock} {product.priceWeightUnit}</span>
                           </TableCell>
                           <TableCell>
                             <Badge className={stockStatus.color}>
