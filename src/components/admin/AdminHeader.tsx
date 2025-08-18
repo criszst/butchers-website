@@ -49,12 +49,12 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: Home },
-    { id: "products", label: "Produtos", icon: Package },
-    { id: "orders", label: "Pedidos", icon: ShoppingCart },
-    { id: "users", label: "Usuários", icon: Users },
-    { id: "suppliers", label: "Fornecedores", icon: Truck },
-    { id: "analytics", label: "Análises", icon: BarChart3 },
-    { id: "settings", label: "Configurações", icon: Settings },
+    { id: "produtos", label: "Produtos", icon: Package },
+    { id: "pedidos", label: "Pedidos", icon: ShoppingCart },
+    { id: "usuarios", label: "Usuários", icon: Users },
+    { id: "fornecedores", label: "Fornecedores", icon: Truck },
+    { id: "analises", label: "Análises", icon: BarChart3 },
+    { id: "configs", label: "Configurações", icon: Settings },
   ]
 
   const loadNotifications = async () => {
@@ -388,7 +388,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
             return (
               <button
                 key={tab.id}
-                onClick={() => onTabChange(tab.id)}
+                onClick={() => onTabChange(tab.id.toString())}
                 className={`flex-shrink-0 flex flex-col items-center justify-center px-3 py-2 min-w-[80px] transition-all duration-300 relative group ${
                   isActive
                     ? "text-orange-600 bg-orange-50 scale-105"

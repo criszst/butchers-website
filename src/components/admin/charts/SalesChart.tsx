@@ -82,7 +82,7 @@ export default function SalesChart({ period = "30days", onPeriodChange }: SalesC
             Receita: <span className="font-semibold">{formatCurrency(payload[0].value)}</span>
           </p>
           <p className="text-sm text-blue-600">
-            Pedidos: <span className="font-semibold">{payload[1]?.value || 0}</span>
+            Pedidos: <span className="font-semibold">{chartData.reduce((sum, item) => sum + item.orders, 0) || 0}</span>
           </p>
         </div>
       )
@@ -125,7 +125,7 @@ export default function SalesChart({ period = "30days", onPeriodChange }: SalesC
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="date" tickFormatter={formatDate} stroke="#666" fontSize={12} />
             <YAxis stroke="#666" fontSize={12} />
-            <Tooltip content={<CustomTooltip  />} />
+            <Tooltip content={<CustomTooltip   />} />
             <Line
               type="monotone"
               dataKey="revenue"

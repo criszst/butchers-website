@@ -277,7 +277,7 @@ export default function SalesAnalytics() {
                   <div key={index} className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs lg:text-sm font-medium text-gray-900 truncate">{category.category}</span>
-                      <span className="text-xs lg:text-sm text-gray-600">{category.percentage.toFixed(1)}%</span>
+                      <span className="text-xs lg:text-sm text-gray-600">{category.percentage.toFixed(2)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div

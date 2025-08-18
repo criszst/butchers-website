@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import AdminHeader from "@/components/admin/AdminHeader"
 import DashboardOverview from "@/components/admin/DashboardOverview"
@@ -9,6 +9,7 @@ import OrdersManager from "@/components/admin/OrdersManager"
 import UsersManager from "@/components/admin/UsersManager"
 import SalesAnalytics from "@/components/admin/SalesAnalytics"
 import SuppliersManager from "@/components/admin/SuppliersManager"
+import { useRouter } from "next/navigation"
 
 
 function SettingsManager() {
@@ -22,12 +23,45 @@ function SettingsManager() {
   )
 }
 
+
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState("dashboard")
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState('')
+
+   const handleTabChange = (tab: string) => {
+    setActiveTab(tab)
+    router.push(`/admin?tab=${tab}`)
+  }
+
+   useEffect(() => {
+      const handleRouterChange = () => {
+         const search = window.location.search.replace("?tab=", "")
+
+         console.log("Search:", search)
+        if (!search) {
+          setActiveTab("dashboard") 
+        }
+        if (search && ["dashboard", "produtos", "pedidos", "usuarios", "fornecedores", 'analises', 'configs'].includes(search)) {
+          setActiveTab(search.match(/^[a-z]+/)?.[0] || "dashboard")
+        }
+      }
+  
+
+      handleRouterChange()
+  
+      
+      window.addEventListener("navigate", handleRouterChange)
+  
+      return () => {
+        window.removeEventListener("navigate", handleRouterChange)
+      }
+    }, [router])
+    
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminHeader activeTab={activeTab} onTabChange={setActiveTab} />
+      <AdminHeader activeTab={activeTab} onTabChange={handleTabChange} />
 
       <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 hover:bg-background transition-colors duration-200">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -35,27 +69,27 @@ export default function AdminPage() {
             <DashboardOverview />
           </TabsContent>
 
-          <TabsContent value="products" className="space-y-4 lg:space-y-6">
+          <TabsContent value="produtos" className="space-y-4 lg:space-y-6">
             <ProductsManager />
           </TabsContent>
 
-          <TabsContent value="orders" className="space-y-4 lg:space-y-6">
+          <TabsContent value="pedidos" className="space-y-4 lg:space-y-6">
             <OrdersManager />
           </TabsContent>
 
-          <TabsContent value="users" className="space-y-4 lg:space-y-6">
+          <TabsContent value="usuarios" className="space-y-4 lg:space-y-6">
             <UsersManager />
           </TabsContent>
 
-          <TabsContent value="suppliers" className="space-y-4 lg:space-y-6">
+          <TabsContent value="fornecedores" className="space-y-4 lg:space-y-6">
             <SuppliersManager />
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-4 lg:space-y-6">
+          <TabsContent value="analises" className="space-y-4 lg:space-y-6">
             <SalesAnalytics />
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-4 lg:space-y-6">
+          <TabsContent value="configs" className="space-y-4 lg:space-y-6">
             <SettingsManager />
           </TabsContent>
         </Tabs>

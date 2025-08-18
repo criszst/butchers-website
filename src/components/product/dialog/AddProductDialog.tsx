@@ -200,7 +200,7 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="price">Preço Base (R$) *</Label>
+                <Label htmlFor="price">Preço do Produto (R$) *</Label>
                 <Input
                   id="price"
                   type="number"
@@ -250,7 +250,7 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
               <div className="bg-green-50 p-3 rounded border border-green-200">
                 <p className="text-sm text-green-800">
                   <strong>Resultado:</strong> R$ {preco.toFixed(2)} por {quantidade} kg
-                  (equivalente a R$ {precoPorKg.toFixed(2)} por kg)
+                  (equivalente a R$ {quantidade !== null && quantidade > 1 ? (quantidade / 2).toFixed(2) : quantidade?.toFixed(2)} por kg)
                 </p>
                 <p className="text-xs text-green-600 mt-1">
                   Cliente pode comprar qualquer quantidade e o preço será calculado proporcionalmente

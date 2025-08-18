@@ -85,10 +85,13 @@ export function OrdersManager() {
     { value: "Cancelado", label: "Cancelado", color: "bg-red-100 text-red-800" },
   ]
 
+  // Função corrigida para formatação de quantidade
   const formatQuantityDisplay = (quantity: number) => {
+    // Se quantity é um número inteiro >= 1, mostrar em kg
     if (quantity >= 1) {
-      return `${quantity}kg`
+      return `${quantity.toFixed(quantity % 1 === 0 ? 0 : 2)}kg`
     } else {
+      // Se quantity < 1, converter para gramas
       return `${(quantity * 1000).toFixed(0)}g`
     }
   }
@@ -97,8 +100,15 @@ export function OrdersManager() {
     try {
       const result = await getAllOrders()
       if (result.success) {
-        setOrders(result.orders)
-        setFilteredOrders(result.orders)
+        // Ordenar por data de criação (mais recente primeiro)
+        const sortedOrders = result.orders.sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime()
+          const dateB = new Date(b.createdAt).getTime()
+          return dateB - dateA // Ordem decrescente (mais recente primeiro)
+        })
+        
+        setOrders(sortedOrders)
+        setFilteredOrders(sortedOrders)
       } else {
         toast.error("Erro ao carregar pedidos")
       }
@@ -116,7 +126,7 @@ export function OrdersManager() {
   }, [])
 
   useEffect(() => {
-    let filtered = orders
+    let filtered = [...orders] // Criar uma cópia para não mutar o array original
 
     // Filter by search term
     if (searchTerm) {
@@ -133,6 +143,13 @@ export function OrdersManager() {
     if (statusFilter !== "all") {
       filtered = filtered.filter((order) => order.status === statusFilter)
     }
+
+    // Manter ordenação por data após filtros
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime()
+      const dateB = new Date(b.createdAt).getTime()
+      return dateB - dateA
+    })
 
     setFilteredOrders(filtered)
   }, [orders, searchTerm, statusFilter])
@@ -153,7 +170,12 @@ export function OrdersManager() {
     try {
       const result = await updateOrderStatusByOrderNumber(editingOrder.orderNumber, editingOrder.status)
       if (result.success) {
-        setOrders((prev) => prev.map((order) => (order.id === editingOrder.id ? editingOrder : order)))
+        // Atualizar o estado local
+        setOrders((prev) => prev.map((order) => 
+          order.id === editingOrder.id 
+            ? { ...order, status: editingOrder.status }
+            : order
+        ))
         setShowEditModal(false)
         setEditingOrder(null)
         toast.success("Pedido atualizado com sucesso!")
@@ -196,6 +218,11 @@ export function OrdersManager() {
       default:
         return <Clock className="h-4 w-4" />
     }
+  }
+
+  // Função para calcular total real do pedido com base nos itens
+  const calculateOrderTotal = (order: Order) => {
+    return order.items.reduce((total, item) => total + (item.price * item.quantity), 0)
   }
 
   const cardVariants = {
@@ -416,7 +443,9 @@ export function OrdersManager() {
                   {/* Order Items */}
                   <div className="bg-gray-50 p-2 sm:p-3 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-xs sm:text-sm text-gray-900">Itens do Pedido</h4>
+                      <h4 className="font-medium text-xs sm:text-sm text-gray-900">
+                        Itens do Pedido ({order.items.length})
+                      </h4>
                       <motion.button
                         onClick={() => toggleCardExpansion(order.id)}
                         whileHover={{ scale: 1.1 }}
@@ -468,7 +497,7 @@ export function OrdersManager() {
                   </div>
                   <div className="flex items-center text-xs text-gray-500">
                     <Calendar className="h-3 w-3 mr-1" />
-                    <span>Pedido: {order.createdAt}</span>
+                    <span>Pedido realizado em {order.createdAt}</span>
                   </div>
 
                   {/* Action Buttons */}
@@ -881,15 +910,23 @@ export function OrdersManager() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                   >
-                    <Label className="text-sm font-medium">Itens do Pedido</Label>
+                    <Label className="text-sm font-medium">Itens do Pedido ({editingOrder.items.length})</Label>
                     <div className="mt-2 space-y-2">
                       {editingOrder.items.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm">
                           <div>
                             <div className="font-medium">{item.name}</div>
-                            <div className="text-gray-600">Quantidade: {formatQuantityDisplay(item.quantity)}</div>
+                            <div className="text-gray-600">
+                              Quantidade: {formatQuantityDisplay(item.quantity)} | 
+                              Categoria: {item.category}
+                            </div>
                           </div>
-                          <div className="font-bold text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</div>
+                          <div className="text-right">
+                            <div className="font-bold text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</div>
+                            <div className="text-xs text-gray-500">
+                              R$ {item.price.toFixed(2)} por {formatQuantityDisplay(1)}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -910,6 +947,10 @@ export function OrdersManager() {
                       <div className="flex justify-between">
                         <span>Pagamento:</span>
                         <span>{editingOrder.paymentMethod}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Status do Pagamento:</span>
+                        <span>{editingOrder.paymentStatus}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Data:</span>

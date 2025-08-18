@@ -23,6 +23,7 @@ import {
   getTopProducts,
 } from "@/app/actions/dashboard/analytics"
 import type { DashboardStats, LowStockProduct, RecentOrder, TopProduct } from "@/app/actions/dashboard/analytics"
+
 import { useRouter } from "next/navigation"
 
 export default function DashboardOverview() {
@@ -280,7 +281,7 @@ export default function DashboardOverview() {
                     ))}
                   </div>
                   <Button
-                    onClick={() => router.push("/admin?tab=products")}
+                    onClick={() => window.location.replace("/admin?tab=produtos")}
                     className="w-full mt-3 lg:mt-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-xs lg:text-sm"
                   >
                     <span className="hidden sm:inline">Gerenciar Estoque</span>
