@@ -130,8 +130,8 @@ export default function ProductsManager() {
   const totalProducts = products.length
   
   const totalStockValue = products.reduce((sum, product) => sum + product.price * product.stock, 0)
- const lowStockProducts = products.filter((product) => product.stock > 0 && product.stock / 1000 <= 5).length;
-const outOfStockProducts = products.filter((product) => product.stock / 1000 === 0).length;
+ const lowStockProducts = products.filter((product) => product.stock > 0 && product.stock <= 5).length;
+const outOfStockProducts = products.filter((product) => product.stock === 0).length;
 
 
 
