@@ -7,13 +7,14 @@ import { Link } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface PageProps {
-  searchParams: {
-    search?: string
-    category?: string
-  }
+  searchParams: Promise<{
+    search?: string;
+    category?: string;
+  }>;
 }
 
-export default function ProdutosPage({ searchParams }: PageProps) {
+export default async function ProdutosPage({ searchParams }: PageProps) {
+  const params = await searchParams;
   return (
     <CartProvider>
       <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-red-50">
@@ -48,7 +49,7 @@ export default function ProdutosPage({ searchParams }: PageProps) {
               </div>
             }
           >
-            <ProductGridWrapper search={searchParams.search} category={searchParams.category} />
+            <ProductGridWrapper search={params.search} category={params.category} />
           </Suspense>
         </main>
 
