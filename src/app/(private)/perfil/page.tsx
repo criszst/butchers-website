@@ -24,6 +24,7 @@ interface ExtendedUser {
   bio?: string | null
   birthDate?: string | null
   cpf?: string | null
+  isAdmin: boolean | undefined
 }
 
 interface Achievement {
@@ -117,6 +118,7 @@ export default function ProfilePage() {
               bio: userProfile.bio,
               birthDate: userProfile.birthDate,
               cpf: userProfile.cpf,
+              isAdmin: userProfile.isAdmin,
             })
           }
         } catch (error) {
@@ -164,6 +166,7 @@ export default function ProfilePage() {
         phone: updatedFields.phone || undefined,
         cpf: updatedFields.cpf?.replace(/\D/g, "") || undefined,
         image: updatedFields.image || undefined,
+        isAdmin: updatedFields.isAdmin || undefined,
       }
 
       const result = await updateUserProfile(updateData)

@@ -36,7 +36,7 @@ import { getAllOrders, updateOrderStatusByOrderNumber } from "@/app/actions/orde
 import { toast } from "sonner"
 import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
 
-// Interface corrigida para corresponder ao retorno da action
+
 interface Order {
   id: string
   orderNumber: string
@@ -87,11 +87,12 @@ export function OrdersManager() {
 
   // Função corrigida para formatação de quantidade
   const formatQuantityDisplay = (quantity: number) => {
-    // Se quantity é um número inteiro >= 1, mostrar em kg
+    // Agora quantity já vem em kg do banco de dados
     if (quantity >= 1) {
+      // Para quantidades >= 1kg, mostrar em kg com até 2 casas decimais
       return `${quantity.toFixed(quantity % 1 === 0 ? 0 : 2)}kg`
     } else {
-      // Se quantity < 1, converter para gramas
+      // Para quantidades < 1kg, converter para gramas
       return `${(quantity * 1000).toFixed(0)}g`
     }
   }
@@ -432,7 +433,7 @@ export function OrdersManager() {
                     </div>
                     <div className="flex items-center text-xs sm:text-sm text-gray-600">
                       <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
-                      <span className="truncate">{order.customer.phone}</span>
+                      <span className="truncate">{order.customer.phone || "(Telefone não informado)"}</span>
                     </div>
                     <div className="flex items-start text-xs sm:text-sm text-gray-600">
                       <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0 mt-0.5" />
@@ -684,7 +685,7 @@ export function OrdersManager() {
                                 </div>
                                 <div className="flex items-center text-sm text-gray-600">
                                   <Phone className="h-4 w-4 mr-2 text-gray-500" />
-                                  <span>{selectedOrder.customer.phone}</span>
+                                  <span>{selectedOrder.customer.phone || "(Telefone não foi informado)"}</span>
                                 </div>
                                 <div className="flex items-start text-sm text-gray-600">
                                   <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5 flex-shrink-0" />
@@ -784,8 +785,8 @@ export function OrdersManager() {
                           <Card className="hover:shadow-md transition-all duration-200">
                             <CardContent className="p-4">
                               <div className="flex items-center space-x-4">
-                                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
-                                  <MeatImagePlaceholder size="sm" className="w-12 h-12" />
+                                <div className="w-24 h-24  rounded-lg flex items-center justify-center">
+                                  <MeatImagePlaceholder size="sm" className="w-20 h-40" />
                                 </div>
                                 <div className="flex-1">
                                   <h5 className="font-bold text-gray-900">{item.name}</h5>
@@ -893,7 +894,7 @@ export function OrdersManager() {
                         <strong>Email:</strong> {editingOrder.customer.email}
                       </div>
                       <div>
-                        <strong>Telefone:</strong> {editingOrder.customer.phone}
+                        <strong>Telefone:</strong> {editingOrder.customer.phone === "" ? 'Telefone não informado' : editingOrder.customer.phone}
                       </div>
                       <div>
                         <strong>Endereço:</strong>

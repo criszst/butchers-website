@@ -10,18 +10,9 @@ import UsersManager from "@/components/admin/UsersManager"
 import SalesAnalytics from "@/components/admin/SalesAnalytics"
 import SuppliersManager from "@/components/admin/SuppliersManager"
 import { useRouter } from "next/navigation"
+import SettingsManager from "@/components/admin/SettingsManager"
 
 
-function SettingsManager() {
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Configurações do Sistema</h2>
-        <p className="text-gray-600">Configurações em desenvolvimento...</p>
-      </div>
-    </div>
-  )
-}
 
 
 

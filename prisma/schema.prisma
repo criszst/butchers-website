@@ -137,7 +137,7 @@ model OrderItem {
   id       String @id @default(cuid())
   orderId  String
   name     String
-  quantity Int
+  quantity Float
   price    Float
 
   order    Order  @relation(fields: [orderId], references: [id])
@@ -248,3 +248,42 @@ model ProductSupplier {
   @@unique([productId, supplierId])
 }
 
+model StoreSettings {
+  id                    String   @id @default(cuid())
+  
+  // Informações da loja
+  storeName             String   @default("Casa de Carnes Duarte")
+  storeDescription      String   @default("A arte de oferecer qualidade.")
+  storeAddress          String   @default("Rua Estado da Bahia, 133, Salto, Sao Paulo 13324470")
+  storePhone            String   @default("(11) 97743-1214")
+  storeEmail            String   @default("contato@acougue.com")
+  
+  // Configurações de entrega
+  deliveryFee           Float    @default(10.0)
+  freeDeliveryMinimum   Float    @default(150.0)
+  averageDeliveryTime   Int      @default(60) // em minutos
+  deliveryRadius        Int      @default(10) // em km
+  
+  // Configurações de negócio
+  businessHours         String   @default("08:00 - 18:00")
+  
+  // Configurações de notificação
+  emailNotifications    Boolean  @default(true)
+  smsNotifications      Boolean  @default(false)
+  orderNotifications    Boolean  @default(true)
+  stockAlerts           Boolean  @default(true)
+  
+  // Configurações de segurança
+  twoFactorAuth         Boolean  @default(false)
+  sessionTimeout        Int      @default(30) // em minutos
+  
+  // Configurações de aparência
+  primaryColor          String   @default("#dc2626")
+  secondaryColor        String   @default("#ea580c")
+  darkMode              Boolean  @default(false)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@map("store_settings")
+}

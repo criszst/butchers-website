@@ -22,6 +22,7 @@ interface ExtendedUser {
   bio?: string | null
   birthDate?: string | null
   cpf?: string | null
+  isAdmin: boolean | undefined
 }
 
 interface Achievement {
@@ -175,7 +176,7 @@ export default function ProfileDetails({
                       <p className="text-white/80 text-lg">{user.email}</p>
                       <Badge className="mt-2 bg-white/20 text-white border-white/30 backdrop-blur-sm">
                         <User className="h-4 w-4 mr-2" />
-                        Cliente Premium
+                        {user.isAdmin ? "Administrador" : "Usuário Comum"}
                       </Badge>
                     </div>
 

@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { MobileFilters } from "@/components/product/mobile/MobileFilters"
 import { ProductCard } from "@/components/product/section/ProductCard"
 import { NoProductsMessage } from "@/components/product/section/NoProducts"
+import { useRouter } from "next/navigation"
 
 interface ProductGridProps {
   products: Product[]
@@ -570,7 +571,7 @@ export function ProductGrid({ products }: ProductGridProps) {
         </AnimatePresence>
 
         {/* Call to Action */}
-        {window.location.pathname === "/product" ? (
+        {String(useRouter()).replace("/", "").includes('products') ? (
         <motion.div
           className="text-center mt-16"
           initial={{ opacity: 0, y: 20 }}

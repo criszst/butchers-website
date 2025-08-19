@@ -108,7 +108,7 @@ export async function createOrder(orderData: CreateOrderData): Promise<OrderResu
       const result = await orderPromise
       return result
     } finally {
-      // Remover da fila após processamento
+ 
       orderQueue.delete(queueKey)
     }
   } catch (error: any) {
@@ -132,19 +132,17 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
     }
   }
 
- 
   const productIds = orderData.items.map((item) => item.productId)
   console.log("IDs dos produtos:", productIds)
 
   return await prisma.$transaction(async (tx) => {
+
     // evitando race conditions
-    // todo: verificar se o pedido já foi criado
     const products = await tx.product.findMany({
       where: { id: { in: productIds } },
     })
     console.log("Produtos encontrados:", products.length)
 
-   
     const validationErrors: string[] = []
     const priceChanges: Array<{ product: string; oldPrice: number; newPrice: number }> = []
 
@@ -176,8 +174,8 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
         continue
       }
 
-      // Verificar mudanças de preço (tolerância de 5%)
-       const priceDifference = Math.abs(product.price - item.price) / item.price
+    
+      const priceDifference = Math.abs(product.price - item.price) / item.price
       if (priceDifference > 0.05) {
         priceChanges.push({
           product: item.name,
@@ -186,7 +184,6 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
         })
       }
     }
-
 
     if (validationErrors.length > 0) {
       console.log("❌ Erros de validação:", validationErrors)
@@ -198,7 +195,6 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
       }
     }
 
- 
     if (priceChanges.length > 0) {
       console.log("❌ Mudanças de preço detectadas:", priceChanges)
       return {
@@ -211,21 +207,11 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
 
     console.log("✅ Todos os produtos validados")
 
-       const recalculatedTotal =
+    const recalculatedTotal =
       orderData.items.reduce((sum, item) => {
         const product = products.find((p) => p.id === item.productId)!
-        
-       
-        if (!product.priceWeightAmount) {
-          return sum + product.price * item.quantity
-        }
-
- 
-        const priceWeightAmount = product.priceWeightAmount || 1
-        const pricePerKg = product.price / priceWeightAmount
-        
-     
-        return sum + pricePerKg * item.quantity
+        // Preço por kg * quantidade em kg
+        return sum + product.price * item.quantity
       }, 0) +
       orderData.deliveryFee -
       (orderData.discount || 0)
@@ -251,13 +237,11 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
     const readableOrderNumber = generateOrderNumber(user.name || "XX")
     console.log("Criando pedido...")
 
- 
     const deliveryAddress = `${orderData.customerData.street}, ${orderData.customerData.number}${
       orderData.customerData.complement ? `, ${orderData.customerData.complement}` : ""
     }, ${orderData.customerData.neighborhood}, ${orderData.customerData.city} - ${orderData.customerData.state}, ${orderData.customerData.cep}`
 
-
-     const order = await tx.order.create({
+    const order = await tx.order.create({
       data: {
         userId: user.id,
         total: recalculatedTotal,
@@ -285,12 +269,10 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
 
     console.log("✅ Pedido criado com ID:", order.id)
 
-  
     console.log("Atualizando estoque...")
     for (const item of orderData.items) {
       const product = products.find((p) => p.id === item.productId)!
 
-      
       if (product.stock < item.quantity) {
         throw new Error(`Estoque insuficiente para ${item.name}`)
       }
@@ -306,7 +288,6 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
       console.log(`✅ Estoque atualizado para produto ${item.productId}`)
     }
 
-   
     console.log("Verificando endereço...")
     const existingAddress = await tx.address.findFirst({
       where: {
@@ -340,7 +321,6 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
       console.log("✅ Novo endereço criado")
     }
 
-   
     console.log("Limpando carrinho...")
     const deletedItems = await tx.cartItem.deleteMany({
       where: { userId: user.id },
@@ -351,7 +331,6 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
     console.log("✅ Pedido finalizado com sucesso:", orderNumber)
     console.log("=== FIM CREATE ORDER ===")
 
-  
     revalidatePath("/")
     revalidatePath("/profile")
 
@@ -396,7 +375,7 @@ export async function getAllOrders() {
         items: order.items.map((item) => ({
           id: item.id,
           name: item.name,
-          quantity: item.quantity,
+          quantity: item.quantity, // Agora é Float
           price: item.price,
           category: item.category || "Outros",
         })),
