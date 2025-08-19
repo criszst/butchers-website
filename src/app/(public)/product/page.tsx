@@ -3,6 +3,8 @@ import ProductGridWrapper from "@/components/product/grid/GridWrapper"
 import { CartProvider } from "@/components/cart/context"
 import { Toaster } from "sonner"
 import Header from "@/components/header"
+import { Link } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface PageProps {
   searchParams: {
@@ -22,9 +24,10 @@ export default function ProdutosPage({ searchParams }: PageProps) {
         <nav className="bg-white border-b border-gray-200 shadow-sm">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <a href="/" className="hover:text-red-600 transition-colors">
+              <Button className="hover:text-red-600 transition-colors"  >
+
                 Início
-              </a>
+              </Button>
               <span>›</span>
               <span className="text-red-600 font-medium">Produtos</span>
             </div>
