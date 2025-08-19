@@ -1,16 +1,18 @@
 "use client"
 
-import { useState } from "react"
-import type { Order, OrderItem } from "@/generated/prisma"
+import { useEffect, useState } from "react"
+import { Product, type Order, type OrderItem } from "@/generated/prisma"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Package, Eye, Plus, Filter, RefreshCw } from "lucide-react"
 import OrderDetailModal from "@/components/profile/modals/OrderDetailsModal"
+import { getProductById } from "@/app/actions/product"
 
 interface OrdersTabProps {
   orders: (Order & { items: OrderItem[] })[]
   onViewOrderDetails: (order: Order & { items: OrderItem[] }) => void
+   product?: { name: string; id: number; createdAt: Date; price: number; category: string; description: string; priceWeightAmount: number | null; priceWeightUnit: string | null; image: string | null; discount: number | null; stock: number; available: boolean; } | null | undefined;
 }
 
 const ordersNotFound = () => {
@@ -55,10 +57,11 @@ const ordersNotFound = () => {
   )
 }
 
-export default function OrdersTab({ orders, onViewOrderDetails }: OrdersTabProps) {
+export default function OrdersTab({ orders, onViewOrderDetails, product }: OrdersTabProps) {
   const [selectedOrder, setSelectedOrder] = useState<(Order & { items: OrderItem[] }) | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+
 
   const handleRefresh = async () => {
     setIsRefreshing(true)

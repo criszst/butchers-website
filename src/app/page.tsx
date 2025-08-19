@@ -14,6 +14,8 @@ export default function Home() {
       <Header key="header" />
       <ShaderHero key="shader-hero" />
       <ProductGridWrapper  key="product-grid-wrapper" />
+
+      
     </div>
   )
 }

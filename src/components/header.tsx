@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -28,6 +30,70 @@ import { useSession } from "next-auth/react"
 import { signOut } from "next-auth/react"
 import { getUserProfile } from "@/app/actions/user-profile"
 import { motion, AnimatePresence } from "framer-motion"
+import { useRouter } from "next/navigation"
+import { getProductsAction } from "@/app/actions/product"
+
+interface SearchSuggestion {
+  id: string
+  name: string
+  category: string
+  price: number
+}
+
+function SearchDropdown({
+  query,
+  suggestions,
+  onSelect,
+  isOpen,
+}: {
+  query: string
+  suggestions: SearchSuggestion[]
+  onSelect: (suggestion: SearchSuggestion) => void
+  isOpen: boolean
+}) {
+  if (!isOpen || !query.trim()) return null
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 max-h-80 overflow-y-auto"
+        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+        transition={{ duration: 0.2 }}
+      >
+        {suggestions.length > 0 ? (
+          <div className="py-2">
+            {suggestions.map((suggestion, index) => (
+              <motion.button
+                key={suggestion.id}
+                onClick={() => onSelect(suggestion)}
+                className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between group"
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900 group-hover:text-red-600 transition-colors">
+                    {suggestion.name}
+                  </div>
+                  <div className="text-sm text-gray-500">{suggestion.category}</div>
+                </div>
+                <div className="text-red-600 font-semibold">R$ {suggestion.price.toFixed(2)}</div>
+              </motion.button>
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-gray-500">
+            <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+            <p>Nenhum produto encontrado</p>
+            <p className="text-sm">Tente buscar por outro termo</p>
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  )
+}
 
 export default function Header() {
   const { itemCount } = useCart()
@@ -35,9 +101,76 @@ export default function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [searchSuggestions, setSearchSuggestions] = useState<SearchSuggestion[]>([])
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+
   const { data: session } = useSession()
   const [user, setUser] = useState<Session | null>(session)
   const [isAdmin, setAdmin] = useState(false)
+
+  useEffect(() => {
+    const searchProducts = async () => {
+      if (searchQuery.trim().length < 2) {
+        setSearchSuggestions([])
+        setIsSearchOpen(false)
+        return
+      }
+
+      setIsSearching(true)
+      try {
+        const { products } = await getProductsAction({
+          search: searchQuery,
+          category: "all",
+        })
+
+        const suggestions = products.slice(0, 5).map((product) => ({
+          id: product.id.toString(),
+          name: product.name,
+          category: product.category,
+          price: product.price,
+        }))
+
+        setSearchSuggestions(suggestions)
+        setIsSearchOpen(true)
+      } catch (error) {
+        console.error("Erro na busca:", error)
+        setSearchSuggestions([])
+      } finally {
+        setIsSearching(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(searchProducts, 300)
+    return () => clearTimeout(debounceTimer)
+  }, [searchQuery])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const handleSearchSelect = (suggestion: SearchSuggestion) => {
+    router.push(`/product/${suggestion.id}`)
+    setSearchQuery("")
+    setIsSearchOpen(false)
+  }
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/product?search=${encodeURIComponent(searchQuery)}`)
+      setIsSearchOpen(false)
+    }
+  }
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -51,14 +184,6 @@ export default function Header() {
     }
     fetchUser()
   }, [session?.user?.email])
-
-  const openMiniCart = () => {
-    setIsMiniCartOpen(true)
-  }
-
-  const closeMiniCart = () => {
-    setIsMiniCartOpen(false)
-  }
 
   useEffect(() => {
     if (session) {
@@ -79,7 +204,7 @@ export default function Header() {
 
   const menuItems = [
     { href: "/", label: "Início", icon: Package },
-    { href: "/#produtos", label: "Produtos", icon: Package },
+    { href: "/produtos", label: "Produtos", icon: Package },
     { href: "/#sobre", label: "Sobre", icon: User },
     { href: "/#contato", label: "Contato", icon: Bell },
   ]
@@ -92,6 +217,14 @@ export default function Header() {
     { href: "/perfil#configuracoes", label: "Configurações", icon: Settings },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Crown, isAdmin: true }] : []),
   ]
+
+  const openMiniCart = () => {
+    setIsMiniCartOpen(true)
+  }
+
+  const closeMiniCart = () => {
+    setIsMiniCartOpen(false)
+  }
 
   return (
     <>
@@ -171,13 +304,26 @@ export default function Header() {
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Buscar produtos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border-2 border-gray-200 focus:border-red-500 rounded-lg transition-all duration-300 hover:shadow-sm"
+              <div className="relative" ref={searchRef}>
+                <form onSubmit={handleSearchSubmit}>
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar produtos..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-4 py-2 w-full border-2 border-gray-200 focus:border-red-500 rounded-lg transition-all duration-300 hover:shadow-sm"
+                  />
+                  {isSearching && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </form>
+                <SearchDropdown
+                  query={searchQuery}
+                  suggestions={searchSuggestions}
+                  onSelect={handleSearchSelect}
+                  isOpen={isSearchOpen}
                 />
               </div>
             </motion.div>
@@ -406,15 +552,17 @@ export default function Header() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar produtos..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 rounded-lg border-2 border-gray-200 focus:border-red-500 transition-all duration-300"
-                  />
-                </div>
+                <form onSubmit={handleSearchSubmit}>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar produtos..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 pr-4 py-2 rounded-lg border-2 border-gray-200 focus:border-red-500 transition-all duration-300"
+                    />
+                  </div>
+                </form>
               </motion.div>
 
               {/* Mobile Menu Content */}

@@ -20,7 +20,7 @@ const formatWeightDisplay = (quantity: number, unit?: string | null) => {
   if (!unit) return `${quantity}`
 
   if (unit === "kg") {
-    return quantity >= 1 ? `${quantity.toFixed(1)}kg` : `${(quantity * 1000).toFixed(0)}g`
+    return quantity >= 1 ? `${quantity.toFixed(3)}kg` : `${(quantity * 1000).toFixed(0)}g`
   } else {
     return `${quantity.toFixed(0)}g`
   }
@@ -315,7 +315,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                                     step="0.1"
                                     min="0.1"
                                     max={item.product.stock}
-                                    value={item.quantity.toFixed(2)}
+                                    value={item.quantity.toFixed(3)}
                                     onChange={(e) => handleQuantityChange(item.product.id, parseFloat(e.target.value) || 0)}
                                     className="w-16 h-8 text-xs text-center border-gray-200 p-1 appearance-none"
                                   />

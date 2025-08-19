@@ -112,13 +112,13 @@ export default function ProductDetailsPage() {
   }
 
   const calculateTotalPrice = () => {
-    if (!product || !product.priceWeightAmount || !quantity) return 0
+    if (!product || !quantity) return 0
 
     const numQuantity = typeof quantity === "string" ? Number.parseFloat(quantity) : quantity
     if (!numQuantity) return 0
 
     // Calculate price per unit weight
-    const pricePerKg = product.price / product.priceWeightAmount
+    const pricePerKg = product.price / (product.priceWeightAmount || 1)
     return pricePerKg * numQuantity
   }
 

@@ -21,12 +21,13 @@ import {
   AlertCircle,
   XCircle,
 } from "lucide-react"
-import type { Order, OrderItem } from "@/generated/prisma"
+import type { Order, OrderItem, Product } from "@/generated/prisma"
 
 interface OrderDetailModalProps {
   order: (Order & { items: OrderItem[]; user?: { name?: string; phone?: string } }) | null
   isOpen: boolean
   onClose: () => void
+
 }
 
 const overlayVariants = {
@@ -405,7 +406,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                                   <div className="text-right">
                                     <div className="text-xs text-gray-500">R$ {item.price.toFixed(2)} cada</div>
                                     <div className="font-bold text-green-600">
-                                      R$ {(item.price * item.quantity).toFixed(2)}
+                                      R$ {(item.price * item.quantity).toFixed(2)} no total
                                     </div>
                                   </div>
                                 </div>

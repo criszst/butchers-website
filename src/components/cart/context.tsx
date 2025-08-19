@@ -54,10 +54,7 @@ const CartContext = createContext<{
 
 
 const formatWeightDisplay = (kilos: number): string => {
-  if (kilos < 1000) {
-    return `${(kilos * 1000).toFixed(1)}kg`
-  }
-  return `${kilos.toFixed(0)}g`
+  return `${(kilos).toFixed(1)}kg`
 }
 
 const calculateItemPrice = (item: CartItem): number => {
@@ -274,10 +271,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "ADD_ITEM", payload: { product, quantity } })
       const displayQuantity = formatWeightDisplay(quantity)
 
-      toast.success(`✅ ${product.name} adicionado ao carrinho!`, {
-        description: `${displayQuantity} adicionado com sucesso.`,
-        duration: 3000,
+      toast.success(`✅ ${product.name} adicionado ao carrinho`, {
+        description: `Você adicionou ${displayQuantity} de ${product.name} ao seu carrinho.`,
+        duration: 4000,
+        closeButton: true,
       })
+
+
     } catch (error) {
       console.error("Error adding item to cart:", error)
       toast.error("❌ Erro ao adicionar produto ao carrinho", {
@@ -295,7 +295,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const item = state.items.find((item) => item.product.id === productId)
       dispatch({ type: "REMOVE_ITEM", payload: { productId } })
       if (item) {
-        toast.success(`🗑️ ${item.product.name} removido do carrinho`)
+        toast.success(`🗑️ ${item.product.name} removido do carrinho`, {
+          duration: 4000,
+          description: `Você removeu ${item.product.name} do seu carrinho.`,
+          closeButton: true,
+        })
       }
     } catch (error) {
       console.error("Error removing item from cart:", error)

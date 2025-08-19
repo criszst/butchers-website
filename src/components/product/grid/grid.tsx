@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Zap, Grid3X3, List, SlidersHorizontal, X } from "lucide-react"
+import { Slider } from "@/components/ui/slider"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Search, Zap, Grid3X3, List, SlidersHorizontal, X, Star } from "lucide-react"
 import { useCart } from "@/components/cart/context"
 import type { Product } from "@/generated/prisma"
 import { toast } from "sonner"
@@ -19,10 +21,10 @@ interface ProductGridProps {
   products: Product[]
 }
 
-export default function ProductGrid({ products }: ProductGridProps) {
+export function ProductGrid({ products }: ProductGridProps) {
   const [termoBusca, setTermoBusca] = useState("")
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("todas")
-  const [faixaPreco, setFaixaPreco] = useState("todas")
+  const [faixaPreco, setFaixaPreco] = useState<[number, number]>([0, 500])
   const [ordenacao, setOrdenacao] = useState("relevancia")
   const [favoritos, setFavoritos] = useState<number[]>([])
   const [loadingProducts, setLoadingProducts] = useState<number[]>([])
@@ -30,32 +32,60 @@ export default function ProductGrid({ products }: ProductGridProps) {
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [filtrosAtivos, setFiltrosAtivos] = useState<string[]>([])
 
+  const [apenasEmEstoque, setApenasEmEstoque] = useState(false)
+  const [avaliacaoMinima, setAvaliacaoMinima] = useState(0)
+  const [marcasSelecionadas, setMarcasSelecionadas] = useState<string[]>([])
+  const [tipoCorte, setTipoCorte] = useState("todos")
+  const [origem, setOrigem] = useState("todas")
+  const [promocao, setPromocao] = useState(false)
+
   const { addItem, isLoading } = useCart()
 
   const productsFiltrados = products.filter((product) => {
     const correspondeNome = product.name.toLowerCase().includes(termoBusca.toLowerCase())
     const correspondeCategoria = categoriaSelecionada === "todas" || product.category === categoriaSelecionada
+    const correspondePreco = product.price >= faixaPreco[0] && product.price <= faixaPreco[1]
+    const correspondeEstoque = !apenasEmEstoque || product.available
 
-    let correspondePreco = true
-    if (faixaPreco !== "todas") {
-      const preco = product.price
-      switch (faixaPreco) {
-        case "0-50":
-          correspondePreco = preco <= 50
-          break
-        case "50-100":
-          correspondePreco = preco > 50 && preco <= 100
-          break
-        case "100-200":
-          correspondePreco = preco > 100 && preco <= 200
-          break
-        case "200+":
-          correspondePreco = preco > 200
-          break
-      }
-    }
+    // Simular avaliação (em um app real viria do banco)
+    const avaliacaoSimulada = Math.floor(Math.random() * 5) + 1
+    const correspondeAvaliacao = avaliacaoSimulada >= avaliacaoMinima
 
-    return correspondeNome && correspondeCategoria && correspondePreco && product.available
+    // Simular marca baseada no nome do produto
+    const marcaSimulada = product.name.includes("Premium")
+      ? "Premium"
+      : product.name.includes("Especial")
+        ? "Especial"
+        : "Casa Duarte"
+    const correspondeMarca = marcasSelecionadas.length === 0 || marcasSelecionadas.includes(marcaSimulada)
+
+    // Filtro por tipo de corte
+    const correspondeCorte =
+      tipoCorte === "todos" ||
+      (tipoCorte === "bovino" && product.category.toLowerCase().includes("bov")) ||
+      (tipoCorte === "suino" && product.category.toLowerCase().includes("suí")) ||
+      (tipoCorte === "ave" && product.category.toLowerCase().includes("ave")) ||
+      (tipoCorte === "linguica" && product.category.toLowerCase().includes("linguiça"))
+
+    // Filtro por origem (simulado)
+    const origemSimulada = Math.random() > 0.5 ? "nacional" : "importado"
+    const correspondeOrigem = origem === "todas" || origem === origemSimulada
+
+    // Filtro por promoção (simulado - produtos com preço terminado em 0 ou 5)
+    const estaEmPromocao = product.price % 10 === 0 || product.price % 10 === 5
+    const correspondePromocao = !promocao || estaEmPromocao
+
+    return (
+      correspondeNome &&
+      correspondeCategoria &&
+      correspondePreco &&
+      correspondeEstoque &&
+      correspondeAvaliacao &&
+      correspondeMarca &&
+      correspondeCorte &&
+      correspondeOrigem &&
+      correspondePromocao
+    )
   })
 
   // Ordenar produtos
@@ -69,38 +99,43 @@ export default function ProductGrid({ products }: ProductGridProps) {
         return a.name.localeCompare(b.name)
       case "mais-novo":
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      case "avaliacao":
+        // Simular ordenação por avaliação
+        return Math.random() - 0.5
+      case "popularidade":
+        // Simular ordenação por popularidade
+        return Math.random() - 0.5
       default:
         return 0
     }
   })
 
-  // Atualizar filtros ativos
   useEffect(() => {
     const filtros: string[] = []
     if (termoBusca) filtros.push(`Busca: ${termoBusca}`)
     if (categoriaSelecionada !== "todas") filtros.push(`Categoria: ${categoriaSelecionada}`)
-    if (faixaPreco !== "todas") {
-      const labels: { [key: string]: string } = {
-        "0-50": "Até R$ 50",
-        "50-100": "R$ 50 - R$ 100",
-        "100-200": "R$ 100 - R$ 200",
-        "200+": "Acima de R$ 200",
-      }
-      filtros.push(`Preço: ${labels[faixaPreco]}`)
+    if (faixaPreco[0] > 0 || faixaPreco[1] < 500) {
+      filtros.push(`Preço: R$ ${faixaPreco[0]} - R$ ${faixaPreco[1]}`)
     }
-    setFiltrosAtivos(filtros)
-  }, [termoBusca, categoriaSelecionada, faixaPreco])
+    if (apenasEmEstoque) filtros.push("Apenas em estoque")
+    if (avaliacaoMinima > 0) filtros.push(`Avaliação: ${avaliacaoMinima}+ estrelas`)
+    if (marcasSelecionadas.length > 0) filtros.push(`Marcas: ${marcasSelecionadas.join(", ")}`)
+    if (tipoCorte !== "todos") filtros.push(`Tipo: ${tipoCorte}`)
+    if (origem !== "todas") filtros.push(`Origem: ${origem}`)
+    if (promocao) filtros.push("Em promoção")
 
-  const getRandomImage = () => {
-    const meatImages = [
-      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1603048297172-c92544798d5a?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=400&fit=crop",
-    ]
-    return meatImages[Math.floor(Math.random() * meatImages.length)]
-  }
+    setFiltrosAtivos(filtros)
+  }, [
+    termoBusca,
+    categoriaSelecionada,
+    faixaPreco,
+    apenasEmEstoque,
+    avaliacaoMinima,
+    marcasSelecionadas,
+    tipoCorte,
+    origem,
+    promocao,
+  ])
 
   const toggleFavorito = (id: number) => {
     setFavoritos((prev) => (prev.includes(id) ? prev.filter((fav) => fav !== id) : [...prev, id]))
@@ -126,8 +161,14 @@ export default function ProductGrid({ products }: ProductGridProps) {
   const limparFiltros = () => {
     setTermoBusca("")
     setCategoriaSelecionada("todas")
-    setFaixaPreco("todas")
+    setFaixaPreco([0, 500])
     setOrdenacao("relevancia")
+    setApenasEmEstoque(false)
+    setAvaliacaoMinima(0)
+    setMarcasSelecionadas([])
+    setTipoCorte("todos")
+    setOrigem("todas")
+    setPromocao(false)
   }
 
   const removerFiltro = (filtro: string) => {
@@ -136,11 +177,39 @@ export default function ProductGrid({ products }: ProductGridProps) {
     } else if (filtro.startsWith("Categoria:")) {
       setCategoriaSelecionada("todas")
     } else if (filtro.startsWith("Preço:")) {
-      setFaixaPreco("todas")
+      setFaixaPreco([0, 500])
+    } else if (filtro === "Apenas em estoque") {
+      setApenasEmEstoque(false)
+    } else if (filtro.startsWith("Avaliação:")) {
+      setAvaliacaoMinima(0)
+    } else if (filtro.startsWith("Marcas:")) {
+      setMarcasSelecionadas([])
+    } else if (filtro.startsWith("Tipo:")) {
+      setTipoCorte("todos")
+    } else if (filtro.startsWith("Origem:")) {
+      setOrigem("todas")
+    } else if (filtro === "Em promoção") {
+      setPromocao(false)
     }
   }
 
   const categorias = Array.from(new Set(products.map((p) => p.category)))
+  const marcas = ["Casa Duarte", "Premium", "Especial"]
+
+  const getRandomImage = () => {
+    const meatImages = [
+      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1603048297172-c92544798d5a?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=400&fit=crop",
+    ]
+    return meatImages[Math.floor(Math.random() * meatImages.length)]
+  }
+
+  const handleFaixaPrecoChange = (value: [number, number]) => {
+  setFaixaPreco(value);
+};
 
   return (
     <section id="produtos" className="py-8 lg:py-16 bg-gradient-to-b from-gray-50 to-white">
@@ -164,7 +233,6 @@ export default function ProductGrid({ products }: ProductGridProps) {
           </p>
         </motion.div>
 
-        {/* Desktop Filters */}
         <motion.div
           className="hidden lg:block mb-8"
           initial={{ opacity: 0, y: 20 }}
@@ -173,7 +241,8 @@ export default function ProductGrid({ products }: ProductGridProps) {
         >
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-end">
+              {/* Primeira linha de filtros */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-end mb-6">
                 {/* Search */}
                 <div className="lg:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Buscar produtos</label>
@@ -206,19 +275,19 @@ export default function ProductGrid({ products }: ProductGridProps) {
                   </Select>
                 </div>
 
-                {/* Price Range */}
+                {/* Tipo de Corte */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Faixa de Preço</label>
-                  <Select value={faixaPreco} onValueChange={setFaixaPreco}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Corte</label>
+                  <Select value={tipoCorte} onValueChange={setTipoCorte}>
                     <SelectTrigger className="h-12 text-base border-2 border-gray-200 focus:border-red-500 rounded-lg">
-                      <SelectValue placeholder="Preço" />
+                      <SelectValue placeholder="Tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todas">Todos os preços</SelectItem>
-                      <SelectItem value="0-50">Até R$ 50</SelectItem>
-                      <SelectItem value="50-100">R$ 50 - R$ 100</SelectItem>
-                      <SelectItem value="100-200">R$ 100 - R$ 200</SelectItem>
-                      <SelectItem value="200+">Acima de R$ 200</SelectItem>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="bovino">Bovino</SelectItem>
+                      <SelectItem value="suino">Suíno</SelectItem>
+                      <SelectItem value="ave">Aves</SelectItem>
+                      <SelectItem value="linguica">Linguiças</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -236,8 +305,112 @@ export default function ProductGrid({ products }: ProductGridProps) {
                       <SelectItem value="preco-maior">Maior preço</SelectItem>
                       <SelectItem value="nome">Nome A-Z</SelectItem>
                       <SelectItem value="mais-novo">Mais recentes</SelectItem>
+                      <SelectItem value="avaliacao">Melhor avaliados</SelectItem>
+                      <SelectItem value="popularidade">Mais populares</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              {/* Segunda linha de filtros avançados */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 pt-6 border-t border-gray-200">
+                {/* Faixa de Preço */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Faixa de Preço: R$ {faixaPreco[0]} - R$ {faixaPreco[1]}
+                  </label>
+                  <Slider
+  value={faixaPreco}
+  onValueChange={handleFaixaPrecoChange}
+  max={500}
+  min={0}
+  step={10}
+  className="w-full"
+/>
+                </div>
+
+                {/* Avaliação Mínima */}
+                {/* <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Avaliação Mínima</label>
+                  <div className="flex items-center space-x-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setAvaliacaoMinima(star === avaliacaoMinima ? 0 : star)}
+                        className={`p-1 rounded transition-colors ${
+                          star <= avaliacaoMinima ? "text-yellow-500" : "text-gray-300 hover:text-yellow-400"
+                        }`}
+                      >
+                        <Star className="h-5 w-5 fill-current" />
+                      </button>
+                    ))}
+                  </div>
+                </div> */}
+
+                {/* Origem */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Origem</label>
+                  <Select value={origem} onValueChange={setOrigem}>
+                    <SelectTrigger className="h-12 text-base border-2 border-gray-200 focus:border-red-500 rounded-lg">
+                      <SelectValue placeholder="Origem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas</SelectItem>
+                      <SelectItem value="nacional">Nacional</SelectItem>
+                      <SelectItem value="importado">Importado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtros de Checkbox */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">Filtros Especiais</label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+  id="estoque"
+  checked={apenasEmEstoque}
+  onCheckedChange={(checked) => setApenasEmEstoque(checked === true)}
+/>
+                      <label htmlFor="estoque" className="text-sm text-gray-700 cursor-pointer">
+                        Apenas em estoque
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                     <Checkbox
+  id="promocao"
+  checked={promocao}
+  onCheckedChange={(checked) => setPromocao(checked === true)}
+/>
+                      <label htmlFor="promocao" className="text-sm text-gray-700 cursor-pointer">
+                        Em promoção
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Marcas */}
+              <div className="pt-6 border-t border-gray-200 mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Marcas</label>
+                <div className="flex flex-wrap gap-2">
+                  {marcas.map((marca) => (
+                    <button
+                      key={marca}
+                      onClick={() => {
+                        setMarcasSelecionadas((prev) =>
+                          prev.includes(marca) ? prev.filter((m) => m !== marca) : [...prev, marca],
+                        )
+                      }}
+                      className={`px-3 py-1 rounded-full text-sm border-2 transition-all duration-200 ${
+                        marcasSelecionadas.includes(marca)
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-white text-gray-700 border-gray-200 hover:border-red-300"
+                      }`}
+                    >
+                      {marca}
+                    </button>
+                  ))}
                 </div>
               </div>
             </CardContent>
@@ -397,6 +570,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
         </AnimatePresence>
 
         {/* Call to Action */}
+        {window.location.pathname === "/product" ? (
         <motion.div
           className="text-center mt-16"
           initial={{ opacity: 0, y: 20 }}
@@ -422,6 +596,35 @@ export default function ProductGrid({ products }: ProductGridProps) {
             </CardContent>
           </Card>
         </motion.div>
+        ) : (
+<motion.div
+          className="text-center mt-16"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Card className="bg-gradient-to-r from-red-600 to-orange-600 text-white border-0 shadow-2xl overflow-hidden">
+            <CardContent className="p-8 lg:p-12 relative">
+              <div className="absolute inset-0 bg-black/10"></div>
+              <div className="relative z-10">
+                <h3 className="text-2xl lg:text-4xl font-bold mb-4">Não encontrou o que procura?</h3>
+                <p className="text-lg lg:text-xl mb-6 opacity-90">
+                  Não se preocupe! Temos outros cortes especiais disponíveis.
+                </p>
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="bg-white text-red-600 hover:bg-gray-100 font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                onClick={() => window.location.href = "/product"}
+               >
+                  Ver página de produtos
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        )
+        }
       </div>
 
       {/* Mobile Filters Modal */}
@@ -431,12 +634,15 @@ export default function ProductGrid({ products }: ProductGridProps) {
         categories={categorias}
         filters={{
           categoria: categoriaSelecionada,
-          faixaPreco,
+          faixaPreco: `${faixaPreco[0]}-${faixaPreco[1]}`,
           ordenacao,
         }}
         onFiltersChange={(filters) => {
           setCategoriaSelecionada(filters.categoria)
-          setFaixaPreco(filters.faixaPreco)
+          if (filters.faixaPreco !== "todas") {
+            const [min, max] = filters.faixaPreco.split("-").map(Number)
+            setFaixaPreco([min, max])
+          }
           setOrdenacao(filters.ordenacao)
         }}
         onClearFilters={limparFiltros}
