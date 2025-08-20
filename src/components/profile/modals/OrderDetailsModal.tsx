@@ -22,6 +22,7 @@ import {
   XCircle,
 } from "lucide-react"
 import type { Order, OrderItem, Product } from "@/generated/prisma"
+import { cancelOrder } from "@/app/actions/order/orders"
 
 interface OrderDetailModalProps {
   order: (Order & { items: OrderItem[]; user?: { name?: string; phone?: string } }) | null
@@ -101,6 +102,22 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
       default:
         return "bg-gray-100 text-gray-800"
     }
+  }
+
+  const formatQuantity = (quantity: number) => {
+    return quantity !== null && quantity < 1 ? `${quantity.toFixed(3).replace(quantity.toString()[0], "").replace(".", "")} gramas` : `${quantity} kilo`
+  }
+
+  const replaceOrderMethod = (method: string) => {
+    const methods = {
+      ["vr"]: "Vale Refeição",
+      ["va"]: "Vale Alimentação",
+      ["debito"]: "Cartão de Débito",
+      ["credito"]: "Cartão de Crédito",
+      ["dinheiro"]: "Dinheiro",
+    }
+
+    return methods[method] || "Não informado"
   }
 
   if (!order) return null
@@ -333,7 +350,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                           <span className="text-gray-600 text-sm">Método de Pagamento:</span>
                           <Badge variant="outline" className="font-medium">
                             <CreditCard className="h-3 w-3 mr-1" />
-                            {order.paymentMethod || "Não informado"}
+                            {replaceOrderMethod(order.paymentMethod)}
                           </Badge>
                         </div>
                         <div className="flex justify-between items-center py-2">
@@ -402,7 +419,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                                 <h5 className="font-bold text-gray-900 truncate">{item.name}</h5>
                                 <p className="text-xs text-gray-500 truncate">{item.category}</p>
                                 <div className="flex items-center justify-between mt-2">
-                                  <span className="text-sm text-gray-600">Qtd: {item.quantity}</span>
+                                  <span className="text-sm text-gray-600">Quantidade: {formatQuantity(item.quantity)}</span>
                                   <div className="text-right">
                                     <div className="text-xs text-gray-500">R$ {item.price.toFixed(2)} cada</div>
                                     <div className="font-bold text-green-600">
@@ -449,6 +466,10 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                     <Button
                       variant="outline"
                       className="flex-1 text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+                      onClick={() => {
+                        // Handle cancel order logic here
+                        cancelOrder(order.id)
+                      }}
                     >
                       <AlertCircle className="h-4 w-4 mr-2" />
                       Cancelar Pedido

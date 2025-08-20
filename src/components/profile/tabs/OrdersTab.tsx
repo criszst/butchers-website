@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Package, Eye, Plus, Filter, RefreshCw } from "lucide-react"
 import OrderDetailModal from "@/components/profile/modals/OrderDetailsModal"
 import { getProductById } from "@/app/actions/product"
+import { cancelOrder } from "@/app/actions/order/orders"
 
 interface OrdersTabProps {
   orders: (Order & { items: OrderItem[] })[]
@@ -180,12 +181,15 @@ export default function OrdersTab({ orders, onViewOrderDetails, product }: Order
                     </Button>
                     {order.status !== "Entregue" && order.status !== "Cancelado" && (
                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 border-red-200 hover:bg-red-50 bg-transparent transition-colors"
-                      >
-                        Cancelar
-                      </Button>
+                      variant="outline"
+                      className="flex-1 text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+                      onClick={() => {
+                        // Handle cancel order logic here
+                        cancelOrder(order.id)
+                      }}
+                    >
+                      Cancelar Pedido
+                    </Button>
                     )}
                   </div>
                 </div>

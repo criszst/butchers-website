@@ -99,7 +99,7 @@ export default function SettingsManager() {
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-5 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
           <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Configurações da Loja</h2>
           <p className="text-sm lg:text-base text-gray-600">Gerencie as configurações gerais do açougue</p>
@@ -313,7 +313,7 @@ export default function SettingsManager() {
         </Card>
 
         {/* Security Settings */}
-        {/* <Card className="bg-white border border-gray-200">
+        <Card className="bg-white border border-gray-200">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <Shield className="h-5 w-5 mr-2 text-orange-600" />
@@ -346,10 +346,10 @@ export default function SettingsManager() {
               <p className="text-xs text-gray-500 mt-1">Entre 5 e 480 minutos (8 horas)</p>
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
 
         {/* Appearance Settings */}
-        {/* <Card className="bg-white border border-gray-200 lg:col-span-2">
+        <Card className="bg-white border border-gray-200 lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <Palette className="h-5 w-5 mr-2 text-orange-600" />
@@ -407,7 +407,7 @@ export default function SettingsManager() {
               </div>
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
       </div>
     </div>
   )

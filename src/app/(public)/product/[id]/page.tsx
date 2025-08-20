@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Heart, Star, ShoppingCart, Loader2, Share2, Truck, Shield, Clock } from "lucide-react"
+import { ArrowLeft, Heart, Star, ShoppingCart, Loader2, Share2, Truck, Shield, Clock, Plus, Minus } from "lucide-react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -371,17 +371,29 @@ export default function ProductDetailsPage() {
                   <Label htmlFor="quantity">
                     Quantidade ({product.priceWeightUnit === "kg" ? "em kg" : "em gramas"})
                   </Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                     step="0.1"
-                    min="0.1"
-                    max={product.stock}
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value === "" ? "" : Number.parseFloat(e.target.value) || "")}
-                    className="text-center text-lg font-bold"
-                    placeholder='0.5 para 500 gramas / ou 1 para 1kg'
-                  />
+                 <Button
+    onClick={() => setQuantity(0.1)}
+    className="w-1/2"
+  >
+    <Minus className="h-4 w-4 mr-2" />
+  </Button>
+  <Input
+    id="quantity"
+    type="number"
+    pattern="[0-9]*"
+    min="-1"
+    max={product.stock}
+    value={quantity}
+    onChange={(e) => setQuantity(e.target.value === "" ? "" : Number.parseFloat(e.target.value) || "")}
+    className="text-center text-lg font-bold w-1/2"
+    placeholder='0.5 para 500 gramas / ou 1 para 1kg'
+  />
+  <Button
+    onClick={() => setQuantity(0.1)}
+    className="w-1/2"
+  >
+    <Plus className="h-4 w-4 mr-2" />
+  </Button>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">

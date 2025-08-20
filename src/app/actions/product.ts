@@ -303,3 +303,32 @@ export async function getRelatedProducts(productId: number, category: string, li
     }
   }
 }
+
+export async function getRecentProducts(limit: number = 4) {
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        available: true,
+        stock: {
+          gt: 0
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: limit
+    })
+
+    return {
+      success: true,
+      products
+    }
+  } catch (error) {
+    console.error("Erro ao buscar produtos recentes:", error)
+    return {
+      success: false,
+      products: [],
+      message: "Erro ao carregar produtos recentes"
+    }
+  }
+}
