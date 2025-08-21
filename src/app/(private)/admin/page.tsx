@@ -11,6 +11,8 @@ import SalesAnalytics from "@/components/admin/SalesAnalytics"
 import SuppliersManager from "@/components/admin/SuppliersManager"
 import { useRouter } from "next/navigation"
 import SettingsManager from "@/components/admin/SettingsManager"
+import { useSession } from "next-auth/react"
+import { getUserProfileDetails } from "@/app/actions/user-info"
 
 
 
@@ -19,6 +21,21 @@ import SettingsManager from "@/components/admin/SettingsManager"
 export default function AdminPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('')
+  const {data: sess} = useSession()
+  const [user, setUser] = useState(null)
+
+  // useEffect(() => {
+  //   const getUser = async (email: string | null | undefined) => {
+  //     try {
+  //       const response = await getUserProfileDetails(sess?.user?.email ?? "").then((response) => {
+  //         setUser(response); // Set the user state with the response
+  //       });
+  //       setUser(response);
+  //       console.log(data)
+  //   }
+  // })
+
+  // if (!sess?.user || !getPro)
 
    const handleTabChange = (tab: string) => {
     setActiveTab(tab)

@@ -27,7 +27,7 @@ export default function ProductDetailsPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [quantity, setQuantity] = useState<number | "">("") // Começar vazio
+  const [quantity, setQuantity] = useState<string>("")
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
 
@@ -44,8 +44,6 @@ export default function ProductDetailsPage() {
         const result = await getProductById(productId)
         if (result.success && result.product) {
           setProduct(result.product)
-
-
 
           // Fetch related products
           const relatedResult = await getRelatedProducts(productId, result.product.category, 4)
@@ -65,10 +63,38 @@ export default function ProductDetailsPage() {
     fetchProduct()
   }, [productId])
 
+  const incrementQuantity = () => {
+    const currentQty = typeof quantity === "string" ? Number.parseFloat(quantity) || 0 : quantity || 0
+    const newQty = currentQty + 0.100
+    setQuantity(String(Math.min(newQty, product?.stock || 0)))
+  }
+
+  const decrementQuantity = () => {
+  const currentQty = typeof quantity === "string" ? Number.parseFloat(quantity) || 0 : quantity || 0
+  const newQty = Math.max(currentQty - 0.100, 0)
+  setQuantity(String(newQty) === "" ? "" : String(newQty))
+}
+
+  const handleQuantityChange = (value: string) => {
+    if (value === "") {
+      setQuantity("")
+      return
+    }
+
+    // Replace comma with dot for decimal parsing
+    const normalizedValue = value.replace(",", ".")
+
+      const numValue = Number.parseFloat(normalizedValue)
+
+    if (!isNaN(numValue) && numValue >= 0) {
+      setQuantity(String(Math.min(numValue, product?.stock || 0)))
+    }
+  }
+
   const handleAddToCart = async () => {
     if (!product) return
 
-    const numQuantity = typeof quantity === "string" ? parseFloat(quantity) : quantity
+    const numQuantity = typeof quantity === "string" ? Number.parseFloat(quantity) : quantity
 
     if (!numQuantity || numQuantity <= 0) {
       toast.error("Por favor, informe uma quantidade válida")
@@ -125,7 +151,7 @@ export default function ProductDetailsPage() {
   const formatQuantityDisplay = () => {
     if (!product || !quantity) return ""
 
-    const numQuantity = typeof quantity === "string" ? parseFloat(quantity) : quantity
+    const numQuantity = typeof quantity === "string" ? Number.parseFloat(quantity) : quantity
     if (!numQuantity) return ""
 
     // Sempre mostrar em kg, mas converter para gramas se for menos de 1kg
@@ -144,7 +170,6 @@ export default function ProductDetailsPage() {
         // User cancelled sharing
       }
     } else {
-
       navigator.clipboard.writeText(window.location.href)
       toast.success("Link copiado para a área de transferência!")
     }
@@ -371,29 +396,36 @@ export default function ProductDetailsPage() {
                   <Label htmlFor="quantity">
                     Quantidade ({product.priceWeightUnit === "kg" ? "em kg" : "em gramas"})
                   </Label>
-                 <Button
-    onClick={() => setQuantity(0.1)}
-    className="w-1/2"
-  >
-    <Minus className="h-4 w-4 mr-2" />
-  </Button>
-  <Input
-    id="quantity"
-    type="number"
-    pattern="[0-9]*"
-    min="-1"
-    max={product.stock}
-    value={quantity}
-    onChange={(e) => setQuantity(e.target.value === "" ? "" : Number.parseFloat(e.target.value) || "")}
-    className="text-center text-lg font-bold w-1/2"
-    placeholder='0.5 para 500 gramas / ou 1 para 1kg'
-  />
-  <Button
-    onClick={() => setQuantity(0.1)}
-    className="w-1/2"
-  >
-    <Plus className="h-4 w-4 mr-2" />
-  </Button>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Button
+                      onClick={decrementQuantity}
+                      disabled={!quantity || parseFloat(quantity) <= 0}
+                      variant="outline"
+                      size="sm"
+                      className="h-12 w-12 p-0 flex-shrink-0 bg-transparent"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      id="quantity"
+                      type="text"
+                      pattern="[0-9]*"
+                      step="any"
+                      value={quantity === "" ? 0 : quantity}
+                      onChange={(e) => handleQuantityChange(e.target.value)}
+                      className="text-center text-lg font-bold flex-1"
+                      placeholder="0,5 para 500g ou 1 para 1kg"
+                    />
+                    <Button
+                      onClick={incrementQuantity}
+                      disabled={!product || (typeof quantity === "number" && quantity >= product.stock)}
+                      variant="outline"
+                      size="sm"
+                      className="h-12 w-12 p-0 flex-shrink-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">
@@ -409,6 +441,7 @@ export default function ProductDetailsPage() {
                     Estoque disponível: {product.stock}
                     {product.priceWeightUnit}
                   </p>
+                  <p className="text-xs text-gray-400 mt-1">Use vírgula para decimais: 0,5 = 500g</p>
                 </div>
               </div>
             </motion.div>
@@ -604,19 +637,35 @@ export default function ProductDetailsPage() {
                         <Label htmlFor="quantity-desktop">
                           Quantidade ({product.priceWeightUnit === "kg" ? "em kg" : "em gramas"})
                         </Label>
-                        <Input
-                          id="quantity-desktop"
-                          type="number"
-                          step={product.priceWeightUnit === "kg" ? "0.1" : "50"}
-                          min={product.priceWeightUnit === "kg" ? "0.1" : "50"}
-                          max={product.stock}
-                          value={quantity}
-                          onChange={(e) =>
-                            setQuantity(e.target.value === "" ? "" : Number.parseFloat(e.target.value) || "")
-                          }
-                          className="text-center text-xl font-bold w-32"
-                          placeholder={product.priceWeightUnit === "kg" ? "0.5" : "500"}
-                        />
+                        <div className="flex items-center space-x-3 mt-2">
+                          <Button
+                            onClick={decrementQuantity}
+                            disabled={!quantity || parseFloat(quantity) <= 0}
+                            variant="outline"
+                            size="sm"
+                            className="h-12 w-12 p-0 bg-transparent"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <Input
+                            id="quantity-desktop"
+                            type="text"
+                            inputMode="decimal"
+                            value={quantity}
+                            onChange={(e) => handleQuantityChange(e.target.value)}
+                            className="text-center text-xl font-bold w-40"
+                            placeholder="0,5 ou 1"
+                          />
+                          <Button
+                            onClick={incrementQuantity}
+                            disabled={!product || (typeof quantity === "number" && quantity >= product.stock)}
+                            variant="outline"
+                            size="sm"
+                            className="h-12 w-12 p-0"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div>
                         <p className="text-gray-600">
@@ -633,6 +682,7 @@ export default function ProductDetailsPage() {
                           Estoque disponível: {product.stock}
                           {product.priceWeightUnit}
                         </p>
+                        <p className="text-xs text-gray-400 mt-1">Use vírgula para decimais: 0,5 = 500g</p>
                       </div>
                     </div>
                   </div>
