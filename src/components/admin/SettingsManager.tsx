@@ -212,12 +212,23 @@ export default function SettingsManager() {
                 <Input
                   id="freeDeliveryMinimum"
                   type="number"
-                  step="0.01"
+                  step="0.1"
                   min="0"
                   value={settings.freeDeliveryMinimum}
                   onChange={(e) => handleInputChange("freeDeliveryMinimum", Number.parseFloat(e.target.value) || 0)}
                 />
               </div>
+
+              {settings.freeDeliveryMinimum > 0 && (
+              <div className="bg-green-50 p-3 w-full rounded border border-green-200">
+                <p className="text-sm text-green-800">
+                  <strong>Resultado:</strong> Frete Gratis para pedidos acima de R$ {Number.parseFloat(settings.freeDeliveryMinimum.toString())}
+                  
+                </p>
+
+              </div>
+            )}
+
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

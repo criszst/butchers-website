@@ -5,6 +5,19 @@ import prisma from "@/lib/prisma"
 import type { Prisma } from "@/generated/prisma"
 import type ProductData from "@/interfaces/product"
 
+function calculateUnitPrice(product: any) {
+  if (!product.priceWeightAmount || !product.priceWeightUnit) return product.price
+
+  // converte para kg
+  let amountInKg =
+    product.priceWeightUnit === "g"
+      ? product.priceWeightAmount / 1000
+      : product.priceWeightAmount
+
+  return product.price / amountInKg
+}
+
+
 export async function createProduct(data: ProductData) {
   if (!data.name || !data.description || !data.category) {
     return {
@@ -259,6 +272,8 @@ export async function getProductById(id: number) {
       where: { id },
     })
 
+    const unitPrice = calculateUnitPrice(product)
+
     if (!product) {
       return {
         success: false,
@@ -269,7 +284,10 @@ export async function getProductById(id: number) {
 
     return {
       success: true,
-      product,
+      product: {
+        ...product,
+        unitPrice, // aqui já devolve o preço por kg
+      },
     }
   } catch (error) {
     console.error("Erro ao buscar produto:", error)

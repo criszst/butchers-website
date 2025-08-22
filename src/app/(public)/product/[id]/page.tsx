@@ -19,6 +19,10 @@ import { getProductById, getRelatedProducts } from "@/app/actions/product"
 import Header from "@/components/header"
 import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
 
+const handleShare = () => {
+  // Implement share functionality here
+}
+
 export default function ProductDetailsPage() {
   const params = useParams()
   const router = useRouter()
@@ -33,6 +37,14 @@ export default function ProductDetailsPage() {
 
   const productId = Number.parseInt(params.id as string)
 
+  const roundToThreeDecimals = (num: number): number => {
+    return Math.round(num * 1000) / 1000
+  }
+
+  const formatQuantityInput = (value: number): string => {
+    return value.toFixed(3).replace(/\.?0+$/, "")
+  }
+
   useEffect(() => {
     const fetchProduct = async () => {
       if (!productId || isNaN(productId)) {
@@ -45,7 +57,6 @@ export default function ProductDetailsPage() {
         if (result.success && result.product) {
           setProduct(result.product)
 
-          // Fetch related products
           const relatedResult = await getRelatedProducts(productId, result.product.category, 4)
           if (relatedResult.success) {
             setRelatedProducts(relatedResult.products)
@@ -64,44 +75,51 @@ export default function ProductDetailsPage() {
   }, [productId])
 
   const incrementQuantity = () => {
-    const currentQty = typeof quantity === "string" ? Number.parseFloat(quantity) || 0 : quantity || 0
-    const newQty = currentQty + 0.100
-    setQuantity(String(Math.min(newQty, product?.stock || 0)))
+    const currentQty = quantity === "" ? 0 : Number.parseFloat(quantity) || 0
+    const newQty = roundToThreeDecimals(currentQty + 0.1)
+    const maxQty = product?.stock || 0
+    const finalQty = Math.min(newQty, maxQty)
+    setQuantity(formatQuantityInput(finalQty))
   }
 
   const decrementQuantity = () => {
-  const currentQty = typeof quantity === "string" ? Number.parseFloat(quantity) || 0 : quantity || 0
-  const newQty = Math.max(currentQty - 0.100, 0)
-  setQuantity(String(newQty) === "" ? "" : String(newQty))
-}
+    const currentQty = quantity === "" ? 0 : Number.parseFloat(quantity) || 0
+    const newQty = roundToThreeDecimals(Math.max(currentQty - 0.1, 0))
+    setQuantity(newQty === 0 ? "0" : formatQuantityInput(newQty))
+  }
 
   const handleQuantityChange = (value: string) => {
-    if (value === "") {
-      setQuantity("")
+    if (value === "" || value === "0") {
+      setQuantity(value)
       return
     }
 
-    // Replace comma with dot for decimal parsing
     const normalizedValue = value.replace(",", ".")
 
-      const numValue = Number.parseFloat(normalizedValue)
+    if (normalizedValue === "0." || normalizedValue === "0,") {
+      setQuantity("0.")
+      return
+    }
+
+    const numValue = Number.parseFloat(normalizedValue)
 
     if (!isNaN(numValue) && numValue >= 0) {
-      setQuantity(String(Math.min(numValue, product?.stock || 0)))
+      const maxQty = product?.stock || 0
+      const finalQty = Math.min(numValue, maxQty)
+      setQuantity(String(finalQty))
     }
   }
 
   const handleAddToCart = async () => {
     if (!product) return
 
-    const numQuantity = typeof quantity === "string" ? Number.parseFloat(quantity) : quantity
+    const numQuantity = quantity === "" ? 0 : Number.parseFloat(quantity)
 
     if (!numQuantity || numQuantity <= 0) {
       toast.error("Por favor, informe uma quantidade válida")
       return
     }
 
-    // Mínimo de 0.1kg
     if (numQuantity < 0.1) {
       toast.error("Quantidade mínima é 0,1kg")
       return
@@ -138,40 +156,26 @@ export default function ProductDetailsPage() {
   }
 
   const calculateTotalPrice = () => {
-    if (!product || !quantity) return 0
+    if (!product || !quantity || quantity === "") return 0
 
-    const numQuantity = typeof quantity === "string" ? Number.parseFloat(quantity) : quantity
+    const numQuantity = Number.parseFloat(quantity)
     if (!numQuantity) return 0
 
-    // Calculate price per unit weight
     const pricePerKg = product.price / (product.priceWeightAmount || 1)
-    return pricePerKg * numQuantity
+    return roundToThreeDecimals(pricePerKg * numQuantity)
   }
 
   const formatQuantityDisplay = () => {
-    if (!product || !quantity) return ""
+    if (!product || !quantity || quantity === "") return ""
 
-    const numQuantity = typeof quantity === "string" ? Number.parseFloat(quantity) : quantity
+    const numQuantity = Number.parseFloat(quantity)
     if (!numQuantity) return ""
 
-    // Sempre mostrar em kg, mas converter para gramas se for menos de 1kg
-    return numQuantity >= 1 ? `${numQuantity.toFixed(1)}kg` : `${(numQuantity * 1000).toFixed(0)}g`
-  }
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: product?.name,
-          text: `Confira este produto: ${product?.name}`,
-          url: window.location.href,
-        })
-      } catch (error) {
-        // User cancelled sharing
-      }
+    if (numQuantity >= 1) {
+      return `${numQuantity.toFixed(1).replace(/\.0$/, "")}kg`
     } else {
-      navigator.clipboard.writeText(window.location.href)
-      toast.success("Link copiado para a área de transferência!")
+      const grams = Math.round(numQuantity * 1000)
+      return `${grams}g`
     }
   }
 
@@ -180,7 +184,6 @@ export default function ProductDetailsPage() {
       <>
         <Header />
         <div className="min-h-screen bg-gray-50">
-          {/* Mobile Loading */}
           <div className="lg:hidden">
             <div className="relative h-80 bg-gradient-to-br from-red-500 to-orange-500">
               <div className="absolute top-4 left-4">
@@ -198,7 +201,6 @@ export default function ProductDetailsPage() {
             </div>
           </div>
 
-          {/* Desktop Loading */}
           <div className="hidden lg:block container py-8">
             <div className="grid grid-cols-2 gap-8 max-w-6xl mx-auto">
               <Skeleton className="h-96 w-full rounded-2xl" />
@@ -244,11 +246,8 @@ export default function ProductDetailsPage() {
     <>
       <Header />
       <div className="min-h-screen bg-gray-50">
-        {/* Mobile Design */}
         <div className="lg:hidden">
-          {/* Hero Section with Image */}
           <div className="relative h-80 bg-gradient-to-br from-red-500 to-orange-500 overflow-hidden">
-            {/* Navigation */}
             <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
               <motion.button
                 onClick={() => router.back()}
@@ -278,7 +277,6 @@ export default function ProductDetailsPage() {
               </div>
             </div>
 
-            {/* Product Image */}
             <div className="absolute inset-0 flex items-center justify-center">
               <motion.div
                 className="relative w-64 h-64"
@@ -299,7 +297,6 @@ export default function ProductDetailsPage() {
               </motion.div>
             </div>
 
-            {/* Stock Badge */}
             {product.stock <= 5 && product.stock > 0 && (
               <div className="absolute bottom-4 left-4">
                 <Badge className="bg-orange-600 text-white">
@@ -311,14 +308,11 @@ export default function ProductDetailsPage() {
             )}
           </div>
 
-          {/* Product Details */}
           <div className="px-4 py-6 space-y-6">
-            {/* Title and Category */}
             <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
               <Badge className="bg-red-100 text-red-800 mb-3">{product.category}</Badge>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h1>
 
-              {/* Rating */}
               <div className="flex items-center space-x-2 mb-4">
                 <div className="flex items-center space-x-1">
                   {[...Array(5)].map((_, i) => (
@@ -328,22 +322,20 @@ export default function ProductDetailsPage() {
                 <span className="text-gray-600 text-sm">4.8 (25 avaliações)</span>
               </div>
 
-              {/* Stock Status */}
               <div className="flex items-center space-x-4 mb-4">
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${product.stock > 0 ? "bg-green-500" : "bg-red-500"}`} />
                   <span className={`text-sm font-medium ${product.stock > 0 ? "text-green-600" : "text-red-600"}`}>
                     {product.stock > 0 ? "Em estoque" : "Fora de estoque"}
                   </span>
                 </div>
-                <div className="flex items-center space-x-1 text-gray-600">
+                <div className="flex items-center space-x-2 text-gray-600">
                   <Truck className="h-4 w-4" />
                   <span className="text-sm">Entrega: Amanhã</span>
                 </div>
               </div>
             </motion.div>
 
-            {/* Price */}
             <motion.div
               className="bg-white p-4 rounded-xl shadow-sm border border-gray-100"
               initial={{ y: 20, opacity: 0 }}
@@ -370,7 +362,6 @@ export default function ProductDetailsPage() {
               </div>
             </motion.div>
 
-            {/* Description */}
             <motion.div
               className="bg-white p-4 rounded-xl shadow-sm border border-gray-100"
               initial={{ y: 20, opacity: 0 }}
@@ -383,7 +374,6 @@ export default function ProductDetailsPage() {
               </p>
             </motion.div>
 
-            {/* Quantity Selector */}
             <motion.div
               className="bg-white p-4 rounded-xl shadow-sm border border-gray-100"
               initial={{ y: 20, opacity: 0 }}
@@ -399,7 +389,7 @@ export default function ProductDetailsPage() {
                   <div className="flex items-center space-x-2 mt-2">
                     <Button
                       onClick={decrementQuantity}
-                      disabled={!quantity || parseFloat(quantity) <= 0}
+                      disabled={!quantity || Number.parseFloat(quantity) <= 0}
                       variant="outline"
                       size="sm"
                       className="h-12 w-12 p-0 flex-shrink-0 bg-transparent"
@@ -409,16 +399,15 @@ export default function ProductDetailsPage() {
                     <Input
                       id="quantity"
                       type="text"
-                      pattern="[0-9]*"
-                      step="any"
-                      value={quantity === "" ? 0 : quantity}
+                      inputMode="decimal"
+                      value={quantity}
                       onChange={(e) => handleQuantityChange(e.target.value)}
                       className="text-center text-lg font-bold flex-1"
                       placeholder="0,5 para 500g ou 1 para 1kg"
                     />
                     <Button
                       onClick={incrementQuantity}
-                      disabled={!product || (typeof quantity === "number" && quantity >= product.stock)}
+                      disabled={!product || (quantity !== "" && Number.parseFloat(quantity) >= product.stock)}
                       variant="outline"
                       size="sm"
                       className="h-12 w-12 p-0 flex-shrink-0"
@@ -429,7 +418,7 @@ export default function ProductDetailsPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">
-                    {quantity ? (
+                    {quantity && quantity !== "0" ? (
                       <>
                         Você está comprando: <span className="font-bold text-red-600">{formatQuantityDisplay()}</span>
                       </>
@@ -446,7 +435,6 @@ export default function ProductDetailsPage() {
               </div>
             </motion.div>
 
-            {/* Related Products */}
             {relatedProducts.length > 0 && (
               <motion.div
                 className="bg-white p-4 rounded-xl shadow-sm border border-gray-100"
@@ -480,7 +468,6 @@ export default function ProductDetailsPage() {
               </motion.div>
             )}
 
-            {/* Security Info */}
             <motion.div
               className="flex items-center justify-center space-x-6 text-xs text-gray-500 py-4"
               initial={{ y: 20, opacity: 0 }}
@@ -502,11 +489,10 @@ export default function ProductDetailsPage() {
             </motion.div>
           </div>
 
-          {/* Fixed Bottom Button */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg">
             <Button
               onClick={handleAddToCart}
-              disabled={isAddingToCart || !product.available || product.stock === 0 || !quantity}
+              disabled={isAddingToCart || !product.available || product.stock === 0 || !quantity || quantity === "0"}
               className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
             >
               {isAddingToCart ? (
@@ -516,7 +502,7 @@ export default function ProductDetailsPage() {
                 </>
               ) : product.stock === 0 ? (
                 "Produto Esgotado"
-              ) : !quantity ? (
+              ) : !quantity || quantity === "0" ? (
                 "Selecione uma quantidade"
               ) : (
                 <>
@@ -527,14 +513,11 @@ export default function ProductDetailsPage() {
             </Button>
           </div>
 
-          {/* Bottom Spacing for Fixed Button */}
           <div className="h-20" />
         </div>
 
-        {/* Desktop Design */}
         <div className="hidden lg:block">
           <div className="container py-8">
-            {/* Breadcrumb */}
             <div className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
               <Link href="/" className="hover:text-red-600 transition-colors">
                 Início
@@ -548,7 +531,6 @@ export default function ProductDetailsPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-12 max-w-6xl mx-auto">
-              {/* Left: Image */}
               <motion.div
                 className="relative"
                 initial={{ x: -50, opacity: 0 }}
@@ -568,7 +550,6 @@ export default function ProductDetailsPage() {
                     <MeatImagePlaceholder size="lg" className="w-96 h-96" />
                   )}
 
-                  {/* Favorite Button */}
                   <motion.button
                     onClick={() => setIsFavorite(!isFavorite)}
                     className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-sm rounded-full text-white hover:bg-white/30 transition-colors"
@@ -580,7 +561,6 @@ export default function ProductDetailsPage() {
                 </div>
               </motion.div>
 
-              {/* Right: Details */}
               <motion.div
                 className="flex flex-col justify-between"
                 initial={{ x: 50, opacity: 0 }}
@@ -598,7 +578,6 @@ export default function ProductDetailsPage() {
 
                   <h1 className="text-4xl font-bold text-gray-900 mb-4">{product.name}</h1>
 
-                  {/* Rating */}
                   <div className="flex items-center space-x-2 mb-6">
                     <div className="flex items-center space-x-1">
                       {[...Array(5)].map((_, i) => (
@@ -611,7 +590,6 @@ export default function ProductDetailsPage() {
                     <span className="text-gray-600">4.8 (25 avaliações)</span>
                   </div>
 
-                  {/* Stock and Delivery Info */}
                   <div className="flex items-center space-x-6 mb-6">
                     <div className="flex items-center space-x-2">
                       <div className={`w-3 h-3 rounded-full ${product.stock > 0 ? "bg-green-500" : "bg-red-500"}`} />
@@ -629,7 +607,6 @@ export default function ProductDetailsPage() {
                     {product.description || "Produto de alta qualidade, selecionado especialmente para você."}
                   </p>
 
-                  {/* Quantity Selector */}
                   <div className="mb-8">
                     <h3 className="font-semibold text-gray-900 mb-4 text-lg">Quantidade Desejada</h3>
                     <div className="space-y-4">
@@ -640,7 +617,7 @@ export default function ProductDetailsPage() {
                         <div className="flex items-center space-x-3 mt-2">
                           <Button
                             onClick={decrementQuantity}
-                            disabled={!quantity || parseFloat(quantity) <= 0}
+                            disabled={!quantity || Number.parseFloat(quantity) <= 0}
                             variant="outline"
                             size="sm"
                             className="h-12 w-12 p-0 bg-transparent"
@@ -658,7 +635,7 @@ export default function ProductDetailsPage() {
                           />
                           <Button
                             onClick={incrementQuantity}
-                            disabled={!product || (typeof quantity === "number" && quantity >= product.stock)}
+                            disabled={!product || (quantity !== "" && Number.parseFloat(quantity) >= product.stock)}
                             variant="outline"
                             size="sm"
                             className="h-12 w-12 p-0"
@@ -669,7 +646,7 @@ export default function ProductDetailsPage() {
                       </div>
                       <div>
                         <p className="text-gray-600">
-                          {quantity ? (
+                          {quantity && quantity !== "0" ? (
                             <>
                               Você está comprando:{" "}
                               <span className="font-bold text-red-600">{formatQuantityDisplay()}</span>
@@ -688,7 +665,6 @@ export default function ProductDetailsPage() {
                   </div>
                 </div>
 
-                {/* Price and Add to Cart */}
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <div>
@@ -711,7 +687,9 @@ export default function ProductDetailsPage() {
 
                   <Button
                     onClick={handleAddToCart}
-                    disabled={isAddingToCart || !product.available || product.stock === 0 || !quantity}
+                    disabled={
+                      isAddingToCart || !product.available || product.stock === 0 || !quantity || quantity === "0"
+                    }
                     className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     {isAddingToCart ? (
@@ -721,7 +699,7 @@ export default function ProductDetailsPage() {
                       </>
                     ) : product.stock === 0 ? (
                       "Produto Esgotado"
-                    ) : !quantity ? (
+                    ) : !quantity || quantity === "0" ? (
                       "Selecione uma quantidade"
                     ) : (
                       <>
@@ -731,7 +709,6 @@ export default function ProductDetailsPage() {
                     )}
                   </Button>
 
-                  {/* Security Info */}
                   <div className="flex items-center justify-center space-x-8 text-sm text-gray-500 mt-6">
                     <div className="flex items-center space-x-2">
                       <Shield className="h-4 w-4" />
@@ -750,7 +727,6 @@ export default function ProductDetailsPage() {
               </motion.div>
             </div>
 
-            {/* Related Products Desktop */}
             {relatedProducts.length > 0 && (
               <motion.div
                 className="mt-16"

@@ -39,6 +39,20 @@ export default function CartPage() {
     }
   }
 
+  const formatQuantityDisplay = (product: any) => {
+    if (!product || !product.quantity) return ""
+
+    const numQuantity = Number.parseFloat(product.quantity)
+    if (!numQuantity) return ""
+
+    if (numQuantity >= 1) {
+      return `${numQuantity.toFixed(1).replace(/\.0$/, "")}kg`
+    } else {
+      const grams = Math.round(numQuantity * 1000)
+      return `${grams}g`
+    }
+  }
+
 
   const handleQuantityChange = async (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {

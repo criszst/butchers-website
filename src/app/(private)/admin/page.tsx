@@ -12,7 +12,9 @@ import SuppliersManager from "@/components/admin/SuppliersManager"
 import { useRouter } from "next/navigation"
 import SettingsManager from "@/components/admin/SettingsManager"
 import { useSession } from "next-auth/react"
-import { getUserProfileDetails } from "@/app/actions/user-info"
+
+import { UserProfile } from "@/interfaces/user"
+import { getUserProfile } from "@/app/actions/user-profile"
 
 
 
@@ -21,21 +23,32 @@ import { getUserProfileDetails } from "@/app/actions/user-info"
 export default function AdminPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('')
-  const {data: sess} = useSession()
-  const [user, setUser] = useState(null)
+  const {data: session} = useSession()
+  const [user, setUser] = useState<UserProfile | null>()
 
-  // useEffect(() => {
-  //   const getUser = async (email: string | null | undefined) => {
-  //     try {
-  //       const response = await getUserProfileDetails(sess?.user?.email ?? "").then((response) => {
-  //         setUser(response); // Set the user state with the response
-  //       });
-  //       setUser(response);
-  //       console.log(data)
-  //   }
-  // })
+  useEffect(() => {
+    const getUser = async (email: string) => {
+      try {
+         await getUserProfile(email).then((response) => {
+          setUser(response);
+        });
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      }
+    };
 
-  // if (!sess?.user || !getPro)
+    getUser(session?.user?.email ?? "")
+}, [session?.user?.email]);
+
+  if (!session?.user?.email && !user?.isAdmin) {
+    // TODO: fake page that shows "No founded page 404"
+    return (
+      <div>
+        <h1>404 - Page not found</h1>
+      </div>
+    )
+  }
+
 
    const handleTabChange = (tab: string) => {
     setActiveTab(tab)

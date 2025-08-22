@@ -2,14 +2,27 @@
 
 import { useState, useEffect } from "react"
 import { Beef, Utensils, Clock } from "lucide-react"
+import { getStoreSettings, StoreSettingsData } from "@/app/actions/store-settings"
 
 interface LoadingScreenProps {
   isLoading: boolean
   message?: string
 }
 
-export default function LoadingScreen({ isLoading, message = "A arte de oferecer qualidade" }: LoadingScreenProps) {
+export default function LoadingScreen({ isLoading }: LoadingScreenProps) {
   const [dots, setDots] = useState("")
+  const [store, setStore] = useState<StoreSettingsData | null>(null)
+
+  useEffect(() => {
+    const getSettings = async () => {
+      if (isLoading) 
+        return getStoreSettings().then((storeData) => {
+      setStore(storeData.settings as StoreSettingsData)
+      })
+    }
+
+    getSettings()
+  }, [isLoading])
 
   useEffect(() => {
     if (!isLoading) return
@@ -79,7 +92,7 @@ export default function LoadingScreen({ isLoading, message = "A arte de oferecer
         {/* Brand Name */}
         <div className="space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
-            Casa de Carnes Duarte
+            {store?.storeName}
           </h1>
           <div className="flex items-center justify-center space-x-2 text-red-600">
             <div className="w-8 h-0.5 bg-red-600 rounded-full" />
@@ -91,7 +104,7 @@ export default function LoadingScreen({ isLoading, message = "A arte de oferecer
         {/* Loading Message */}
         <div className="space-y-4">
           <p className="text-xl text-gray-700 font-medium">
-            {message}
+            {store?.storeDescription}
             {dots}
           </p>
 
@@ -126,7 +139,7 @@ export default function LoadingScreen({ isLoading, message = "A arte de oferecer
         </div>
 
         {/* Fun Facts */}
-        <div className="mt-8 p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-red-100 max-w-md mx-auto">
+        {/* <div className="mt-8 p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-red-100 max-w-md mx-auto">
           <div className="flex items-center justify-center space-x-2 text-red-600 mb-2">
             <Clock className="h-4 w-4" />
             <span className="text-sm font-medium">Você sabia?</span>
@@ -134,7 +147,7 @@ export default function LoadingScreen({ isLoading, message = "A arte de oferecer
           <p className="text-sm text-gray-600">
             Nossas carnes são maturadas por até 28 dias para garantir máxima maciez e sabor!
           </p>
-        </div>
+        </div> */}
       </div>
 
       {/* Custom CSS for animations */}

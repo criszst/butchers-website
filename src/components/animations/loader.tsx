@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import LoadingScreen from "../loading"
+import LoadingScreen from "@/components/loading"
 
 interface PageLoaderProps {
   children: React.ReactNode
@@ -24,7 +24,7 @@ export default function PageLoader({ children, loadingDuration = 2000, message }
 
   return (
     <>
-      <LoadingScreen isLoading={isLoading} message={message} />
+      <LoadingScreen isLoading={isLoading} />
       <div className={`transition-opacity duration-500 ${isLoading ? "opacity-0" : "opacity-100"}`}>{children}</div>
     </>
   )

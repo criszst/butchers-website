@@ -56,8 +56,9 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
     if (order) {
       const stepIndex = statusSteps.findIndex((step) => step.key === order.status)
       setCurrentStep(stepIndex >= 0 ? stepIndex : 0)
-    }
+    } 
   }, [order])
+
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -168,6 +169,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
 
               {/* Status Badges */}
               <div className="mt-4 flex flex-wrap gap-2">
+             
                 <Badge className={`${getStatusColor(order.status)} text-sm px-3 py-1`}>
                   {getStatusIcon(order.status)}
                   <span className="ml-2">{order.status}</span>
@@ -199,31 +201,24 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                   <div className="relative">
                     {/* Mobile Timeline */}
                     <div className="block md:hidden space-y-4">
-                      {statusSteps.map((step, index) => {
-                        const isActive = index <= currentStep
-                        const isCurrent = index === currentStep
-                        const Icon = step.icon
-
-                        return (
-                          <div key={step.key} className="flex items-center space-x-3">
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={{ delay: 0.2 + index * 0.1 }}
-                              className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                                isActive
-                                  ? "bg-gradient-to-r from-orange-500 to-red-500 border-orange-500 text-white shadow-lg"
-                                  : "bg-gray-200 border-gray-300 text-gray-500"
-                              } ${isCurrent ? "ring-4 ring-orange-200" : ""}`}
-                            >
-                              <Icon className="h-4 w-4" />
-                            </motion.div>
-                            <span className={`text-sm ${isActive ? "text-orange-600 font-medium" : "text-gray-500"}`}>
-                              {step.label}
-                            </span>
+                      {order.status === "Cancelado" ? (
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-gray-300 text-gray-500">
+                            <X className="h-4 w-4" />
                           </div>
-                        )
-                      })}
+                          <span className="text-sm text-gray-500">Cancelado</span>
+                        </div>
+                      ) : (
+                        statusSteps.map((step, index) => (
+                          <div key={index} className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-gray-300 text-gray-500">
+                              <step.icon className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm text-gray-500">{step.label}</span>
+                          </div>
+                        ))
+                      )}
+                   
                     </div>
 
                     {/* Desktop Timeline */}
@@ -419,11 +414,11 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                                 <h5 className="font-bold text-gray-900 truncate">{item.name}</h5>
                                 <p className="text-xs text-gray-500 truncate">{item.category}</p>
                                 <div className="flex items-center justify-between mt-2">
-                                  <span className="text-sm text-gray-600">Quantidade: {formatQuantity(item.quantity)}</span>
+                                  <span className="text-sm text-gray-600">Comprou: {formatQuantity(item.quantity)}</span>
                                   <div className="text-right">
-                                    <div className="text-xs text-gray-500">R$ {item.price.toFixed(2)} cada</div>
+                                    <div className="text-xs text-gray-500"> R$ {(item.price)}</div>
                                     <div className="font-bold text-green-600">
-                                      R$ {(item.price * item.quantity).toFixed(2)} no total
+                                      R$ {(item.price * item.quantity).toFixed(2)} por {formatQuantity(item.quantity)}
                                     </div>
                                   </div>
                                 </div>
@@ -484,3 +479,4 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
     </AnimatePresence>
   )
 }
+

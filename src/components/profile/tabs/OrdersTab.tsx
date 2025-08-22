@@ -64,6 +64,8 @@ export default function OrdersTab({ orders, onViewOrderDetails, product }: Order
   const [isRefreshing, setIsRefreshing] = useState(false)
 
 
+  // TODO: makes refresh works 100%
+
   const handleRefresh = async () => {
     setIsRefreshing(true)
     setTimeout(() => {
@@ -204,3 +206,4 @@ export default function OrdersTab({ orders, onViewOrderDetails, product }: Order
     </div>
   )
 }
+

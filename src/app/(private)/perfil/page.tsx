@@ -15,6 +15,7 @@ import NotificationsTab from "@/components/profile/tabs/NotificationsTab"
 import ProfileHeader from "@/components/profile/Header"
 import { useOrderUpdates } from "@/hooks/useOrderUpdate"
 import { toast } from "sonner"
+import Header from "@/components/header"
 
 interface ExtendedUser {
   name?: string | null
@@ -194,7 +195,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <ProfileHeader userName={userInfo?.name} />
+      <Header key="header" />
 
       <div className="container mx-auto px-4 py-8">
         <ProfileNavigation activeTab={activeTab} setActiveTab={handleTabChange} />

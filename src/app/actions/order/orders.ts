@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 import generateOrderNumber from "@/app/utils/db/generateOrderNumber"
 import type { PaymentStatus } from "@/generated/prisma"
+import { toast } from "sonner"
 
 interface OrderItem {
   productId: number
@@ -258,7 +259,7 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
               quantity: item.quantity,
               price: product.price,
               category: item.category,
-            }
+                 }
           }),
         },
       },
@@ -555,6 +556,8 @@ export async function cancelOrder(orderId: string) {
 
       revalidatePath("/profile")
       revalidatePath("/admin")
+
+      toast.success("Pedido cancelado com sucesso!")
 
       return { success: true, message: "Pedido cancelado com sucesso" }
     })
