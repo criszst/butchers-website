@@ -26,31 +26,7 @@ export default function AdminPage() {
   const {data: session} = useSession()
   const [user, setUser] = useState<UserProfile | null>()
 
-  useEffect(() => {
-    const getUser = async (email: string) => {
-      try {
-         await getUserProfile(email).then((response) => {
-          setUser(response);
-        });
-      } catch (error) {
-        console.error("Error fetching user:", error);
-      }
-    };
-
-    getUser(session?.user?.email ?? "")
-}, [session?.user?.email]);
-
-  if (!session?.user?.email && !user?.isAdmin) {
-    // TODO: fake page that shows "No founded page 404"
-    return (
-      <div>
-        <h1>404 - Page not found</h1>
-      </div>
-    )
-  }
-
-
-   const handleTabChange = (tab: string) => {
+  const handleTabChange = (tab: string) => {
     setActiveTab(tab)
     router.push(`/admin?tab=${tab}`)
   }
@@ -78,6 +54,32 @@ export default function AdminPage() {
         window.removeEventListener("navigate", handleRouterChange)
       }
     }, [router])
+  
+  useEffect(() => {
+    const getUser = async (email: string) => {
+      try {
+         await getUserProfile(email).then((response) => {
+          setUser(response);
+        });
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      }
+    };
+
+    getUser(session?.user?.email ?? "")
+}, [session?.user?.email]);
+
+  if (!session?.user?.email && !user?.isAdmin) {
+    // TODO: fake page that shows "No founded page 404"
+    return (
+      <div>
+        <h1>404 - Page not found</h1>
+      </div>
+    )
+  }
+
+
+   
     
 
   return (

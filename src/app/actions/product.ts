@@ -9,7 +9,7 @@ function calculateUnitPrice(product: any) {
   if (!product.priceWeightAmount || !product.priceWeightUnit) return product.price
 
   // converte para kg
-  let amountInKg =
+  const amountInKg =
     product.priceWeightUnit === "g"
       ? product.priceWeightAmount / 1000
       : product.priceWeightAmount
