@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Loader2, Info, Calculator } from "lucide-react"
+import { Plus, Loader2, Info, Calculator, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { createProduct } from "@/app/actions/product"
 import type ProductData from "@/interfaces/product"
@@ -29,6 +29,9 @@ interface AddProductDialogProps {
 export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>("")
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [formData, setFormData] = useState<ProductData>({
     name: "",
     description: "",
@@ -46,26 +49,71 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const formatStockDisplay = () => {
-    if (!formData.stock || !formData.priceWeightUnit) return ""
+  const handleImageUpload = async (file: File) => {
+    setIsUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
 
-    const total = formData.stock
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
 
-
-    return `${total.toFixed(2)} kg`
+      if (response.ok) {
+        const data = await response.json()
+        setFormData((prev) => ({ ...prev, image: data.url }))
+        setImagePreview(data.url)
+        toast.success("Imagem enviada com sucesso!")
+      } else {
+        toast.error("Erro ao enviar imagem")
+      }
+    } catch (error) {
+      toast.error("Erro ao enviar imagem")
+    } finally {
+      setIsUploadingImage(false)
+    }
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB limit
+        toast.error("Arquivo muito grande. Máximo 5MB.")
+        return
+      }
+
+      if (!file.type.startsWith("image/")) {
+        toast.error("Apenas arquivos de imagem são permitidos.")
+        return
+      }
+
+      setImageFile(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
+      if (imageFile && !formData.image) {
+        await handleImageUpload(imageFile)
+      }
+
       const result = await createProduct(formData)
 
       if (result.success) {
         toast.success(result.message)
         setOpen(false)
+        setImageFile(null)
+        setImagePreview("")
         setFormData({
           name: "",
           description: "",
@@ -89,15 +137,21 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
     }
   }
 
-  const preco = formData.price;
+  const formatStockDisplay = () => {
+    if (!formData.stock || !formData.priceWeightUnit) return ""
+
+    const total = formData.stock
+
+    return `${total.toFixed(2)} kg`
+  }
+
+  const preco = formData.price
 
   // Quantidade e unidade
-  const quantidade = formData.priceWeightAmount;
-  const unidade = formData.priceWeightUnit;
+  const quantidade = formData.priceWeightAmount
+  const unidade = formData.priceWeightUnit
 
-
-  const precoPorKg = preco;
-
+  const precoPorKg = preco
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -143,7 +197,6 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                 ✅ Cliente pode comprar: 500g por R$ 22,50 | 1,2kg por R$ 54,00 | 750g por R$ 33,75
               </p>
             </CardContent>
-
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -222,11 +275,11 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                   step="0.1"
                   min="0.1"
                   value={formData.priceWeightAmount || ""}
-                  onChange={(e) => handleInputChange("priceWeightAmount", parseFloat(e.target.value) || null)}
+                  onChange={(e) => handleInputChange("priceWeightAmount", Number.parseFloat(e.target.value) || null)}
                   placeholder="1.0"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Ex: 1,0 para 1 quilograma  ( 1kg)</p>
+                <p className="text-xs text-gray-500 mt-1">Ex: 1,0 para 1 quilograma ( 1kg)</p>
               </div>
 
               <div>
@@ -249,8 +302,8 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
             {formData.price && formData.priceWeightAmount && formData.priceWeightUnit && (
               <div className="bg-green-50 p-3 rounded border border-green-200">
                 <p className="text-sm text-green-800">
-                  <strong>Resultado:</strong> R$ {preco.toFixed(2)} por {quantidade} kg
-                  (equivalente a R$ {quantidade !== null && quantidade > 1 ? (precoPorKg / 2).toFixed(2) : precoPorKg?.toFixed(2)} por kg)
+                  <strong>Resultado:</strong> R$ {preco.toFixed(2)} por {quantidade} kg (equivalente a R${" "}
+                  {quantidade !== null && quantidade > 1 ? (precoPorKg / 2).toFixed(2) : precoPorKg?.toFixed(2)} por kg)
                 </p>
                 <p className="text-xs text-green-600 mt-1">
                   Cliente pode comprar qualquer quantidade e o preço será calculado proporcionalmente
@@ -261,11 +314,11 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
 
           {/* Estoque */}
           <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold text-gray-800">Controle de Estoque</h3>
+            <h3 className="font-semibold text-gray-800">Controle de Estoque (Opcional)</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="stock">Quantidade em Estoque *</Label>
+                <Label htmlFor="stock">Quantidade em Estoque</Label>
                 <Input
                   id="stock"
                   type="number"
@@ -276,7 +329,7 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                   placeholder="Ex: 12.5"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Quantidade total disponível quilogramas (kg) no estoque. Ex: 12.5 para 12,5 kg
+                  Quantidade total disponível quilogramas (kg) no estoque. Deixe vazio se não controlar estoque.
                 </p>
               </div>
 
@@ -284,7 +337,7 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                 <Label>Estoque Total Calculado</Label>
                 <div className="h-10 px-3 py-2 bg-white border rounded-md flex items-center">
                   <span className="text-sm font-medium text-gray-700">
-                    {formatStockDisplay() || "Configure os campos acima"}
+                    {formatStockDisplay() || "Sem controle de estoque"}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Total disponível para venda</p>
@@ -292,7 +345,74 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Imagem do Produto */}
+          <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold text-gray-800">Imagem do Produto</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="image-upload">Enviar Imagem</Label>
+                <div className="space-y-2">
+                  <input
+                    id="image-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById("image-upload")?.click()}
+                    disabled={isUploadingImage}
+                    className="w-full"
+                  >
+                    {isUploadingImage ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Escolher Arquivo
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-gray-500">Máximo 5MB - JPG, PNG, GIF</p>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="image-url">Ou URL da Imagem</Label>
+                <Input
+                  id="image-url"
+                  type="url"
+                  value={formData.image || ""}
+                  onChange={(e) => handleInputChange("image", e.target.value)}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                />
+                <p className="text-xs text-gray-500 mt-1">Link direto da imagem</p>
+              </div>
+            </div>
+
+            {/* Image Preview */}
+            {(imagePreview || formData.image) && (
+              <div className="mt-4">
+                <Label>Pré-visualização</Label>
+                <div className="mt-2 border rounded-lg p-2 bg-white">
+                  <img
+                    src={(imagePreview || formData.image) as string}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded mx-auto"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Desconto */}
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
             <div>
               <Label htmlFor="discount">Desconto (%) - Opcional</Label>
               <Input
@@ -306,18 +426,6 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
                 placeholder="10"
               />
               <p className="text-xs text-gray-500 mt-1">Desconto promocional (deixe vazio se não houver)</p>
-            </div>
-
-            <div>
-              <Label htmlFor="image">URL da Imagem - Opcional</Label>
-              <Input
-                id="image"
-                type="url"
-                value={formData.image || ""}
-                onChange={(e) => handleInputChange("image", e.target.value)}
-                placeholder="https://exemplo.com/imagem.jpg"
-              />
-              <p className="text-xs text-gray-500 mt-1">Link da imagem do produto</p>
             </div>
           </div>
 

@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/components/cart/context"
+import { useState, useEffect } from "react"
+import { getStoreSettings, type StoreSettingsData } from "@/app/actions/store-settings"
 import {
   Package,
   Truck,
   Clock,
   Shield,
   CheckCircle,
-  Phone,
   ArrowLeft,
   CreditCard,
   DollarSign,
@@ -38,8 +39,29 @@ export const OrderSummary = ({
   total,
 }: OrderSummaryProps) => {
   const { items, total: cartTotal, itemCount } = useCart()
+  const [storeSettings, setStoreSettings] = useState<StoreSettingsData | null>(null)
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
+
   const subtotal = cartTotal
-  const taxaEntrega = subtotal > 50 ? 0 : 8.9
+  const taxaEntrega =
+    storeSettings && subtotal >= storeSettings.freeDeliveryMinimum ? 0 : storeSettings?.deliveryFee || 8.9
+
+  useEffect(() => {
+    const loadStoreSettings = async () => {
+      try {
+        const result = await getStoreSettings()
+        if (result.success && result.settings) {
+          setStoreSettings(result.settings as StoreSettingsData)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configurações da loja:", error)
+      } finally {
+        setIsLoadingSettings(false)
+      }
+    }
+
+    loadStoreSettings()
+  }, [])
 
   const getPaymentIcon = () => {
     switch (tipoEntrega) {
@@ -69,6 +91,24 @@ export const OrderSummary = ({
       default:
         return "Dinheiro"
     }
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price)
+  }
+
+  if (isLoadingSettings) {
+    return (
+      <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm overflow-hidden sticky top-4 lg:top-24">
+        <CardContent className="p-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-red-600 border-t-transparent"></div>
+          <span className="ml-2 text-gray-600">Carregando...</span>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -136,7 +176,7 @@ export const OrderSummary = ({
         <div className="space-y-3">
           <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50">
             <span className="text-gray-700 text-sm lg:text-base">Subtotal</span>
-            <span className="font-semibold text-gray-800">R$ {subtotal.toFixed(2)}</span>
+            <span className="font-semibold text-gray-800">{formatPrice(subtotal)}</span>
           </div>
 
           <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50">
@@ -151,10 +191,15 @@ export const OrderSummary = ({
                   <span>Grátis</span>
                 </span>
               ) : (
-                `R$ ${taxaEntrega.toFixed(2)}`
+                formatPrice(taxaEntrega)
               )}
             </span>
           </div>
+          {storeSettings && subtotal < storeSettings.freeDeliveryMinimum && (
+            <div className="text-xs text-gray-600 bg-orange-50 p-2 rounded border border-orange-200">
+              Faltam {formatPrice(storeSettings.freeDeliveryMinimum - subtotal)} para frete grátis
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -162,7 +207,7 @@ export const OrderSummary = ({
         {/* Total */}
         <div className="flex justify-between items-center p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 shadow-sm">
           <span className="font-bold text-lg lg:text-xl text-gray-800">Total</span>
-          <span className="font-bold text-xl lg:text-2xl text-green-600">R$ {total.toFixed(2)}</span>
+          <span className="font-bold text-xl lg:text-2xl text-green-600">{formatPrice(total)}</span>
         </div>
 
         {/* Delivery Time */}
@@ -170,7 +215,9 @@ export const OrderSummary = ({
           <Clock className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600 flex-shrink-0" />
           <div>
             <p className="font-semibold text-blue-800 text-sm lg:text-base">Entrega Expressa</p>
-            <p className="text-blue-600 text-xs lg:text-sm">45-60 minutos</p>
+            <p className="text-blue-600 text-xs lg:text-sm">
+              {storeSettings?.averageDeliveryTime || 45}-{(storeSettings?.averageDeliveryTime || 45) + 15} minutos
+            </p>
           </div>
         </div>
 
@@ -209,8 +256,6 @@ export const OrderSummary = ({
             Voltar ao Carrinho
           </Button>
         </div>
-
-
       </CardContent>
     </Card>
   )

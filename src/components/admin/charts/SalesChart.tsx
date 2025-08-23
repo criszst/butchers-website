@@ -75,6 +75,10 @@ export default function SalesChart({ period = "30days", onPeriodChange }: SalesC
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      // Find the specific data point for this date
+      const dataPoint = chartData.find((item) => item.date === label)
+      const ordersForThisDate = dataPoint ? dataPoint.orders : 0
+
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="text-sm font-medium text-gray-900">{formatDate(label)}</p>
@@ -82,7 +86,7 @@ export default function SalesChart({ period = "30days", onPeriodChange }: SalesC
             Receita: <span className="font-semibold">{formatCurrency(payload[0].value)}</span>
           </p>
           <p className="text-sm text-blue-600">
-            Pedidos: <span className="font-semibold">{chartData.reduce((sum, item) => sum + item.orders, 0) || 0}</span>
+            Pedidos: <span className="font-semibold">{ordersForThisDate}</span>
           </p>
         </div>
       )
@@ -125,7 +129,7 @@ export default function SalesChart({ period = "30days", onPeriodChange }: SalesC
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="date" tickFormatter={formatDate} stroke="#666" fontSize={12} />
             <YAxis stroke="#666" fontSize={12} />
-            <Tooltip content={<CustomTooltip   />} />
+            <Tooltip content={<CustomTooltip />} />
             <Line
               type="monotone"
               dataKey="revenue"

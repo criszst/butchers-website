@@ -74,6 +74,8 @@ model User {
   Address Address[]
 
   CartItem CartItem[]
+
+  Favorites Favorite[]
 }
 
 model Product {
@@ -95,6 +97,7 @@ model Product {
 
   CartItem CartItem[]
   ProductSupplier ProductSupplier[]
+  Favorites Favorite[]
 }
 
 model VerificationToken {
@@ -125,6 +128,8 @@ model Order {
   trackingCode      String?
 
   deliveryAddress String? @db.Text
+
+  deliveryFee   Float @default(10.0)
 
   createdAt DateTime    @default(now())  
   updatedAt DateTime    @updatedAt
@@ -286,4 +291,20 @@ model StoreSettings {
   updatedAt             DateTime @updatedAt
   
   @@map("store_settings")
+}
+
+
+model Favorite {
+  id        String   @id @default(cuid())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
 }

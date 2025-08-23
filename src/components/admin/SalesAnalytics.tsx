@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import { getSalesAnalytics } from "@/app/actions/dashboard/analytics"
 import type { SalesAnalytics as SalesAnalyticsType } from "@/app/actions/dashboard/analytics"
-import SalesChart from "./charts/SalesChart"
+import SalesChart from "@/components/admin/charts/SalesChart"
 import PDFReportGenerator from "./reports/PDFReportGenerator"
 import AdvancedFilters from "./filters/AdvancedFilters"
 import { toast } from "react-hot-toast"

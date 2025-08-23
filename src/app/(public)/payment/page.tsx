@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { getStoreSettings, type StoreSettingsData } from "@/app/actions/store-settings"
 import {
   CreditCard,
   Banknote,
@@ -52,15 +53,19 @@ export default function PaymentPage() {
   const [orderNumber, setOrderNumber] = useState("")
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null)
-  const [showAddressModal, setShowAddressModal] = useState(false)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true)
+  const [storeSettings, setStoreSettings] = useState<StoreSettingsData | null>(null)
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
+  const [quantities, setQuantities] = useState<Record<number, string>>({})
+  const [showAddressModal, setShowAddressModal] = useState(false)
 
   const [couponCode, setCouponCode] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null)
 
   const subtotal = cartTotal
-  const deliveryFee = subtotal > 50 ? 0 : 8.9
+  const deliveryFee =
+    storeSettings && subtotal >= storeSettings.freeDeliveryMinimum ? 0 : storeSettings?.deliveryFee || 8.9
   const couponDiscount = appliedCoupon ? appliedCoupon.discount : 0
   const total = subtotal + deliveryFee - couponDiscount
 
@@ -71,11 +76,54 @@ export default function PaymentPage() {
     { code: "SEGUNDA", discount: 10.0, description: "Segunda sem carne" },
   ]
 
+  useEffect(() => {
+    const loadStoreSettings = async () => {
+      try {
+        const result = await getStoreSettings()
+        if (result.success && result.settings) {
+          setStoreSettings(result.settings as StoreSettingsData)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configurações da loja:", error)
+      } finally {
+        setIsLoadingSettings(false)
+      }
+    }
+
+    loadStoreSettings()
+  }, [])
+
+  const handleQuantityChangeInput = (productId: number, value: string) => {
+    setQuantities((prev) => ({ ...prev, [productId]: value }))
+  }
+
+  const handleQuantityBlur = async (productId: number) => {
+    const raw = quantities[productId]
+    const normalized = raw.replace(",", ".")
+    const numValue = Number.parseFloat(normalized)
+
+    if (!isNaN(numValue) && numValue >= 0) {
+      const product = items.find((item) => item.product.id === productId)?.product
+      if (product) {
+        if (numValue === 0) {
+          await removeItem(productId)
+        } else {
+          const adjustedQuantity = Math.max(numValue, 0.1)
+          await updateQuantity(productId, adjustedQuantity)
+        }
+        setQuantities((prev) => {
+          const copy = { ...prev }
+          delete copy[productId]
+          return copy
+        })
+      }
+    }
+  }
+
   const handleQuantityChange = async (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       await removeItem(productId)
     } else {
-      // Sempre trabalhar em kg com mínimo de 0.1kg
       const minQuantity = 0.1
       const adjustedQuantity = Math.max(newQuantity, minQuantity)
       await updateQuantity(productId, adjustedQuantity)
@@ -83,26 +131,20 @@ export default function PaymentPage() {
   }
 
   const formatQuantityDisplay = (quantity: number): string => {
-    // Sempre exibir em kg
     return `${quantity.toFixed(3)}kg`
   }
 
   const calculateItemPrice = (item: any) => {
     const product = item.product
 
-    // Se não tem priceWeightAmount, usar preço direto
     if (!product.priceWeightAmount) {
       return product.price * item.quantity
     }
 
-    // Sempre trabalhar considerando que está em kg
-    // Se priceWeightAmount é 1kg, então o preço é por kg
-    // item.quantity já está em kg
     const pricePerKg = product.price / (product.priceWeightAmount || 1)
 
     return pricePerKg * item.quantity
   }
-
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null)
@@ -119,7 +161,6 @@ export default function PaymentPage() {
     }
   }
 
-  // Check authentication and load addresses
   useEffect(() => {
     const checkUserAndAddresses = async () => {
       if (status === "loading") return
@@ -135,8 +176,6 @@ export default function PaymentPage() {
           const defaultAddress = result.addresses.find((addr) => addr.isDefault)
           if (defaultAddress) {
             setSelectedAddress(defaultAddress)
-          } else if (result.addresses.length === 0) {
-            setShowAddressModal(true)
           }
         }
       } catch (error) {
@@ -157,7 +196,6 @@ export default function PaymentPage() {
 
     if (!selectedAddress) {
       toast.error("Selecione um endereço de entrega")
-      setShowAddressModal(true)
       return
     }
 
@@ -193,7 +231,7 @@ export default function PaymentPage() {
           country: selectedAddress.country,
           cep: selectedAddress.cep,
         },
-        deliveryFee,
+        deliveryFee: deliveryFee,
         couponDiscount,
       }
 
@@ -215,6 +253,11 @@ export default function PaymentPage() {
     }
   }
 
+  const handleAddressSelect = (address: Address) => {
+    setSelectedAddress(address)
+    setShowAddressModal(false)
+  }
+
   const handleAddressCreated = async () => {
     const result = await getUserAddresses()
     if (result.success) {
@@ -226,8 +269,7 @@ export default function PaymentPage() {
     }
   }
 
-  // Loading state
-  if (status === "loading" || isLoadingAddresses) {
+  if (status === "loading" || isLoadingAddresses || isLoadingSettings) {
     return (
       <>
         <Header />
@@ -241,7 +283,6 @@ export default function PaymentPage() {
     )
   }
 
-  // Login prompt
   if (showLoginPrompt && !session) {
     return (
       <>
@@ -275,7 +316,6 @@ export default function PaymentPage() {
     )
   }
 
-  // Empty cart
   if (items.length === 0 && !orderSuccess) {
     return (
       <>
@@ -296,7 +336,6 @@ export default function PaymentPage() {
     )
   }
 
-  // Success page
   if (orderSuccess) {
     return (
       <SuccessPage
@@ -332,9 +371,7 @@ export default function PaymentPage() {
       <div className="min-h-screen bg-gray-50">
         <div className="container py-6 lg:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {/* Left Column - Forms */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Delivery Address */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                 <Card className="shadow-sm border-gray-200">
                   <CardHeader className="pb-4">
@@ -347,50 +384,49 @@ export default function PaymentPage() {
                   </CardHeader>
                   <CardContent>
                     {selectedAddress ? (
-                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center mb-2">
-                              <p className="font-medium text-green-800">{selectedAddress.name}</p>
-                              <Badge className="ml-2 bg-green-100 text-green-800 text-xs">Padrão</Badge>
+                      <div className="space-y-3">
+                        <div className="p-4 border rounded-lg bg-green-50 border-green-200">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-green-600 mt-0.5" />
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <h3 className="font-medium">{selectedAddress.name}</h3>
+                                  {selectedAddress.isDefault && (
+                                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                      Padrão
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {selectedAddress.street}, {selectedAddress.number}
+                                  {selectedAddress.complement && `, ${selectedAddress.complement}`}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {selectedAddress.neighborhood}, {selectedAddress.city} - {selectedAddress.state}
+                                </p>
+                                <p className="text-sm text-gray-600">CEP: {selectedAddress.cep}</p>
+                              </div>
                             </div>
-                            <p className="text-sm text-green-700">
-                              {selectedAddress.street}, {selectedAddress.number}
-                              {selectedAddress.complement && `, ${selectedAddress.complement}`}
-                            </p>
-                            <p className="text-sm text-green-700">
-                              {selectedAddress.neighborhood}, {selectedAddress.city} - {selectedAddress.state}
-                            </p>
-                            <p className="text-sm text-green-700">CEP: {selectedAddress.cep}</p>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowAddressModal(true)}
-                            className="border-green-300 text-green-700 hover:bg-green-100 bg-transparent text-xs"
-                          >
-                            Alterar
-                          </Button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-6">
-                        <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <p className="text-gray-600 mb-4">Nenhum endereço cadastrado</p>
-                        <Button
-                          onClick={() => setShowAddressModal(true)}
-                          className="bg-red-500 hover:bg-red-600 text-white"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Endereço
+                        <Button variant="outline" onClick={() => setShowAddressModal(true)} className="w-full">
+                          Alterar Endereço
                         </Button>
                       </div>
+                    ) : (
+                      <Button
+                        onClick={() => setShowAddressModal(true)}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Selecionar Endereço
+                      </Button>
                     )}
                   </CardContent>
                 </Card>
               </motion.div>
 
-              {/* Payment Method */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                 <Card className="shadow-sm border-gray-200">
                   <CardHeader className="pb-4">
@@ -459,7 +495,6 @@ export default function PaymentPage() {
                 </Card>
               </motion.div>
 
-              {/* Coupon Code */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <Card className="shadow-sm border-gray-200">
                   <CardHeader className="pb-4">
@@ -526,7 +561,6 @@ export default function PaymentPage() {
               </motion.div>
             </div>
 
-            {/* Right Column - Order Summary */}
             <div className="lg:sticky lg:top-6 lg:self-start">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                 <Card className="shadow-sm border-gray-200">
@@ -542,7 +576,6 @@ export default function PaymentPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Products List */}
                     <div className="space-y-3 max-h-64 overflow-y-auto">
                       {items.map((item, index) => (
                         <div
@@ -567,13 +600,13 @@ export default function PaymentPage() {
                             <p className="text-xs text-gray-600 capitalize">{item.product.category}</p>
                             <p className="text-xs text-gray-500">{formatPriceDisplay(item.product)}</p>
                           </div>
-                          {/* Quantity Controls */}
                           <div className="flex items-center space-x-1">
                             <button
                               onClick={() => {
-                                const product = item.product
-                                const decrement = product.priceWeightUnit === "kg" ? 0.1 : 50
-                                handleQuantityChange(product.id, Math.max(item.quantity - decrement, decrement))
+                                const current = quantities[item.product.id] ?? item.quantity.toString()
+                                const newQuantity = Math.max(0, Number.parseFloat(current) - 0.5)
+                                setQuantities((prev) => ({ ...prev, [item.product.id]: newQuantity.toString() }))
+                                handleQuantityChange(item.product.id, newQuantity)
                               }}
                               className="w-6 h-6 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-colors"
                             >
@@ -581,30 +614,26 @@ export default function PaymentPage() {
                             </button>
                             <div className="text-center min-w-[60px]">
                               <Input
-                                inputMode="numeric"
-                                step="0.1"
-                                min="0"
-                                max={item.product.stock}
-                                value={item.quantity.toFixed(3)}
-                                onChange={(e) => {
-                                  const value = Number.parseFloat(e.target.value);
-                                  if (value < 0) {
-                                    handleQuantityChange(item.product.id, 0);
-                                  } else {
-                                    handleQuantityChange(item.product.id, value || 0);
-                                  }
-                                }}
+                                type="text"
+                                inputMode="decimal"
+                                value={
+                                  quantities[item.product.id] !== undefined
+                                    ? quantities[item.product.id]
+                                    : String(item.quantity.toFixed(3))
+                                }
+                                onBlur={() => handleQuantityBlur(item.product.id)}
+                                onChange={(e) => handleQuantityChangeInput(item.product.id, e.target.value)}
                                 className="w-16 h-8 text-xs text-center border-gray-200 p-1"
+                                placeholder="0 para remover"
                               />
-                              <p className="text-xs text-gray-500 mt-1">
-                                {formatQuantityDisplay(item.quantity)}
-                              </p>
+                              <p className="text-xs text-gray-500 mt-1">{formatQuantityDisplay(item.quantity)}</p>
                             </div>
                             <button
                               onClick={() => {
-                                const product = item.product
-                                const increment = product.priceWeightUnit === "kg" ? 0.1 : 50
-                                handleQuantityChange(product.id, item.quantity + increment)
+                                const current = quantities[item.product.id] ?? item.quantity.toString()
+                                const newQuantity = Number.parseFloat(current) + 0.5
+                                setQuantities((prev) => ({ ...prev, [item.product.id]: newQuantity.toString() }))
+                                handleQuantityChange(item.product.id, newQuantity)
                               }}
                               className="w-6 h-6 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-colors"
                             >
@@ -622,7 +651,6 @@ export default function PaymentPage() {
 
                     <Separator />
 
-                    {/* Totals */}
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Subtotal</span>
@@ -643,6 +671,11 @@ export default function PaymentPage() {
                           <span>-{formatPrice(appliedCoupon.discount)}</span>
                         </div>
                       )}
+                      {storeSettings && subtotal < storeSettings.freeDeliveryMinimum && (
+                        <div className="text-xs text-gray-600 bg-orange-50 p-2 rounded border border-orange-200">
+                          Faltam {formatPrice(storeSettings.freeDeliveryMinimum - subtotal)} para frete grátis
+                        </div>
+                      )}
                       <Separator />
                       <div className="flex justify-between text-lg font-bold text-gray-800">
                         <span>Total</span>
@@ -650,23 +683,25 @@ export default function PaymentPage() {
                       </div>
                     </div>
 
-                    {/* Delivery Time */}
                     <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <Clock className="h-4 w-4 text-blue-600" />
                       <div>
                         <p className="font-medium text-blue-800 text-sm">Tempo de entrega</p>
-                        <p className="text-blue-600 text-xs">45-60 minutos</p>
+                        <p className="text-blue-600 text-xs">
+                          {storeSettings?.averageDeliveryTime || 45}-{(storeSettings?.averageDeliveryTime || 45) + 15}{" "}
+                          minutos
+                        </p>
                       </div>
                     </div>
 
-                    {/* Checkout Button */}
                     <Button
                       onClick={handleSubmitOrder}
                       disabled={!selectedAddress || isProcessing || items.length === 0}
-                      className={`w-full py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${selectedAddress && !isProcessing && items.length > 0
+                      className={`w-full py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                        selectedAddress && !isProcessing && items.length > 0
                           ? "bg-red-500 hover:bg-red-600 text-white shadow-md hover:shadow-lg"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
+                      }`}
                     >
                       {isProcessing ? (
                         <>
@@ -681,7 +716,6 @@ export default function PaymentPage() {
                       )}
                     </Button>
 
-                    {/* Continue Shopping */}
                     <Link href="/">
                       <Button
                         variant="outline"
@@ -692,7 +726,6 @@ export default function PaymentPage() {
                       </Button>
                     </Link>
 
-                    {/* Security Info */}
                     <div className="flex items-center justify-center space-x-4 text-xs text-gray-500 pt-2">
                       <div className="flex items-center">
                         <Shield className="h-3 w-3 mr-1" />
@@ -704,7 +737,10 @@ export default function PaymentPage() {
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
-                        <span>45-60 min</span>
+                        <span>
+                          {storeSettings?.averageDeliveryTime || 45}-{(storeSettings?.averageDeliveryTime || 45) + 15}{" "}
+                          min
+                        </span>
                       </div>
                     </div>
                   </CardContent>
@@ -715,13 +751,13 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      {/* Modals */}
       <AddressModal
         isOpen={showAddressModal}
         onClose={() => setShowAddressModal(false)}
-        onAddressCreated={handleAddressCreated}
+        onSelectAddress={handleAddressSelect}
+        selectedAddressId={selectedAddress?.id}
+        showSelectButton={true}
       />
     </>
   )
 }
-

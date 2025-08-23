@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Search, Zap, Grid3X3, List, SlidersHorizontal, X, Star } from "lucide-react"
+import { Search, Zap, Grid3X3, List, SlidersHorizontal, X } from "lucide-react"
 import { useCart } from "@/components/cart/context"
 import type { Product } from "@/generated/prisma"
 import { toast } from "sonner"
@@ -197,20 +197,9 @@ export function ProductGrid({ products }: ProductGridProps) {
   const categorias = Array.from(new Set(products.map((p) => p.category)))
   const marcas = ["Casa Duarte", "Premium", "Especial"]
 
-  const getRandomImage = () => {
-    const meatImages = [
-      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1603048297172-c92544798d5a?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=400&fit=crop",
-    ]
-    return meatImages[Math.floor(Math.random() * meatImages.length)]
-  }
-
   const handleFaixaPrecoChange = (value: [number, number]) => {
-  setFaixaPreco(value);
-};
+    setFaixaPreco(value)
+  }
 
   return (
     <section id="produtos" className="py-8 lg:py-16 bg-gradient-to-b from-gray-50 to-white">
@@ -321,13 +310,13 @@ export function ProductGrid({ products }: ProductGridProps) {
                     Faixa de Preço: R$ {faixaPreco[0]} - R$ {faixaPreco[1]}
                   </label>
                   <Slider
-  value={faixaPreco}
-  onValueChange={handleFaixaPrecoChange}
-  max={500}
-  min={0}
-  step={10}
-  className="w-full"
-/>
+                    value={faixaPreco}
+                    onValueChange={handleFaixaPrecoChange}
+                    max={500}
+                    min={0}
+                    step={10}
+                    className="w-full"
+                  />
                 </div>
 
                 {/* Avaliação Mínima */}
@@ -369,20 +358,20 @@ export function ProductGrid({ products }: ProductGridProps) {
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox
-  id="estoque"
-  checked={apenasEmEstoque}
-  onCheckedChange={(checked) => setApenasEmEstoque(checked === true)}
-/>
+                        id="estoque"
+                        checked={apenasEmEstoque}
+                        onCheckedChange={(checked) => setApenasEmEstoque(checked === true)}
+                      />
                       <label htmlFor="estoque" className="text-sm text-gray-700 cursor-pointer">
                         Apenas em estoque
                       </label>
                     </div>
                     <div className="flex items-center space-x-2">
-                     <Checkbox
-  id="promocao"
-  checked={promocao}
-  onCheckedChange={(checked) => setPromocao(checked === true)}
-/>
+                      <Checkbox
+                        id="promocao"
+                        checked={promocao}
+                        onCheckedChange={(checked) => setPromocao(checked === true)}
+                      />
                       <label htmlFor="promocao" className="text-sm text-gray-700 cursor-pointer">
                         Em promoção
                       </label>
@@ -562,7 +551,6 @@ export function ProductGrid({ products }: ProductGridProps) {
                     isLoading={loadingProducts.includes(product.id) || isLoading}
                     onToggleFavorite={() => toggleFavorito(product.id)}
                     onAddToCart={() => handleAddToCart(product)}
-                    getRandomImage={getRandomImage}
                   />
                 </motion.div>
               ))}
@@ -571,61 +559,60 @@ export function ProductGrid({ products }: ProductGridProps) {
         </AnimatePresence>
 
         {/* Call to Action */}
-        {String(useRouter()).replace("/", "").includes('products') ? (
-        <motion.div
-          className="text-center mt-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <Card className="bg-gradient-to-r from-red-600 to-orange-600 text-white border-0 shadow-2xl overflow-hidden">
-            <CardContent className="p-8 lg:p-12 relative">
-              <div className="absolute inset-0 bg-black/10"></div>
-              <div className="relative z-10">
-                <h3 className="text-2xl lg:text-4xl font-bold mb-4">Não encontrou o que procura?</h3>
-                <p className="text-lg lg:text-xl mb-6 opacity-90">
-                  Entre em contato conosco! Temos outros cortes especiais disponíveis.
-                </p>
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="bg-white text-red-600 hover:bg-gray-100 font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  Falar com Especialista
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {String(useRouter()).replace("/", "").includes("products") ? (
+          <motion.div
+            className="text-center mt-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Card className="bg-gradient-to-r from-red-600 to-orange-600 text-white border-0 shadow-2xl overflow-hidden">
+              <CardContent className="p-8 lg:p-12 relative">
+                <div className="absolute inset-0 bg-black/10"></div>
+                <div className="relative z-10">
+                  <h3 className="text-2xl lg:text-4xl font-bold mb-4">Não encontrou o que procura?</h3>
+                  <p className="text-lg lg:text-xl mb-6 opacity-90">
+                    Entre em contato conosco! Temos outros cortes especiais disponíveis.
+                  </p>
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="bg-white text-red-600 hover:bg-gray-100 font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    Falar com Especialista
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         ) : (
-<motion.div
-          className="text-center mt-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <Card className="bg-gradient-to-r from-red-600 to-orange-600 text-white border-0 shadow-2xl overflow-hidden">
-            <CardContent className="p-8 lg:p-12 relative">
-              <div className="absolute inset-0 bg-black/10"></div>
-              <div className="relative z-10">
-                <h3 className="text-2xl lg:text-4xl font-bold mb-4">Não encontrou o que procura?</h3>
-                <p className="text-lg lg:text-xl mb-6 opacity-90">
-                  Não se preocupe! Temos outros cortes especiais disponíveis.
-                </p>
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="bg-white text-red-600 hover:bg-gray-100 font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                onClick={() => window.location.href = "/product"}
-               >
-                  Ver página de produtos
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        )
-        }
+          <motion.div
+            className="text-center mt-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Card className="bg-gradient-to-r from-red-600 to-orange-600 text-white border-0 shadow-2xl overflow-hidden">
+              <CardContent className="p-8 lg:p-12 relative">
+                <div className="absolute inset-0 bg-black/10"></div>
+                <div className="relative z-10">
+                  <h3 className="text-2xl lg:text-4xl font-bold mb-4">Não encontrou o que procura?</h3>
+                  <p className="text-lg lg:text-xl mb-6 opacity-90">
+                    Não se preocupe! Temos outros cortes especiais disponíveis.
+                  </p>
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="bg-white text-red-600 hover:bg-gray-100 font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                    onClick={() => (window.location.href = "/product")}
+                  >
+                    Ver página de produtos
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
 
       {/* Mobile Filters Modal */}

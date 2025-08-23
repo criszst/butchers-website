@@ -1,5 +1,5 @@
 "use client"
-import { User, Package, MapPin, Settings, Bell } from "lucide-react"
+import { User, Package, MapPin, Settings, Bell, Heart, Award } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ProfileNavigationProps {
@@ -27,6 +27,12 @@ const tabs = [
     color: "text-orange-600",
   },
   {
+    id: "favoritos", // Added favorites tab
+    label: "Favoritos",
+    icon: Heart,
+    color: "text-red-600",
+  },
+  {
     id: "notificacoes",
     label: "Notificações",
     icon: Bell,
@@ -45,7 +51,7 @@ export default function ProfileNavigation({ activeTab, setActiveTab }: ProfileNa
     <>
       {/* Desktop Tabs */}
       <div className="hidden md:block mb-8">
-        <div className="bg-white rounded-2xl p-2 shadow-lg border border-gray-100">
+        <div className="bg-white rounded-2xl p-2  shadow-lg border border-gray-100">
           <div className="flex space-x-1">
             {tabs.map((tab) => {
               const Icon = tab.icon
@@ -54,14 +60,14 @@ export default function ProfileNavigation({ activeTab, setActiveTab }: ProfileNa
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 flex-1 justify-center",
+                    "flex items-center space-x-5 pl-20 ml-15 px-4 py-3 rounded-xl font-medium transition-all duration-300 flex-shrink-0 justify-center min-w-fit",
                     activeTab === tab.id
                       ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg transform scale-105"
                       : "text-gray-600 hover:text-orange-600 hover:bg-orange-50",
                   )}
                 >
                   <Icon className="h-5 w-5" />
-                  <span className="hidden lg:inline">{tab.label}</span>
+                  <span className="hidden lg:inline text-sm">{tab.label}</span>
                 </button>
               )
             })}
@@ -71,7 +77,7 @@ export default function ProfileNavigation({ activeTab, setActiveTab }: ProfileNa
 
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-2xl">
-        <div className="flex">
+        <div className="flex overflow-x-auto ">
           {tabs.map((tab) => {
             const Icon = tab.icon
             return (
@@ -79,7 +85,7 @@ export default function ProfileNavigation({ activeTab, setActiveTab }: ProfileNa
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center py-3 px-2 transition-all duration-300",
+                  "flex-shrink-0 flex flex-col items-center justify-center py-2 px-3 transition-all duration-300 min-w-fit",
                   activeTab === tab.id ? "text-orange-600 bg-orange-50" : "text-gray-500 hover:text-orange-600",
                 )}
               >
@@ -89,7 +95,7 @@ export default function ProfileNavigation({ activeTab, setActiveTab }: ProfileNa
                     activeTab === tab.id ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg" : "",
                   )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4" />
                 </div>
                 <span className="text-xs mt-1 font-medium">{tab.label}</span>
                 {activeTab === tab.id && (

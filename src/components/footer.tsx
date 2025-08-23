@@ -22,6 +22,8 @@ export default function Footer(): React.JSX.Element {
 
    if (isLoading) return <p>Loading...</p>
 
+   if (window.location.pathname.startsWith("/orders")) return <></>
+
 
   return (
       <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white mt-16">

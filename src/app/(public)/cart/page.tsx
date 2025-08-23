@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation"
 import { useCart } from "@/components/cart/context"
 import { toast } from "sonner"
 import Header from "@/components/header"
+import { getStoreSettings, type StoreSettingsData } from "@/app/actions/store-settings"
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, total, itemCount, isLoading } = useCart()
@@ -19,11 +20,31 @@ export default function CartPage() {
   const [isUpdating, setIsUpdating] = useState<number | null>(null)
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
   const [promoCode, setPromoCode] = useState("")
+  const [storeSettings, setStoreSettings] = useState<StoreSettingsData | undefined>()
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
 
   const [quantities, setQuantities] = useState<Record<number, string>>({})
 
-  const taxaEntrega = total > 50 ? 0 : 8.9
+  const taxaEntrega =
+    storeSettings && total >= storeSettings.freeDeliveryMinimum ? 0 : storeSettings?.deliveryFee || 8.9
   const totalFinal = total + taxaEntrega
+
+  useEffect(() => {
+    const loadStoreSettings = async () => {
+      try {
+        const result = await getStoreSettings()
+        if (result.success && result.settings) {
+          setStoreSettings(result.settings as StoreSettingsData)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configurações da loja:", error)
+      } finally {
+        setIsLoadingSettings(false)
+      }
+    }
+
+    loadStoreSettings()
+  }, [])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -64,7 +85,7 @@ export default function CartPage() {
     const raw = quantities[productId]
 
     const normalized = raw.replace(",", ".")
-    const numValue = parseFloat(normalized)
+    const numValue = Number.parseFloat(normalized)
 
     if (!isNaN(numValue) && numValue > 0) {
       const product = items.find((item) => item.product.id === productId)?.product
@@ -80,15 +101,11 @@ export default function CartPage() {
     }
   }
 
-
-
   const handleQuantityChange = async (productId: number, newQuantity: number) => {
-
     const product = items.find((item) => item.product.id === productId)?.product
     if (product) {
       const adjustedQuantity = Math.max(newQuantity, 0.1)
       await updateQuantity(productId, adjustedQuantity)
-
     }
   }
 
@@ -107,15 +124,6 @@ export default function CartPage() {
     }
   }
 
-  const formatWeightDisplay = (quantity: number, unit?: string | null) => {
-    if (!unit) return `${quantity}`
-
-    if (unit === "kg") {
-      return quantity >= 1 ? `${quantity.toFixed(1)}kg` : `${(quantity * 1000).toFixed(0)}g`
-    } else {
-      return `${quantity.toFixed(0)}g`
-    }
-  }
 
   const calculateItemPrice = (item: any) => {
     const product = item.product
@@ -130,7 +138,7 @@ export default function CartPage() {
     return pricePerKg * item.quantity
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingSettings) {
     return (
       <>
         <Header />
@@ -212,8 +220,9 @@ export default function CartPage() {
               {items.map((item, index) => (
                 <Card
                   key={item.id}
-                  className={`bg-white shadow-sm hover:shadow-md transition-all duration-300 border-0 ${removingItems.has(item.product.id) ? "animate-pulse opacity-50" : ""
-                    }`}
+                  className={`bg-white shadow-sm hover:shadow-md transition-all duration-300 border-0 ${
+                    removingItems.has(item.product.id) ? "animate-pulse opacity-50" : ""
+                  }`}
                 >
                   <CardContent className="p-4 lg:p-6">
                     <div className="grid grid-cols-3 sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
@@ -255,13 +264,13 @@ export default function CartPage() {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 rounded-full"
+                            className="h-8 w-8 rounded-full bg-transparent"
                             onClick={() => {
                               const current = quantities[item.product.id] ?? item.quantity.toString()
-                              const newQuantity = Math.max(0, parseFloat(current) - 0.5) // nunca negativo
+                              const newQuantity = Math.max(0, Number.parseFloat(current) - 0.5) // nunca negativo
 
                               // Atualiza estado local (mostra no input)
-                              setQuantities(prev => ({ ...prev, [item.product.id]: newQuantity.toString() }))
+                              setQuantities((prev) => ({ ...prev, [item.product.id]: newQuantity.toString() }))
 
                               // Atualiza backend
                               handleQuantityChange(item.product.id, newQuantity)
@@ -275,7 +284,6 @@ export default function CartPage() {
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent mx-auto"></div>
                             ) : (
                               <div>
-
                                 <Input
                                   id="quantity"
                                   type="text"
@@ -286,7 +294,6 @@ export default function CartPage() {
                                       : String(item.quantity.toFixed(3)) // fallback
                                   }
                                   onBlur={(e) => handleQuantityBlur(item.product.id)}
-
                                   onChange={(e) => handleQuantityChangeInput(item.product.id, e.target.value)}
                                   className="text-center text-lg font-bold flex-1"
                                   placeholder="0,5 para 500g ou 1 para 1kg"
@@ -298,13 +305,13 @@ export default function CartPage() {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 rounded-full"
+                            className="h-8 w-8 rounded-full bg-transparent"
                             onClick={() => {
                               const current = quantities[item.product.id] ?? item.quantity.toString()
-                              const newQuantity = parseFloat(current) + 0.5
+                              const newQuantity = Number.parseFloat(current) + 0.5
 
                               // Atualiza estado local
-                              setQuantities(prev => ({ ...prev, [item.product.id]: newQuantity.toString() }))
+                              setQuantities((prev) => ({ ...prev, [item.product.id]: newQuantity.toString() }))
 
                               // Atualiza backend
                               handleQuantityChange(item.product.id, newQuantity)
@@ -315,9 +322,7 @@ export default function CartPage() {
                         </div>
 
                         <p className="text-sm text-gray-600 sm:align-text-bottom">
-                          <span className="font-bold text-red-600">
-                            {formatQuantityDisplay(item)}
-                          </span>
+                          <span className="font-bold text-red-600">{formatQuantityDisplay(item)}</span>
                         </p>
 
                         {/* Desktop Remove Button */}
@@ -336,8 +341,6 @@ export default function CartPage() {
                         <div className="font-bold text-green-600 text-sm lg:text-base sm:text-right">
                           {formatPrice(calculateItemPrice(item))}
                         </div>
-
-
                       </div>
                     </div>
                   </CardContent>
@@ -376,32 +379,39 @@ export default function CartPage() {
 
                   {/* Free Shipping Progress */}
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    {total >= 50 ? (
+                    {storeSettings && total >= storeSettings.freeDeliveryMinimum ? (
                       <div className="text-center space-y-2">
                         <div className="flex items-center justify-center space-x-2 text-green-600">
                           <CheckCircle className="h-5 w-5" />
                           <span className="font-semibold text-sm">Frete Grátis Garantido!</span>
                         </div>
-                        <p className="text-xs text-green-600">Você economizou R$ 8,90</p>
+                        <p className="text-xs text-green-600">
+                          Você economizou {formatPrice(storeSettings.deliveryFee)}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">
-                            Faltam <span className="font-bold text-red-600">{formatPrice(50 - total)}</span> para frete
-                            grátis
+                            Faltam{" "}
+                            <span className="font-bold text-red-600">
+                              {formatPrice((storeSettings?.freeDeliveryMinimum || 50) - total)}
+                            </span>{" "}
+                            para frete grátis
                           </p>
                         </div>
                         <div className="relative">
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
                               className="bg-gradient-to-r from-red-600 to-orange-600 h-2 rounded-full transition-all duration-1000"
-                              style={{ width: `${Math.min((total / 50) * 100, 100)}%` }}
+                              style={{
+                                width: `${Math.min((total / (storeSettings?.freeDeliveryMinimum || 50)) * 100, 100)}%`,
+                              }}
                             />
                           </div>
                           <div className="flex justify-between text-xs text-gray-500 mt-1">
                             <span>{formatPrice(0)}</span>
-                            <span>{formatPrice(50)}</span>
+                            <span>{formatPrice(storeSettings?.freeDeliveryMinimum || 50)}</span>
                           </div>
                         </div>
                       </div>
@@ -465,7 +475,10 @@ export default function CartPage() {
                     </div>
                     <div className="flex items-center space-x-2 text-xs text-gray-600 p-2 bg-green-50 rounded">
                       <Clock className="h-4 w-4 text-green-600 flex-shrink-0" />
-                      <span>Entrega em 45-60 minutos</span>
+                      <span>
+                        Entrega em {storeSettings?.averageDeliveryTime || 45}-
+                        {(storeSettings?.averageDeliveryTime || 45) + 15} minutos
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2 text-xs text-gray-600 p-2 bg-purple-50 rounded">
                       <Package className="h-4 w-4 text-purple-600 flex-shrink-0" />

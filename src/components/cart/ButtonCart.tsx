@@ -18,8 +18,8 @@ export default function EnhancedCartButton({ onClick }: EnhancedCartButtonProps)
   return (
     <Button
       variant="outline"
-      size="lg"
-      className="relative bg-white hover:bg-red-50 border-2 border-red-200 hover:border-red-300 transition-all duration-300 transform hover:scale-105 hover:shadow-lg group px-3 sm:px-4 py-2 h-10 sm:h-12"
+      size={"lg"}
+      className="relative bg-white hover:bg-red-50 border-2 border-red-200 hover:border-red-300 transition-all duration-300 transform hover:scale-105 hover:shadow-lg group px-5 sm:px-4 py-5 h-30 sm:h-12 w-full"
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

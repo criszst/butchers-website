@@ -387,7 +387,6 @@ const outOfStockProducts = products.filter((product) => product.stock === 0).len
                       <TableHead>Preço</TableHead>
                       <TableHead>Estoque</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Avaliação</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -433,17 +432,6 @@ const outOfStockProducts = products.filter((product) => product.stock === 0).len
                               <StatusIcon className="h-3 w-3 mr-1" />
                               {stockStatus.label}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-1">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-4 w-4 ${i < 4 ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-                                />
-                              ))}
-                              <span className="text-sm text-gray-600 ml-1">(4.0)</span>
-                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">

@@ -86,7 +86,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminHeader activeTab={activeTab} onTabChange={handleTabChange} />
 
-      <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 hover:bg-background transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 py-7 pb-20 md:pb-6 hover:bg-background transition-colors duration-200">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="dashboard" className="space-y-4 lg:space-y-6">
             <DashboardOverview />
@@ -104,9 +104,9 @@ export default function AdminPage() {
             <UsersManager />
           </TabsContent>
 
-          <TabsContent value="fornecedores" className="space-y-4 lg:space-y-6">
+          {/* <TabsContent value="fornecedores" className="space-y-4 lg:space-y-6">
             <SuppliersManager />
-          </TabsContent>
+          </TabsContent> */}
 
           <TabsContent value="analises" className="space-y-4 lg:space-y-6">
             <SalesAnalytics />

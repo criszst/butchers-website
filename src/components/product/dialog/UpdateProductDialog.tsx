@@ -129,7 +129,6 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
         {success && <p className="text-green-600 text-sm">{success}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-4">
               <div>
@@ -213,27 +212,27 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                 </div>
               </div>
 
-                <Card className="bg-blue-50 border-blue-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center text-blue-800">
-                <Calculator className="h-4 w-4 mr-2" />
-                Sistema de Preços Atual
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-blue-700">
-              {updatedProduct.price && updatedProduct.priceWeightAmount && updatedProduct.priceWeightUnit && (
-                <div className="bg-white p-3 rounded border">
-                  <p>
-                    <strong>Configuração:</strong> R$ {updatedProduct.price} por {updatedProduct.priceWeightAmount}
-                    {updatedProduct.priceWeightUnit}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    Cliente pode comprar qualquer quantidade e o preço será calculado proporcionalmente
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              <Card className="bg-blue-50 border-blue-200">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center text-blue-800">
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Sistema de Preços Atual
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-blue-700">
+                  {updatedProduct.price && updatedProduct.priceWeightAmount && updatedProduct.priceWeightUnit && (
+                    <div className="bg-white p-3 rounded border">
+                      <p>
+                        <strong>Configuração:</strong> R$ {updatedProduct.price} por {updatedProduct.priceWeightAmount}
+                        {updatedProduct.priceWeightUnit}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Cliente pode comprar qualquer quantidade e o preço será calculado proporcionalmente
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Estoque */}
               <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
@@ -253,7 +252,9 @@ export function UpdateProductDialog({ product, onSuccess }: UpdateProductProps) 
                       required
                       className="text-sm"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Em {updatedProduct.priceWeightUnit === 'kg' ? 'Kilos' : 'Unidades'}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Em {updatedProduct.priceWeightUnit === "kg" ? "Kilos" : "Unidades"}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-xs">Total Disponível</Label>

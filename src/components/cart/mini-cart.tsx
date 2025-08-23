@@ -9,6 +9,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/components/cart/context"
 import { motion, AnimatePresence } from "framer-motion"
+import { getStoreSettings, type StoreSettingsData } from "@/app/actions/store-settings"
 
 interface MiniCartProps {
   isOpen: boolean
@@ -31,6 +32,9 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
   const [showSuccess, setShowSuccess] = useState(false)
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
   const [isUpdating, setIsUpdating] = useState<number | null>(null)
+  const [storeSettings, setStoreSettings] = useState<StoreSettingsData | null>(null)
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
+  const [quantities, setQuantities] = useState<Record<number, string>>({})
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -39,13 +43,56 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
     }).format(price)
   }
 
+  useEffect(() => {
+    const loadStoreSettings = async () => {
+      try {
+        const result = await getStoreSettings()
+        if (result.success && result.settings) {
+          setStoreSettings(result.settings as StoreSettingsData)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configurações da loja:", error)
+      } finally {
+        setIsLoadingSettings(false)
+      }
+    }
+
+    loadStoreSettings()
+  }, [])
+
+  const handleQuantityChangeInput = (productId: number, value: string) => {
+    setQuantities((prev) => ({ ...prev, [productId]: value }))
+  }
+
+  const handleQuantityBlur = async (productId: number) => {
+    const raw = quantities[productId]
+    const normalized = raw.replace(",", ".")
+    const numValue = Number.parseFloat(normalized)
+
+    if (!isNaN(numValue) && numValue >= 0) {
+      const product = items.find((item) => item.product.id === productId)?.product
+      if (product) {
+        if (numValue === 0) {
+          await removeItem(productId)
+        } else {
+          const adjustedQuantity = Math.max(numValue, 0.1)
+          await updateQuantity(productId, adjustedQuantity)
+        }
+        setQuantities((prev) => {
+          const copy = { ...prev }
+          delete copy[productId]
+          return copy
+        })
+      }
+    }
+  }
+
   const handleQuantityChange = async (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       await removeItem(productId)
     } else {
       const product = items.find((item) => item.product.id === productId)?.product
       if (product) {
-        // Mínimo de 0.1kg
         const adjustedQuantity = Math.max(newQuantity, 0.1)
         await updateQuantity(productId, adjustedQuantity)
       }
@@ -99,7 +146,8 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
     return pricePerGram * item.quantity
   }
 
-  const taxaEntrega = total > 50 ? 0 : 8.9
+  const taxaEntrega =
+    storeSettings && total >= storeSettings.freeDeliveryMinimum ? 0 : storeSettings?.deliveryFee || 8.9
   const totalFinal = total + taxaEntrega
 
   return (
@@ -237,12 +285,13 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                     {items.map((item, index) => (
                       <motion.div
                         key={item.id}
-                        className={`flex items-center space-x-3 lg:space-x-4 p-4 lg:p-5 rounded-xl border-2 transition-all duration-300 ${lastAddedItem?.id === item.product.id && showSuccess
-                          ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-lg"
-                          : removingItems.has(item.product.id)
-                            ? "bg-red-50 border-red-200 opacity-50"
-                            : "bg-gray-50 hover:bg-gray-100 border-gray-200 hover:border-red-200 hover:shadow-md"
-                          }`}
+                        className={`flex items-center space-x-3 lg:space-x-4 p-4 lg:p-5 rounded-xl border-2 transition-all duration-300 ${
+                          lastAddedItem?.id === item.product.id && showSuccess
+                            ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-lg"
+                            : removingItems.has(item.product.id)
+                              ? "bg-red-50 border-red-200 opacity-50"
+                              : "bg-gray-50 hover:bg-gray-100 border-gray-200 hover:border-red-200 hover:shadow-md"
+                        }`}
                         initial={{ opacity: 0, x: 50 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -50, scale: 0.8 }}
@@ -291,33 +340,38 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                         </div>
 
                         <div className="flex flex-col items-center space-y-2">
-                          <div className="bg-white rounded-lg p-2 shadow-sm border flex flex-wrap justify-center items-center">
+                          <div className="flex items-center space-x-3 bg-gray-50 rounded-lg p-1">
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-4 w-4 p-0 hover:bg-red-50 hover:text-red-600 md:mr-2"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-full bg-transparent"
                               onClick={() => {
-                                const product = item.product
-                                const decrement = 0.1 // Sempre decrementar 0.1kg
-                                handleQuantityChange(product.id, Math.max(item.quantity - decrement, 0.1))
+                                const current = quantities[item.product.id] ?? item.quantity.toString()
+                                const newQuantity = Math.max(0, Number.parseFloat(current) - 0.5)
+                                setQuantities((prev) => ({ ...prev, [item.product.id]: newQuantity.toString() }))
+                                handleQuantityChange(item.product.id, newQuantity)
                               }}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
 
-                            <div className="min-w-[4rem] text-center md:mx-2">
+                            <div className="min-w-[4rem] text-center">
                               {isUpdating === item.product.id ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent mx-auto"></div>
                               ) : (
                                 <div>
                                   <Input
-                                    inputMode="numeric"
-                                    step="0.1"
-                                    min="0.1"
-                                    max={item.product.stock}
-                                    value={item.quantity.toFixed(3)}
-                                    onChange={(e) => handleQuantityChange(item.product.id, parseFloat(e.target.value) || 0)}
-                                    className="w-16 h-8 text-xs text-center border-gray-200 p-1 appearance-none"
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={
+                                      quantities[item.product.id] !== undefined
+                                        ? quantities[item.product.id]
+                                        : String(item.quantity.toFixed(3))
+                                    }
+                                    onBlur={() => handleQuantityBlur(item.product.id)}
+                                    onChange={(e) => handleQuantityChangeInput(item.product.id, e.target.value)}
+                                    className="w-16 h-8 text-xs text-center border-gray-200 p-1"
+                                    placeholder="0 para remover"
                                   />
                                   <p className="text-xs text-gray-500 mt-1">
                                     {formatWeightDisplay(item.quantity, item.product.priceWeightUnit)}
@@ -327,13 +381,14 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                             </div>
 
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 md:ml-2"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-full bg-transparent"
                               onClick={() => {
-                                const product = item.product
-                                const increment = 0.1 // Sempre incrementar 0.1kg
-                                handleQuantityChange(product.id, item.quantity + increment)
+                                const current = quantities[item.product.id] ?? item.quantity.toString()
+                                const newQuantity = Number.parseFloat(current) + 0.5
+                                setQuantities((prev) => ({ ...prev, [item.product.id]: newQuantity.toString() }))
+                                handleQuantityChange(item.product.id, newQuantity)
                               }}
                               disabled={isUpdating === item.product.id}
                             >
@@ -370,27 +425,32 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
               >
                 {/* Shipping Info */}
                 <div className="text-center">
-                  {total >= 50 ? (
+                  {storeSettings && total >= storeSettings.freeDeliveryMinimum ? (
                     <motion.div
-                      className="flex items-center justify-center space-x-2 text-green-600 p-3 lg:p-4 bg-green-50 rounded-lg"
+                      className="flex items-center justify-center space-x-2 text-green-600 p-2 lg:p-3 bg-green-50 rounded-lg"
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
-                      <CheckCircle className="h-5 w-5" />
-                      <span className="text-sm lg:text-base font-bold">🎉 Frete grátis garantido!</span>
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="text-xs lg:text-sm font-semibold">🎉 Frete grátis!</span>
                     </motion.div>
                   ) : (
-                    <div className="p-3 lg:p-4 bg-orange-50 rounded-lg">
-                      <p className="text-sm lg:text-base text-gray-700 mb-2">
-                        Faltam <span className="font-bold text-red-600">{formatPrice(50 - total)}</span> para frete
-                        grátis
+                    <div className="p-2 lg:p-3 bg-orange-50 rounded-lg">
+                      <p className="text-xs lg:text-sm text-gray-700 mb-1">
+                        Faltam{" "}
+                        <span className="font-bold text-red-600">
+                          {formatPrice((storeSettings?.freeDeliveryMinimum || 50) - total)}
+                        </span>{" "}
+                        para frete grátis
                       </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
                         <motion.div
-                          className="bg-gradient-to-r from-red-600 to-orange-600 h-2 rounded-full"
+                          className="bg-gradient-to-r from-red-600 to-orange-600 h-1.5 rounded-full"
                           initial={{ width: 0 }}
-                          animate={{ width: `${Math.min((total / 50) * 100, 100)}%` }}
+                          animate={{
+                            width: `${Math.min((total / (storeSettings?.freeDeliveryMinimum || 50)) * 100, 100)}%`,
+                          }}
                           transition={{ duration: 1, ease: "easeOut" }}
                         />
                       </div>

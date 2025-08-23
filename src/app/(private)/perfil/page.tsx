@@ -16,6 +16,8 @@ import ProfileHeader from "@/components/profile/Header"
 import { useOrderUpdates } from "@/hooks/useOrderUpdate"
 import { toast } from "sonner"
 import Header from "@/components/header"
+import FavoritesTab from "@/components/profile/tabs/FavoritesTab"
+import AchievementsTab from "@/components/profile/tabs/AchievementsTab"
 
 interface ExtendedUser {
   name?: string | null
@@ -229,6 +231,8 @@ export default function ProfilePage() {
           {activeTab === "pedidos" && <OrdersTab orders={orders} onViewOrderDetails={handleViewOrderDetails} />}
           {activeTab === "enderecos" && <AddressesTab address={[]} />}
           {activeTab === "notificacoes" && <NotificationsTab />}
+          {activeTab === "favoritos" && <FavoritesTab />}
+          {activeTab === "conquistas" && <AchievementsTab />}
           {activeTab === "configuracoes" && (
             <div className="pb-20 md:pb-0">
               <div className="text-center py-12">

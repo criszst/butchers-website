@@ -8,9 +8,11 @@ import { ShoppingCart, Heart, Eye, Loader2, Clock, Award } from "lucide-react"
 import type { Product } from "@/generated/prisma"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { toggleFavorite } from "@/app/actions/favorites"
+import { toast } from "sonner"
 
 import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
-
 
 interface ProductCardProps {
   product: Product
@@ -19,7 +21,6 @@ interface ProductCardProps {
   isLoading?: boolean
   onToggleFavorite?: () => void
   onAddToCart?: () => void
-  getRandomImage?: () => string
 }
 
 export function ProductCard({
@@ -29,9 +30,9 @@ export function ProductCard({
   isLoading = false,
   onToggleFavorite,
   onAddToCart,
-  getRandomImage,
 }: ProductCardProps) {
   const router = useRouter()
+  const [favoriteLoading, setFavoriteLoading] = useState(false)
 
   const formatPrice = (price: number | null) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -40,13 +41,27 @@ export function ProductCard({
     }).format(price ?? 0)
   }
 
-  
-
   const discountedPrice = product.discount ? product.price - (product.price * product.discount) / 100 : product.price
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 1024
   const effectiveViewMode = isMobile ? "list" : viewMode
 
+  const handleToggleFavorite = async () => {
+    if (favoriteLoading) return
+
+    setFavoriteLoading(true)
+    try {
+      await toggleFavorite(product.id)
+      toast.success(isFavorite ? "Removido dos favoritos" : "Adicionado aos favoritos")
+      if (onToggleFavorite) {
+        onToggleFavorite()
+      }
+    } catch (error) {
+      toast.error("Erro ao atualizar favoritos")
+    } finally {
+      setFavoriteLoading(false)
+    }
+  }
 
   const formatPriceDisplay = () => {
     const price = product.discount ? product.price - (product.price * product.discount) / 100 : product.price
@@ -67,9 +82,9 @@ export function ProductCard({
           {/* Image Section */}
           <div className="relative lg:w-64 flex-shrink-0">
             <div className="aspect-square lg:aspect-[4/3] overflow-hidden">
-            {product.image ? (
+              {product.image ? (
                 <Image
-                  src={product.image}
+                  src={product.image || "/placeholder.svg"}
                   alt={product.name}
                   width={300}
                   height={300}
@@ -79,7 +94,7 @@ export function ProductCard({
                 />
               ) : (
                 <MeatImagePlaceholder className="w-full h-full object-cover" />
-            )}
+              )}
             </div>
 
             {/* Badges */}
@@ -98,13 +113,20 @@ export function ProductCard({
 
             {/* Favorite Button */}
             <motion.button
-              onClick={onToggleFavorite}
-              className="absolute top-2 right-2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-white shadow-lg"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              onClick={handleToggleFavorite}
+              disabled={favoriteLoading}
+              className="absolute top-2 right-2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-white shadow-lg disabled:opacity-50"
+              whileHover={{ scale: favoriteLoading ? 1 : 1.1 }}
+              whileTap={{ scale: favoriteLoading ? 1 : 0.9 }}
             >
               <Heart
-                className={`h-4 w-4 transition-colors ${isFavorite ? "text-red-500 fill-current" : "text-gray-400"}`}
+                className={`h-4 w-4 transition-colors ${
+                  favoriteLoading
+                    ? "text-gray-400 animate-pulse"
+                    : isFavorite
+                      ? "text-red-500 fill-current"
+                      : "text-gray-400"
+                }`}
               />
             </motion.button>
           </div>
@@ -136,9 +158,7 @@ export function ProductCard({
                     <span className="text-sm line-through text-gray-400">{formatPrice(product.price)}</span>
                   )}
                 </div>
-                <span className="text-xs text-gray-500">
-                  por {formatPrice(product.priceWeightAmount)}
-                </span>
+                <span className="text-xs text-gray-500">por {formatPrice(product.priceWeightAmount)}</span>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -187,13 +207,20 @@ export function ProductCard({
       <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 border border-gray-100 bg-white relative">
         {/* Favorite Button */}
         <motion.button
-          onClick={onToggleFavorite}
-          className="absolute top-3 right-3 z-20 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-white shadow-lg"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          onClick={handleToggleFavorite}
+          disabled={favoriteLoading}
+          className="absolute top-3 right-3 z-20 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-white shadow-lg disabled:opacity-50"
+          whileHover={{ scale: favoriteLoading ? 1 : 1.1 }}
+          whileTap={{ scale: favoriteLoading ? 1 : 0.9 }}
         >
           <Heart
-            className={`h-4 w-4 transition-colors ${isFavorite ? "text-red-500 fill-current" : "text-gray-400"}`}
+            className={`h-4 w-4 transition-colors ${
+              favoriteLoading
+                ? "text-gray-400 animate-pulse"
+                : isFavorite
+                  ? "text-red-500 fill-current"
+                  : "text-gray-400"
+            }`}
           />
         </motion.button>
 
@@ -212,14 +239,18 @@ export function ProductCard({
 
         <CardHeader className="p-0 relative overflow-hidden">
           <div className="relative aspect-square">
-            <Image
-              src={product.image || getRandomImage?.() || "/placeholder.svg?height=400&width=400"}
-              alt={product.name}
-              fill
-              className={`object-cover transition-transform duration-700 group-hover:scale-110 ${
-                product.stock === 0 ? "grayscale" : ""
-              }`}
-            />
+            {product.image === null ? (
+              <MeatImagePlaceholder className="w-full h-full object-cover" />
+            ) : (
+              <Image
+                src={product.image || "/placeholder.svg?height=400&width=400"}
+                alt={product.name}
+                fill
+                className={`object-cover transition-transform duration-700 group-hover:scale-110 ${
+                  product.stock === 0 ? "grayscale" : ""
+                }`}
+              />
+            )}
 
             {/* Hover Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

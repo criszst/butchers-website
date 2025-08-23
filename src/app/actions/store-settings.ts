@@ -25,15 +25,23 @@ export interface StoreSettingsData {
   darkMode: boolean
 }
 
+export interface DeliveryData {
+  deliveryFee: number
+  freeDeliveryMinimum: number
+  averageDeliveryTime: number
+  deliveryRadius: number
+}
+
 export async function getStoreSettings() {
   try {
     let settings = await prisma.storeSettings.findFirst()
 
     // Se não existir configuração, criar uma padrão
     if (!settings) {
-      settings = await prisma.storeSettings.create({
-        data: {},
-      })
+         return {
+      success: false,
+      settings,
+    }
     }
 
     return {
@@ -79,5 +87,28 @@ export async function updateStoreSettings(data: Partial<StoreSettingsData>) {
       success: false,
       message: "Erro ao atualizar configurações da loja",
     }
+  }
+}
+
+export async function getDeliveryConfigs() {
+  const dConfigs = await prisma.storeSettings.findMany({
+    select: {
+      deliveryFee: true,
+      freeDeliveryMinimum: true,
+      averageDeliveryTime: true,
+      deliveryRadius: true,
+    },
+  })
+
+  if (!dConfigs)
+    return {
+      success: false,
+      message: "Configurações de entrega não encontradas",
+      value: dConfigs || [],
+    }
+
+  return {
+    success: true,
+    value: dConfigs,
   }
 }

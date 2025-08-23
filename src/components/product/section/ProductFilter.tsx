@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Filter, X } from "lucide-react"
+import { Search, Filter, X, Heart } from "lucide-react"
 
 interface ProductFiltersProps {
   categories: string[]
@@ -22,6 +22,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
     category: searchParams.get("category") || "todas",
     priceRange: searchParams.get("priceRange") || "all",
     sortBy: searchParams.get("sortBy") || "newest",
+    favorites: searchParams.get("favorites") || "all",
   })
 
   const [activeFilters, setActiveFilters] = useState<string[]>([])
@@ -34,6 +35,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
     if (newFilters.category !== "todas") params.set("category", newFilters.category)
     if (newFilters.priceRange !== "all") params.set("priceRange", newFilters.priceRange)
     if (newFilters.sortBy !== "newest") params.set("sortBy", newFilters.sortBy)
+    if (newFilters.favorites !== "all") params.set("favorites", newFilters.favorites)
 
     const queryString = params.toString()
     const newURL = queryString ? `/?${queryString}` : "/"
@@ -46,7 +48,6 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
     setFilters(newFilters)
     updateURL(newFilters)
 
-  
     const newActiveFilters: string[] = []
     if (newFilters.search) newActiveFilters.push(`Busca: ${newFilters.search}`)
     if (newFilters.category !== "todas") newActiveFilters.push(`Categoria: ${newFilters.category}`)
@@ -59,6 +60,8 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
       }
       newActiveFilters.push(`Preço: ${priceLabels[newFilters.priceRange] || "Todos"}`)
     }
+    if (newFilters.favorites === "only") newActiveFilters.push("Apenas Favoritos")
+
     setActiveFilters(newActiveFilters)
   }
 
@@ -68,6 +71,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
       category: "todas",
       priceRange: "all",
       sortBy: "newest",
+      favorites: "all",
     }
     setFilters(defaultFilters)
     setActiveFilters([])
@@ -81,9 +85,10 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
       handleFilterChange("category", "todas")
     } else if (filterText.startsWith("Preço:")) {
       handleFilterChange("priceRange", "all")
+    } else if (filterText === "Apenas Favoritos") {
+      handleFilterChange("favorites", "all")
     }
   }
-
 
   useEffect(() => {
     const newActiveFilters: string[] = []
@@ -98,6 +103,8 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
       }
       newActiveFilters.push(`Preço: ${priceLabels[filters.priceRange] || "Todos"}`)
     }
+    if (filters.favorites === "only") newActiveFilters.push("Apenas Favoritos")
+
     setActiveFilters(newActiveFilters)
   }, [filters])
 
@@ -105,7 +112,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
     <div className="space-y-4">
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -144,6 +151,17 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
                 <SelectItem value="50-100">R$ 50 - R$ 100</SelectItem>
                 <SelectItem value="100-200">R$ 100 - R$ 200</SelectItem>
                 <SelectItem value="200+">Acima de R$ 200</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.favorites} onValueChange={(value) => handleFilterChange("favorites", value)}>
+              <SelectTrigger>
+                <Heart className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Favoritos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Produtos</SelectItem>
+                <SelectItem value="only">Apenas Favoritos</SelectItem>
               </SelectContent>
             </Select>
 

@@ -251,6 +251,7 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
         paymentStatus: orderData.PaymentStatus || "Pendente",
         orderNumber: readableOrderNumber,
         deliveryAddress: deliveryAddress,
+        deliveryFee: orderData.deliveryFee,
         items: {
           create: orderData.items.map((item) => {
             const product = products.find((p) => p.id === item.productId)!
