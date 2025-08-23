@@ -41,9 +41,8 @@ export default async function PrintOrderPage({ params }: PrintOrderPageProps) {
   }
 
   const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const deliveryFee = settings?.deliveryFee ?? 0
-  const isDeliveryFree = deliveryFee > 0 && deliveryFee < order.total
-
+  
+  const isDeliveryFree = settings && settings?.deliveryFee > order.total ? true : false
   return (
     <div className="min-h-screen bg-white">
       <PrintButton />
@@ -79,7 +78,7 @@ export default async function PrintOrderPage({ params }: PrintOrderPageProps) {
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Detalhes do Pedido</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-gray-600 mb-1">
-                <span className="font-medium">Data:</span> {order.createdAt}
+                <span className="font-medium">Data:</span> {new Date(order.createdAt).toLocaleDateString("pt-BR")}
               </p>
               <p className="text-gray-600 mb-1">
                 <span className="font-medium">Status:</span> {order.status}
@@ -135,9 +134,15 @@ export default async function PrintOrderPage({ params }: PrintOrderPageProps) {
               <span className="text-gray-600">Subtotal dos Produtos:</span>
               <span className="font-medium">{formatPrice(subtotal)}</span>
             </div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-4">              
               <span className="text-gray-600">Taxa de Frete:</span>
-              <span className="font-medium">{isDeliveryFree ? formatPrice(deliveryFee) :  "GRÁTIS"}</span>
+              <span className="font-medium">{isDeliveryFree ? "GRÁTIS" : formatPrice(settings!.deliveryFee)}</span>
+                
+            </div>
+            <div className="border-t border-gray-300 pt-4">
+              {isDeliveryFree ? null : (
+                <span className="text-gray-600">Taxa de entrega é grátis para pedidos acima de R$ {settings!.freeDeliveryMinimum}</span>
+              )}
             </div>
             <div className="border-t border-gray-300 pt-4">
               <div className="flex justify-between items-center">
@@ -148,7 +153,7 @@ export default async function PrintOrderPage({ params }: PrintOrderPageProps) {
           </div>
         </div>
 
-        <div className="mb-2">
+        <div className="mb-12">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Forma de Pagamento</h3>
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
             <p className="text-blue-900 font-medium text-lg">{order.paymentMethod}</p>

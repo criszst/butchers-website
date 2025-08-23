@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 import generateOrderNumber from "@/app/utils/db/generateOrderNumber"
-import type { PaymentStatus } from "@/generated/prisma"
+import type { Order, PaymentStatus } from "@/generated/prisma"
 import { toast } from "sonner"
 
 interface OrderItem {
@@ -391,6 +391,7 @@ export async function getAllOrders() {
         estimatedDelivery: order.estimatedDelivery,
         deliveryDate: order.deliveryDate,
         trackingCode: order.trackingCode,
+        deliveryFee: order.deliveryFee,
       })),
     }
   } catch (error) {
