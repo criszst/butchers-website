@@ -212,7 +212,7 @@ export default function Header() {
   const userMenuItems = [
     { href: "/perfil#perfil", label: "Meu Perfil", icon: User },
     { href: "/perfil#pedidos", label: "Meus Pedidos", icon: Package, badge: "3" },
-    { href: "/favoritos", label: "Favoritos", icon: Heart },
+    // { href: "/favoritos", label: "Favoritos", icon: Heart },
     { href: "/perfil#notificacoes", label: "Notificações", icon: Bell, hasNotification: true },
     { href: "/perfil#configuracoes", label: "Configurações", icon: Settings },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Crown, isAdmin: true }] : []),

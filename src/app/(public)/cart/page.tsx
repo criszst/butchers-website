@@ -20,6 +20,8 @@ export default function CartPage() {
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
   const [promoCode, setPromoCode] = useState("")
 
+  const [quantities, setQuantities] = useState<Record<number, string>>({})
+
   const taxaEntrega = total > 50 ? 0 : 8.9
   const totalFinal = total + taxaEntrega
 
@@ -39,10 +41,10 @@ export default function CartPage() {
     }
   }
 
-  const formatQuantityDisplay = (product: any) => {
-    if (!product || !product.quantity) return ""
+  const formatQuantityDisplay = (item) => {
+    if (!item || !item.quantity) return ""
 
-    const numQuantity = Number.parseFloat(product.quantity)
+    const numQuantity = Number.parseFloat(item.quantity)
     if (!numQuantity) return ""
 
     if (numQuantity >= 1) {
@@ -53,17 +55,40 @@ export default function CartPage() {
     }
   }
 
+  const handleQuantityChangeInput = (productId: number, value: string) => {
+    // só guarda o valor digitado
+    setQuantities((prev) => ({ ...prev, [productId]: value }))
+  }
 
-  const handleQuantityChange = async (productId: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      await removeItem(productId)
-    } else {
+  const handleQuantityBlur = async (productId: number) => {
+    const raw = quantities[productId]
+
+    const normalized = raw.replace(",", ".")
+    const numValue = parseFloat(normalized)
+
+    if (!isNaN(numValue) && numValue > 0) {
       const product = items.find((item) => item.product.id === productId)?.product
       if (product) {
-        // Mínimo de 0.1kg
-        const adjustedQuantity = Math.max(newQuantity, 0.1)
+        const adjustedQuantity = Math.max(numValue, 0.1)
         await updateQuantity(productId, adjustedQuantity)
+        setQuantities((prev) => {
+          const copy = { ...prev }
+          delete copy[productId] // limpa pra voltar a usar o item.quantity atualizado
+          return copy
+        })
       }
+    }
+  }
+
+
+
+  const handleQuantityChange = async (productId: number, newQuantity: number) => {
+
+    const product = items.find((item) => item.product.id === productId)?.product
+    if (product) {
+      const adjustedQuantity = Math.max(newQuantity, 0.1)
+      await updateQuantity(productId, adjustedQuantity)
+
     }
   }
 
@@ -181,7 +206,7 @@ export default function CartPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 sm:ml-10 w-[calc(100%-2rem)] ml-[1rem] sm:w-auto ">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 sm:ml-10 w-[calc(100%-2rem)] ml-[1rem] sm:w-auto">
             {/* Products List - Mobile First */}
             <div className="lg:col-span-2 space-y-4 lg:space-y-6">
               {items.map((item, index) => (
@@ -191,7 +216,7 @@ export default function CartPage() {
                     }`}
                 >
                   <CardContent className="p-4 lg:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                    <div className="grid grid-cols-3 sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
                       {/* Product Image */}
                       <div className="relative flex-shrink-0 mx-auto sm:mx-0">
                         <div className="relative w-20 h-20 lg:w-24 lg:h-24 rounded-lg overflow-hidden bg-gray-100">
@@ -228,15 +253,19 @@ export default function CartPage() {
                       <div className="flex items-center justify-between sm:justify-end sm:flex-col sm:space-y-3">
                         <div className="flex items-center space-x-3 bg-gray-50 rounded-lg p-1">
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-full"
                             onClick={() => {
-                              const product = item.product
-                              const decrement = 0.1 // Sempre decrementar 0.1kg
-                              handleQuantityChange(product.id, Math.max(item.quantity - decrement, 0.1))
+                              const current = quantities[item.product.id] ?? item.quantity.toString()
+                              const newQuantity = Math.max(0, parseFloat(current) - 0.5) // nunca negativo
+
+                              // Atualiza estado local (mostra no input)
+                              setQuantities(prev => ({ ...prev, [item.product.id]: newQuantity.toString() }))
+
+                              // Atualiza backend
+                              handleQuantityChange(item.product.id, newQuantity)
                             }}
-                            disabled={isUpdating === item.product.id}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -246,36 +275,50 @@ export default function CartPage() {
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent mx-auto"></div>
                             ) : (
                               <div>
+
                                 <Input
-                                  inputMode="numeric"
-                                  step="0.1"
-                                  min="0.1"
-                                  max={item.product.stock}
-                                  value={item.quantity.toFixed(3)}
-                                  onChange={(e) => handleQuantityChange(item.product.id, parseFloat(e.target.value) || 0)}
-                                  className="w-16 h-8 text-xs text-center border-gray-200 p-1"
+                                  id="quantity"
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={
+                                    quantities[item.product.id] !== undefined
+                                      ? quantities[item.product.id] // valor digitado pelo usuário
+                                      : String(item.quantity.toFixed(3)) // fallback
+                                  }
+                                  onBlur={(e) => handleQuantityBlur(item.product.id)}
+
+                                  onChange={(e) => handleQuantityChangeInput(item.product.id, e.target.value)}
+                                  className="text-center text-lg font-bold flex-1"
+                                  placeholder="0,5 para 500g ou 1 para 1kg"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {formatWeightDisplay(item.quantity, item.product.priceWeightUnit)}
-                                </p>
                               </div>
                             )}
                           </div>
 
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-full"
                             onClick={() => {
-                              const product = item.product
-                              const increment = 0.1 // Sempre incrementar 0.1kg
-                              handleQuantityChange(product.id, item.quantity + increment)
+                              const current = quantities[item.product.id] ?? item.quantity.toString()
+                              const newQuantity = parseFloat(current) + 0.5
+
+                              // Atualiza estado local
+                              setQuantities(prev => ({ ...prev, [item.product.id]: newQuantity.toString() }))
+
+                              // Atualiza backend
+                              handleQuantityChange(item.product.id, newQuantity)
                             }}
-                            disabled={isUpdating === item.product.id}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
+
+                        <p className="text-sm text-gray-600 sm:align-text-bottom">
+                          <span className="font-bold text-red-600">
+                            {formatQuantityDisplay(item)}
+                          </span>
+                        </p>
 
                         {/* Desktop Remove Button */}
                         <Button
@@ -290,11 +333,11 @@ export default function CartPage() {
                         </Button>
 
                         {/* Subtotal */}
-                        <div className="text-right sm:text-center">
-                          <div className="font-bold text-green-600 text-sm lg:text-base">
-                            {formatPrice(calculateItemPrice(item))}
-                          </div>
+                        <div className="font-bold text-green-600 text-sm lg:text-base sm:text-right">
+                          {formatPrice(calculateItemPrice(item))}
                         </div>
+
+
                       </div>
                     </div>
                   </CardContent>
