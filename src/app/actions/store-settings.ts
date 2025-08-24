@@ -34,7 +34,7 @@ export interface DeliveryData {
 
 export async function getStoreSettings() {
   try {
-    let settings = await prisma.storeSettings.findFirst()
+    const settings = await prisma.storeSettings.findFirst()
 
     // Se não existir configuração, criar uma padrão
     if (!settings) {

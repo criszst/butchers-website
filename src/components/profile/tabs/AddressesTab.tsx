@@ -87,7 +87,7 @@ export default function AddressesTab({ address }: AddressesTabProps) {
         <CardContent className="p-6">
           <div className="space-y-4">
             <p className="text-sm text-gray-600 mb-4">
-              Clique em "Gerenciar Endereços" para adicionar, editar ou selecionar seus endereços de entrega.
+              Clique em Gerenciar Endereços para adicionar, editar ou selecionar seus endereços de entrega.
             </p>
 
             {selectedAddress ? (
