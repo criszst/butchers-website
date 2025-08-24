@@ -4,11 +4,10 @@ import { getStoreSettings } from "@/app/actions/store-settings"
 import PrintButton from "@/app/(private)/orders/[id]/print/PrintButton"
 
 interface PrintOrderPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
-
 export default async function PrintOrderPage({ params }: PrintOrderPageProps) {
   const [ordersResult, settingsResult] = await Promise.all([getAllOrders(), getStoreSettings()])
 
@@ -16,7 +15,9 @@ export default async function PrintOrderPage({ params }: PrintOrderPageProps) {
     notFound()
   }
 
-  const order = ordersResult.orders.find((o) => o.id === params.id || o.orderNumber === params.id)
+  
+const { id } = await params;
+const order = ordersResult.orders.find((o) => o.id === id || o.orderNumber === id)
 
   if (!order) {
     notFound()
