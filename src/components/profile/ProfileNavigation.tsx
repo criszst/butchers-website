@@ -32,12 +32,12 @@ const tabs = [
     icon: Heart,
     color: "text-red-600",
   },
-  {
-    id: "notificacoes",
-    label: "Notificações",
-    icon: Bell,
-    color: "text-orange-600",
-  },
+  // {
+  //   id: "notificacoes",
+  //   label: "Notificações",
+  //   icon: Bell,
+  //   color: "text-orange-600",
+  // },
   // {
   //   id: "configuracoes",
   //   label: "Config",
@@ -60,7 +60,7 @@ export default function ProfileNavigation({ activeTab, setActiveTab }: ProfileNa
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center space-x-5 pl-20 ml-15 px-4 py-3 rounded-xl font-medium transition-all duration-300 flex-shrink-0 justify-center min-w-fit",
+                    "flex items-center space-x-5 ml-20 p-10 px-15 py-3 rounded-xl font-medium transition-all duration-300 flex-shrink-0 justify-center min-w-fit",
                     activeTab === tab.id
                       ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg transform scale-105"
                       : "text-gray-600 hover:text-orange-600 hover:bg-orange-50",
@@ -85,7 +85,7 @@ export default function ProfileNavigation({ activeTab, setActiveTab }: ProfileNa
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex-shrink-0 flex flex-col items-center justify-center py-2 px-3 transition-all duration-300 min-w-fit",
+                  "flex-shrink-0 flex flex-col items-center justify-center py-2 px-7 ml-1 transition-all duration-300 min-w-fit",
                   activeTab === tab.id ? "text-orange-600 bg-orange-50" : "text-gray-500 hover:text-orange-600",
                 )}
               >

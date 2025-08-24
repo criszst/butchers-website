@@ -19,6 +19,7 @@ import {
   Crown,
   Search,
   ShoppingCart,
+  MapPin,
 } from "lucide-react"
 import Link from "next/link"
 import { useCart } from "@/components/cart/context"
@@ -212,9 +213,11 @@ export default function Header() {
   const userMenuItems = [
     { href: "/perfil#perfil", label: "Meu Perfil", icon: User },
     { href: "/perfil#pedidos", label: "Meus Pedidos", icon: Package, badge: "3" },
+    { href: "/perfil#enderecos", label: "Meus Endereços", icon: MapPin },
+    { href: "/perfil#favoritos", label: "Favoritos", icon: Heart },
     // { href: "/favoritos", label: "Favoritos", icon: Heart },
-    { href: "/perfil#notificacoes", label: "Notificações", icon: Bell, hasNotification: true },
-    { href: "/perfil#configuracoes", label: "Configurações", icon: Settings },
+    // { href: "/perfil#notificacoes", label: "Notificações", icon: Bell, hasNotification: true },
+    // { href: "/perfil#configuracoes", label: "Configurações", icon: Settings },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Crown, isAdmin: true }] : []),
   ]
 
@@ -463,9 +466,9 @@ export default function Header() {
                                     {item.badge && (
                                       <Badge className="ml-auto bg-red-100 text-red-800 text-xs">{item.badge}</Badge>
                                     )}
-                                    {item.hasNotification && (
+                                    {/* {item.hasNotification && (
                                       <div className="ml-auto w-2 h-2 bg-red-500 rounded-full"></div>
-                                    )}
+                                    )} */}
                                   </Link>
                                 </motion.div>
                               )
@@ -642,9 +645,9 @@ export default function Header() {
                                 {item.badge && (
                                   <Badge className="ml-auto bg-red-100 text-red-800 text-xs">{item.badge}</Badge>
                                 )}
-                                {item.hasNotification && (
+                                {/* {item.hasNotification && (
                                   <div className="ml-auto w-2 h-2 bg-red-500 rounded-full"></div>
-                                )}
+                                )} */}
                               </Link>
                             </motion.div>
                           )
