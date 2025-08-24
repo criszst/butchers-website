@@ -445,7 +445,7 @@ export default function ProductDetailsPage() {
                 <h3 className="font-semibold text-gray-900 mb-4">Produtos Relacionados</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {relatedProducts.map((relatedProduct) => (
-                    <Link key={relatedProduct.id} href={`/produto/${relatedProduct.id}`}>
+                    <Link key={relatedProduct.id} href={`/product/${relatedProduct.id}`}>
                       <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
                         <div className="relative w-full h-20 mb-2">
                           {relatedProduct.image ? (
