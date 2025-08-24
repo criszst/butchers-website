@@ -38,12 +38,12 @@ const tabs = [
     icon: Bell,
     color: "text-orange-600",
   },
-  {
-    id: "configuracoes",
-    label: "Config",
-    icon: Settings,
-    color: "text-orange-600",
-  },
+  // {
+  //   id: "configuracoes",
+  //   label: "Config",
+  //   icon: Settings,
+  //   color: "text-orange-600",
+  // },
 ]
 
 export default function ProfileNavigation({ activeTab, setActiveTab }: ProfileNavigationProps) {

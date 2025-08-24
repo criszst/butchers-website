@@ -69,7 +69,7 @@ export default function CartPage() {
     if (!numQuantity) return ""
 
     if (numQuantity >= 1) {
-      return `${numQuantity.toFixed(1).replace(/\.0$/, "")}kg`
+      return `${numQuantity.toFixed(3).replace(/\.0$/, "")}kg`
     } else {
       const grams = Math.round(numQuantity * 1000)
       return `${grams}g`

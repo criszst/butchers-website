@@ -233,14 +233,14 @@ export default function ProfilePage() {
           {activeTab === "notificacoes" && <NotificationsTab />}
           {activeTab === "favoritos" && <FavoritesTab />}
           {activeTab === "conquistas" && <AchievementsTab />}
-          {activeTab === "configuracoes" && (
+          {/* {activeTab === "configuracoes" && (
             <div className="pb-20 md:pb-0">
               <div className="text-center py-12">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Configurações</h3>
                 <p className="text-gray-600">Em breve...</p>
               </div>
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>

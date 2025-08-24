@@ -51,8 +51,6 @@ const CartContext = createContext<{
   refreshCart: () => Promise<void>
 } | null>(null)
 
-
-
 const formatWeightDisplay = (kilos: number): string => {
   return `${(kilos).toFixed(1)}kg`
 }
@@ -60,7 +58,6 @@ const formatWeightDisplay = (kilos: number): string => {
 const calculateItemPrice = (item: CartItem): number => {
   const product = item.product
 
-  
   if (!product.priceWeightAmount || !product.priceWeightUnit) {
     return product.price * item.quantity
   }
@@ -276,8 +273,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         duration: 4000,
         closeButton: true,
       })
-
-
     } catch (error) {
       console.error("Error adding item to cart:", error)
       toast.error("❌ Erro ao adicionar produto ao carrinho", {
@@ -322,7 +317,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           duration: 4000,
         })
         dispatch({ type: "UPDATE_QUANTITY", payload: { productId, quantity: item.product.stock } })
-        return 
+        return
       }
 
       dispatch({ type: "UPDATE_QUANTITY", payload: { productId, quantity } })

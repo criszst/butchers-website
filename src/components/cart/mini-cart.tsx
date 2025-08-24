@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
-import { ShoppingCart, X, ArrowRight, CheckCircle, Trash2, Gift, Minus, Plus } from "lucide-react"
+import { ShoppingCart, X, ArrowRight, CheckCircle, Trash2, Gift, Minus, Plus } from 'lucide-react'
 import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/components/cart/context"
@@ -363,11 +363,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                                   <Input
                                     type="text"
                                     inputMode="decimal"
-                                    value={
-                                      quantities[item.product.id] !== undefined
-                                        ? quantities[item.product.id]
-                                        : String(item.quantity.toFixed(3))
-                                    }
+                                    value={quantities[item.product.id] !== undefined ? quantities[item.product.id] : String(item.quantity.toFixed(3))}
                                     onBlur={() => handleQuantityBlur(item.product.id)}
                                     onChange={(e) => handleQuantityChangeInput(item.product.id, e.target.value)}
                                     className="w-16 h-8 text-xs text-center border-gray-200 p-1"
