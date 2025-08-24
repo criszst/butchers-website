@@ -21,14 +21,15 @@ import {
   AlertCircle,
   XCircle,
 } from "lucide-react"
-import type { Order, OrderItem, Product } from "@/generated/prisma"
+import type { Order, OrderItem } from "@/generated/prisma"
 import { cancelOrder } from "@/app/actions/order/orders"
+import { useDeliveryFee } from "@/app/hooks/useDeliveryFee"
+import { getStoreSettings, type StoreSettingsData } from "@/app/actions/store-settings"
 
 interface OrderDetailModalProps {
   order: (Order & { items: OrderItem[]; user?: { name?: string; phone?: string } }) | null
   isOpen: boolean
   onClose: () => void
-
 }
 
 const overlayVariants = {
@@ -51,14 +52,39 @@ const statusSteps = [
 
 export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetailModalProps) {
   const [currentStep, setCurrentStep] = useState(0)
+  const [storeSettings, setStoreSettings] = useState<StoreSettingsData | null>(null)
 
   useEffect(() => {
     if (order) {
       const stepIndex = statusSteps.findIndex((step) => step.key === order.status)
       setCurrentStep(stepIndex >= 0 ? stepIndex : 0)
-    } 
+    }
   }, [order])
 
+  useEffect(() => {
+    const loadStoreSettings = async () => {
+      try {
+        const result = await getStoreSettings()
+        if (result.success && result.settings) {
+          setStoreSettings(result.settings)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configurações:", error)
+      }
+    }
+    loadStoreSettings()
+  }, [])
+
+  const deliveryCalculation = useDeliveryFee({
+    orderTotal: order ? order.total - (order.deliveryFee || 0) : 0,
+    deliveryMethod: order?.paymentMethod === "pickupOrder" ? "pickup" : "delivery",
+    storeSettings: storeSettings
+      ? {
+          deliveryFee: storeSettings.deliveryFee || 10.0,
+          freeDeliveryMinimum: storeSettings.freeDeliveryMinimum || 150.0,
+        }
+      : undefined,
+  })
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -106,7 +132,9 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
   }
 
   const formatQuantity = (quantity: number) => {
-    return quantity !== null && quantity < 1 ? `${quantity.toFixed(3).replace(quantity.toString()[0], "").replace(".", "")} gramas` : `${quantity} kilo`
+    return quantity !== null && quantity < 1
+      ? `${quantity.toFixed(3).replace(quantity.toString()[0], "").replace(".", "")} gramas`
+      : `${quantity} kilo`
   }
 
   const replaceOrderMethod = (method: string) => {
@@ -120,6 +148,10 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
     }
 
     return methods[method] || "Não informado"
+  }
+
+  const formatPrice = (price: number) => {
+    return `R$ ${price.toFixed(2)}`
   }
 
   if (!order) return null
@@ -170,7 +202,6 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
 
               {/* Status Badges */}
               <div className="mt-4 flex flex-wrap gap-2">
-             
                 <Badge className={`${getStatusColor(order.status)} text-sm px-3 py-1`}>
                   {getStatusIcon(order.status)}
                   <span className="ml-2">{order.status}</span>
@@ -219,7 +250,6 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                           </div>
                         ))
                       )}
-                   
                     </div>
 
                     {/* Desktop Timeline */}
@@ -266,59 +296,57 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                 </motion.div>
 
                 <div className="grid lg:grid-cols-1 gap-6 md:gap-8">
-                  {location.pathname.includes("/perfil") ? (
+                  {window.location.pathname.includes("/perfil") ? (
                     <></>
                   ) : (
-                      <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="space-y-4"
-                  >
-                    <h4 className="font-bold text-lg text-gray-900 flex items-center">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                        <User className="h-5 w-5 text-blue-600" />
-                      </div>
-                      Informações do Cliente
-                    </h4>
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="space-y-4"
+                    >
+                      <h4 className="font-bold text-lg text-gray-900 flex items-center">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                          <User className="h-5 w-5 text-blue-600" />
+                        </div>
+                        Informações do Cliente
+                      </h4>
 
-                    <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-                      <CardContent className="p-4 md:p-6">
-                        <div className="flex items-start space-x-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                            {order.user?.name?.charAt(0).toUpperCase() || "U"}
-                          </div>
-                          <div className="flex-1 space-y-3 min-w-0">
-                            <div className="flex items-center text-sm">
-                              <User className="h-4 w-4 mr-2 text-gray-500 flex-shrink-0" />
-                              <span className="font-medium truncate">{order.user?.name || "Cliente"}</span>
+                      <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+                        <CardContent className="p-4 md:p-6">
+                          <div className="flex items-start space-x-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                              {order.user?.name?.charAt(0).toUpperCase() || "U"}
                             </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Phone className="h-4 w-4 mr-2 text-gray-500 flex-shrink-0" />
-                              <span className="truncate">{order.user?.phone || "Não informado"}</span>
-                            </div>
-                            <div className="flex items-start text-sm text-gray-600">
-                              <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <div className="font-medium mb-1 break-words">
-                                  {order.deliveryAddress || "Endereço de entrega"}
-                                </div>
-                                {order.trackingCode && (
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    Código de rastreamento: {order.trackingCode}
+                            <div className="flex-1 space-y-3 min-w-0">
+                              <div className="flex items-center text-sm">
+                                <User className="h-4 w-4 mr-2 text-gray-500 flex-shrink-0" />
+                                <span className="font-medium truncate">{order.user?.name || "Cliente"}</span>
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Phone className="h-4 w-4 mr-2 text-gray-500 flex-shrink-0" />
+                                <span className="truncate">{order.user?.phone || "Não informado"}</span>
+                              </div>
+                              <div className="flex items-start text-sm text-gray-600">
+                                <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="font-medium mb-1 break-words">
+                                    {order.deliveryAddress || "Endereço de entrega"}
                                   </div>
-                                )}
+                                  {order.trackingCode && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      Código de rastreamento: {order.trackingCode}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                  )
-                  }
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
                   {/* Customer Details */}
-                
 
                   {/* Order Summary */}
                   <motion.div
@@ -336,6 +364,23 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
 
                     <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
                       <CardContent className="p-4 md:p-6 space-y-4">
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-gray-600">Subtotal dos Produtos:</span>
+                          <span className="font-medium">R$ {(order.total - (order.deliveryFee || 0)).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-gray-600">Taxa de Entrega:</span>
+                          <div className="text-right">
+                            {deliveryCalculation.isFree ? (
+                              <span className="text-green-600 font-medium">Grátis</span>
+                            ) : (
+                              <span className="font-medium">{formatPrice(deliveryCalculation.fee)}</span>
+                            )}
+                            {deliveryCalculation.reason && (
+                              <p className="text-xs text-teal-600 mt-1">{deliveryCalculation.reason}</p>
+                            )}
+                          </div>
+                        </div>
                         <div className="flex justify-between items-center py-3 border-b border-gray-100">
                           <span className="text-gray-600">Total do Pedido:</span>
                           <span className="font-bold text-xl md:text-2xl text-green-600">
@@ -415,9 +460,11 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                                 <h5 className="font-bold text-gray-900 truncate">{item.name}</h5>
                                 <p className="text-xs text-gray-500 truncate">{item.category}</p>
                                 <div className="flex items-center justify-between mt-2">
-                                  <span className="text-sm text-gray-600">Comprou: {formatQuantity(item.quantity)}</span>
+                                  <span className="text-sm text-gray-600">
+                                    Comprou: {formatQuantity(item.quantity)}
+                                  </span>
                                   <div className="text-right">
-                                    <div className="text-xs text-gray-500"> R$ {(item.price)}</div>
+                                    <div className="text-xs text-gray-500"> R$ {item.price}</div>
                                     <div className="font-bold text-green-600">
                                       R$ {(item.price * item.quantity).toFixed(2)} por {formatQuantity(item.quantity)}
                                     </div>
@@ -463,7 +510,6 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
                       variant="outline"
                       className="flex-1 text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
                       onClick={() => {
-                        // Handle cancel order logic here
                         cancelOrder(order.id)
                       }}
                     >
@@ -480,4 +526,3 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
     </AnimatePresence>
   )
 }
-

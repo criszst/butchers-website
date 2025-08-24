@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Search, Eye, Printer } from "lucide-react"
 import { getAllOrders, updateOrderStatusByOrderNumber } from "@/app/actions/order/orders"
 import { toast } from "sonner"
-import { DeliveryData, getDeliveryConfigs, getStoreSettings, StoreSettingsData } from "@/app/actions/store-settings"
-
+import { getStoreSettings, type StoreSettingsData } from "@/app/actions/store-settings"
 import replaceOrderMethod from "@/app/utils/replacePayment"
+import { useDeliveryFee } from "@/app/hooks/useDeliveryFee"
 
 interface Order {
   id: string
@@ -40,6 +40,128 @@ interface Order {
   trackingCode: string | null
 }
 
+const OrderCard = ({
+  order,
+  setSelectedOrder,
+  setShowOrderDetails,
+  handlePrintOrder,
+  getStatusColor,
+  formatPrice,
+  formatWeight,
+  updateOrderStatus,
+  storeSettings, // Added storeSettings prop
+}: {
+  order: Order
+  setSelectedOrder: (order: Order) => void
+  setShowOrderDetails: (show: boolean) => void
+  handlePrintOrder: (order: Order) => void
+  getStatusColor: (status: string) => string
+  formatPrice: (price: number) => string
+  formatWeight: (quantity: number) => string
+  updateOrderStatus: (orderNumber: string, newStatus: string) => void
+  storeSettings: StoreSettingsData | null // Added storeSettings prop type
+}) => {
+  const deliveryCalculation = useDeliveryFee({
+    orderTotal: order.total - (order.deliveryFee || 0), // Subtract delivery fee to get subtotal
+    deliveryMethod: order.paymentMethod === "pickupOrder" ? "pickup" : "delivery",
+    storeSettings: storeSettings // Use storeSettings prop instead of order.store
+      ? {
+          deliveryFee: storeSettings.deliveryFee || 10.0,
+          freeDeliveryMinimum: storeSettings.freeDeliveryMinimum || 150.0,
+        }
+      : undefined,
+  })
+
+  return (
+    <Card key={order.id} className="border border-gray-200">
+      <CardContent className="p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+              <h3 className="font-semibold text-lg">#{order.orderNumber}</h3>
+              <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600">
+              <p>
+                <span className="font-medium">Cliente:</span> {order.customer.name}
+              </p>
+              <p>
+                <span className="font-medium">Total:</span> {formatPrice(order.total)}
+              </p>
+              <p>
+                <span className="font-medium">Data:</span> {order.createdAt}
+              </p>
+              <p>
+                <span className="font-medium">Pagamento:</span> {replaceOrderMethod(order.paymentMethod)}
+              </p>
+              <p>
+                <span className="font-medium">Itens:</span> {order.items.length}
+              </p>
+              <p>
+                <span className="font-medium">Taxa de Entrega:</span>{" "}
+                {deliveryCalculation.isFree ? (
+                  <span className="text-green-600">Grátis</span>
+                ) : (
+                  formatPrice(deliveryCalculation.fee)
+                )}
+              </p>
+              {deliveryCalculation.reason && (
+                <p className="text-xs text-teal-600 col-span-full mt-1">{deliveryCalculation.reason}</p>
+              )}
+              <p>
+                <span className="font-medium">
+                  Pedido: {order.items
+      .map((item) => `${formatWeight(item.quantity)} de ${item.name.toLowerCase()}`)
+      .join(", ")}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium">Categoria:</span> {order.items.map((item) => item.category).join(", ")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePrintOrder(order)}
+              className="flex items-center gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Imprimir
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedOrder(order)
+                setShowOrderDetails(true)
+              }}
+              className="flex items-center gap-2"
+            >
+              <Eye className="h-4 w-4" />
+              Ver Detalhes
+            </Button>
+
+            <Select value={order.status} onValueChange={(newStatus) => updateOrderStatus(order.orderNumber, newStatus)}>
+              <SelectTrigger className="w-full sm:w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Preparando">Preparando</SelectItem>
+                <SelectItem value="Enviado">Enviado</SelectItem>
+                <SelectItem value="Entregue">Entregue</SelectItem>
+                <SelectItem value="Cancelado">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function OrdersManager() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -50,7 +172,6 @@ export default function OrdersManager() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderDetails, setShowOrderDetails] = useState(false)
   const [store, setStore] = useState<StoreSettingsData | null>(null)
-
 
   useEffect(() => {
     loadSettings()
@@ -160,7 +281,6 @@ export default function OrdersManager() {
     window.open(printUrl, "_blank")
   }
 
-
   if (loading) {
     return (
       <Card>
@@ -209,87 +329,18 @@ export default function OrdersManager() {
               <div className="text-center py-8 text-gray-500">Nenhum pedido encontrado</div>
             ) : (
               filteredOrders.map((order) => (
-                <Card key={order.id} className="border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-lg">#{order.orderNumber}</h3>
-                          <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600">
-                          <p>
-                            <span className="font-medium">Cliente:</span> {order.customer.name}
-                          </p>
-                          <p>
-                            <span className="font-medium">Total:</span> {formatPrice(order.total)}
-                          </p>
-                          <p>
-                            <span className="font-medium">Data:</span>{" "}
-                            {order.createdAt}
-                          </p>
-                          <p>
-                            <span className="font-medium">Pagamento:</span> {replaceOrderMethod(order.paymentMethod)}
-                          </p>
-                          <p>
-                            <span className="font-medium">Itens:</span> {order.items.length}
-                          </p>
-
-                          <p>
-                            <span className="font-medium"> Pedido:   {order.items.map((item) => formatWeight(item.quantity)).join(", ")} de {order.items.map((item) => item.name).join(", ")} - {order.items.map((item) => formatPrice(item.price * item.quantity)).join(", ")}
-                            </span>
-
-                          </p>
-
-                          <p>
-                            <span className="font-medium">Categoria:</span> {order.items.map((item) => item.category).join(", ")}
-                          </p>
-
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePrintOrder(order)}
-                          className="flex items-center gap-2"
-                        >
-                          <Printer className="h-4 w-4" />
-                          Imprimir
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrder(order)
-                            setShowOrderDetails(true)
-                          }}
-                          className="flex items-center gap-2"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Ver Detalhes
-                        </Button>
-
-                        <Select
-                          value={order.status}
-                          onValueChange={(newStatus) => updateOrderStatus(order.orderNumber, newStatus)}
-                        >
-                          <SelectTrigger className="w-full sm:w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Preparando">Preparando</SelectItem>
-                            <SelectItem value="Enviado">Enviado</SelectItem>
-                            <SelectItem value="Entregue">Entregue</SelectItem>
-                            <SelectItem value="Cancelado">Cancelado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  setSelectedOrder={setSelectedOrder}
+                  setShowOrderDetails={setShowOrderDetails}
+                  handlePrintOrder={handlePrintOrder}
+                  getStatusColor={getStatusColor}
+                  formatPrice={formatPrice}
+                  formatWeight={formatWeight}
+                  updateOrderStatus={updateOrderStatus}
+                  storeSettings={store} // Pass store settings as prop
+                />
               ))
             )}
           </div>
@@ -416,13 +467,19 @@ export default function OrdersManager() {
                     <span className="font-medium">{replaceOrderMethod(selectedOrder.paymentMethod)}</span>
                   </div>
                   <div className="flex justify-between items-center mb-2">
-
-                    <div className="border-t pt-2 mt-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-semibold">Total:</span>
-                        <span className="text-lg font-bold text-green-600">{formatPrice(selectedOrder.total)} 
-                          <span className="text-lg ml-2 text-gray-600">(já inclui taxa de entrega)</span></span>
-                      </div>
+                    <span>Taxa de Entrega:</span>{" "}
+                    {selectedOrder.deliveryFee ? (
+                      formatPrice(selectedOrder.deliveryFee)
+                    ) : (
+                      <span className="text-green-600">Grátis</span>
+                    )}
+                  </div>
+                  <div className="border-t pt-2 mt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold">Total:</span>
+                      <span className="text-lg font-bold text-green-600">
+                        {formatPrice(selectedOrder.total)}
+                      </span>
                     </div>
                   </div>
                 </div>

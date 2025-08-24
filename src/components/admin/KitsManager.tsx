@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -121,7 +122,7 @@ export default function KitsManager() {
     return (
       <Card className="bg-white border border-gray-200 hover:shadow-lg transition-all duration-200 overflow-hidden">
         <div className="relative">
-          <img
+          <Image
             src={kit.image || "/placeholder.svg?height=200&width=200&text=Kit"}
             alt={kit.name}
             className="w-full h-48 object-cover"
@@ -197,9 +198,9 @@ export default function KitsManager() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                      <AlertDialogTitle>Confirmar Exclusao</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Tem certeza que deseja excluir o kit "{kit.name}"? Esta ação não pode ser desfeita.
+                        Tem certeza que deseja excluir o kit "{kit.name}"? Esta acao não pode ser desfeita.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -399,7 +400,7 @@ export default function KitsManager() {
                         <TableRow key={kit.id} className="hover:bg-gray-50">
                           <TableCell>
                             <div className="flex items-center space-x-3">
-                              <img
+                              <Image
                                 src={kit.image || "/placeholder.svg?height=48&width=48&text=Kit"}
                                 alt={kit.name}
                                 className="w-12 h-12 rounded-lg object-cover"
@@ -459,9 +460,9 @@ export default function KitsManager() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                    <AlertDialogTitle>Confirmar Exclusao</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Tem certeza que deseja excluir o kit "{kit.name}"? Esta ação não pode ser
+                                      Tem certeza que deseja excluir o kit "{kit.name}"? Esta acao não pode ser
                                       desfeita.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
