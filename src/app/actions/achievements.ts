@@ -46,7 +46,7 @@ export async function getUserAchievements(): Promise<Achievement[]> {
     const orderCount = completedOrders.length
     const firstOrderDate = completedOrders.length > 0 ? completedOrders[completedOrders.length - 1].createdAt : null
 
-    // Get unique categories from completed orders
+   
     const uniqueCategories = new Set()
     completedOrders.forEach((order) => {
       order.items.forEach((item) => {

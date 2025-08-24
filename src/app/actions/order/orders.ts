@@ -90,7 +90,7 @@ export async function createOrder(orderData: CreateOrderData): Promise<OrderResu
       }
     }
 
-    // Sistema de fila - evita pedidos simultâneos do mesmo usuário
+
     const queueKey = `order_${user.id}`
     if (orderQueue.has(queueKey)) {
       console.log("❌ Pedido já em processamento para este usuário")
@@ -101,7 +101,7 @@ export async function createOrder(orderData: CreateOrderData): Promise<OrderResu
       }
     }
 
-    // Adicionar à fila
+
     const orderPromise = processOrder(orderData, user)
     orderQueue.set(queueKey, orderPromise)
 
@@ -208,17 +208,16 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
     const recalculatedTotal =
       orderData.items.reduce((sum, item) => {
         const product = products.find((p) => p.id === item.productId)!
-        // Preço por kg * quantidade em kg
+        
         return sum + product.price * item.quantity
       }, 0) +
       orderData.deliveryFee -
       (orderData.discount || 0)
 
     const difference = Math.abs(recalculatedTotal - orderData.total)
-    const tolerance = recalculatedTotal * 0.50 // Exactly 5% tolerance
+    const tolerance = recalculatedTotal * 0.50
 
     if (difference > tolerance) {
-      
 
       console.log("❌ Divergência no total do pedido superior a 50%")
       console.log("Total recalculado:", recalculatedTotal)
@@ -342,7 +341,7 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
 
     const orderNumber = order.orderNumber || order.id.toString().padStart(8, "0").toUpperCase()
     console.log("✅ Pedido finalizado com sucesso:", orderNumber)
-    console.log("=== FIM CREATE ORDER ===")
+    console.log("CREATE ORDER FIM")
 
     revalidatePath("/")
     revalidatePath("/profile")
@@ -388,7 +387,7 @@ export async function getAllOrders() {
         items: order.items.map((item) => ({
           id: item.id,
           name: item.name,
-          quantity: item.quantity, // Agora é Float
+          quantity: item.quantity,
           price: item.price,
           category: item.category || "Outros",
         })),
@@ -419,7 +418,7 @@ export async function updateOrderStatusByOrderNumber(orderId: string, newStatus:
   try {
     console.log("Atualizando status do pedido:", orderId, "para", newStatus)
 
-    // Validar transições de status válidas
+   
     const validTransitions: { [key: string]: string[] } = {
       Preparando: ["Enviado", "Cancelado"],
       Enviado: ["Entregue", "Cancelado"],
@@ -537,7 +536,7 @@ export async function cancelOrder(orderId: string) {
         return { success: false, message: "Este pedido não pode ser cancelado" }
       }
 
-      // Atualizar status do pedido
+      
       await tx.order.update({
         where: { id: orderId },
         data: {
@@ -546,9 +545,9 @@ export async function cancelOrder(orderId: string) {
         },
       })
 
-      // Restaurar estoque dos produtos (se possível identificar os produtos)
+     
       for (const item of order.items) {
-        // Tentar encontrar o produto pelo nome (não é ideal, mas funciona)
+        
         const product = await tx.product.findFirst({
           where: { name: item.name },
         })

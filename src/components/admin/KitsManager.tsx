@@ -124,6 +124,8 @@ export default function KitsManager() {
         <div className="relative">
           <Image
             src={kit.image || "/placeholder.svg?height=200&width=200&text=Kit"}
+            width={300}
+            height={300}
             alt={kit.name}
             className="w-full h-48 object-cover"
           />
@@ -402,6 +404,8 @@ export default function KitsManager() {
                             <div className="flex items-center space-x-3">
                               <Image
                                 src={kit.image || "/placeholder.svg?height=48&width=48&text=Kit"}
+                                width={300}
+            height={300}
                                 alt={kit.name}
                                 className="w-12 h-12 rounded-lg object-cover"
                               />

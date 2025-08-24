@@ -62,7 +62,7 @@ const calculateItemPrice = (item: CartItem): number => {
     return product.price * item.quantity
   }
 
-  // APENAS KG
+
   const pricePerKg = product.price / product.priceWeightAmount
   return pricePerKg * item.quantity
 }
@@ -120,7 +120,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
             ? { ...item, quantity: Math.min(Math.max(0, quantity), item.product.stock) }
             : item,
         )
-        .filter((item) => item.quantity > 0) // Only remove if quantity is actually 0 or less
+        .filter((item) => item.quantity > 0)
 
       const total = newItems.reduce((sum, item) => sum + calculateItemPrice(item), 0)
       const itemCount = newItems.length
@@ -181,7 +181,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const [isLoading, setIsLoading] = useState(false)
 
-  // Load cart from localStorage on mount
+
   useEffect(() => {
     const savedCart = localStorage.getItem("cart")
     if (savedCart) {
@@ -195,12 +195,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Save cart to localStorage whenever it changes
+
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(state.items))
   }, [state.items])
 
-  // Clear lastAddedItem after 5 seconds
+
   useEffect(() => {
     if (state.lastAddedItem) {
       const timer = setTimeout(() => {
@@ -214,7 +214,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true)
 
-      // Validate product availability
+     
       if (!product.available) {
         toast.error(`❌ ${product.name} não está disponível no momento`, {
           description: "Este produto foi temporariamente removido do estoque.",
@@ -240,7 +240,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Check if adding this quantity would exceed stock
+
       const existingItem = state.items.find((item) => item.product.id === product.id)
       const currentQuantity = existingItem ? existingItem.quantity : 0
       const totalQuantity = currentQuantity + quantity
@@ -310,7 +310,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const item = state.items.find((item) => item.product.id === productId)
       if (!item) return
 
-      // Allow zero quantity to be set without removing the item immediately
+
       if (quantity < 0) {
         toast.warning("⚠️ Quantidade não pode ser negativa")
         return
@@ -351,7 +351,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const refreshCart = async () => {
     try {
       setIsLoading(true)
-      // In a real app, you might want to fetch updated product data here
+
       dispatch({ type: "REFRESH_CART" })
       toast.success("🔄 Carrinho atualizado")
     } catch (error) {

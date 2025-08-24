@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "CEP é obrigatório" }, { status: 400 })
   }
 
-  // Remove caracteres não numéricos
+
   const cleanCep = cep.replace(/\D/g, "")
 
   if (cleanCep.length !== 8) {
@@ -33,6 +33,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error("Erro ao buscar CEP:", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao buscar CEP" }, { status: 500 })
   }
 }

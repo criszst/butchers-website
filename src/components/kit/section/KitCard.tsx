@@ -74,7 +74,7 @@ export function KitCard({
           <div className="relative lg:w-64 flex-shrink-0">
             <div className="aspect-square lg:aspect-[4/3] overflow-hidden">
               <Image
-                src={kit.image || "/placeholder.svg?height=300&width=300&text=Kit"}
+                src={kit.image ?? "/placeholder.svg?height=300&width=300&text=Kit"}
                 alt={kit.name}
                 width={300}
                 height={300}
@@ -229,8 +229,10 @@ export function KitCard({
         <CardHeader className="p-0 relative overflow-hidden">
           <div className="relative aspect-square">
             <Image
-              src={kit.image || "/placeholder.svg?height=400&width=400&text=Kit"}
+              src={kit.image ?? "/placeholder.svg?height=400&width=400&text=Kit"}
               alt={kit.name}
+              width={300}
+              height={300}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-110"
             />

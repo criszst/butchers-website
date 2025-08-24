@@ -25,8 +25,8 @@ export interface KitItem {
     image?: string | null
     priceWeightAmount?: number | null
     priceWeightUnit?: string | null
-    category: string; // make category optional
-  stock: number | undefined; // make stock optional
+    category: string;
+  stock: number | undefined;
   available?: boolean | undefined;
   }
 }
