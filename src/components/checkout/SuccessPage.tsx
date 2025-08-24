@@ -13,11 +13,14 @@ import {
   Smartphone,
   Gift,
   Truck,
+  Copy,
+  MapPin,
 } from "lucide-react"
 import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
 import { getUserOrders } from "@/app/actions/order/orders"
 import { getStoreSettings } from "@/app/actions/store-settings"
+import { toast } from "sonner"
 
 interface SuccessPageProps {
   formaPagamento: string
@@ -127,6 +130,8 @@ export default function SuccessPage({
 
   const getPaymentIcon = () => {
     switch (formaPagamento) {
+      case "pickupOrder":
+        return <Package className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
       case "dinheiro":
         return <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
       case "credito":
@@ -142,6 +147,8 @@ export default function SuccessPage({
 
   const getPaymentLabel = () => {
     switch (formaPagamento) {
+      case "pickupOrder":
+        return "Pagamento na Retirada"
       case "dinheiro":
         return "Dinheiro"
       case "credito":
@@ -163,7 +170,13 @@ export default function SuccessPage({
     return `${deliveryTime} min`
   }
 
+  const copyOrderNumber = () => {
+    navigator.clipboard.writeText(userOrder.orderNumber)
+    toast.success("Número do pedido copiado!")
+  }
+
   const subtotal = userOrder.total - userOrder.deliveryFee
+  const isPickup = tipoEntrega === "PICKUP" || formaPagamento === "pickupOrder"
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-3 sm:p-4 z-[9999] overflow-y-auto">
@@ -195,7 +208,7 @@ export default function SuccessPage({
                     <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-white" />
                   </motion.div>
                   <motion.div
-                    className="absolute -bottom-1 -left-1 sm:-bottom-2 sm:-left-2 md:-bottom-3 md:-left-3 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-pink-400 rounded-full flex items-center justify-center shadow-lg"
+                    className="absolute -bottom-1 -left-1 sm:-bottom-2 sm:-left-2 md:-bottom-3 md:-left-3 w-5 h-5 sm:w-6 md:w-8 md:h-8 bg-pink-400 rounded-full flex items-center justify-center shadow-lg"
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
                   >
@@ -214,27 +227,64 @@ export default function SuccessPage({
                 </motion.div>
               </motion.div>
 
-              {/* Order Details Grid - Made more responsive with better mobile layout */}
               <motion.div
-                className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8"
+                className="mb-6 sm:mb-8"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6 }}
+              >
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 sm:p-6 rounded-xl shadow-sm border-2 border-blue-200">
+                  <div className="text-center">
+                    <Package className="h-8 w-8 sm:h-10 sm:w-10 text-blue-600 mx-auto mb-3" />
+                    <h3 className="text-lg sm:text-xl font-bold text-blue-800 mb-2">Número do Pedido</h3>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-blue-600 font-mono">
+                        {userOrder.orderNumber}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyOrderNumber}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {isPickup ? (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-left">
+                            <p className="font-semibold text-yellow-800 text-sm sm:text-base">
+                              ⚠️ IMPORTANTE - Retirada no Açougue
+                            </p>
+                            <p className="text-yellow-700 text-xs sm:text-sm mt-1">
+                              <strong>Apresente este número do pedido</strong> no balcão para retirar seu pedido.
+                            </p>
+                            <p className="text-yellow-700 text-xs sm:text-sm">
+                              Seu pedido estará pronto em aproximadamente {formatDeliveryTime()}.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-blue-700 text-xs sm:text-sm">Guarde este número para acompanhar seu pedido</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Order Details Grid - Made more mobile-friendly */}
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.7 }}
               >
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 sm:p-4 md:p-6 rounded-xl shadow-sm">
-                  <Package className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-blue-600 mx-auto mb-2" />
-                  <p className="font-semibold text-gray-800 text-xs sm:text-sm md:text-base text-center">
-                    Número do Pedido
-                  </p>
-                  <p className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-blue-600 text-center break-all">
-                    {userOrder.orderNumber}
-                  </p>
-                </div>
-
                 <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-3 sm:p-4 md:p-6 rounded-xl shadow-sm">
                   <Timer className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-orange-600 mx-auto mb-2" />
                   <p className="font-semibold text-gray-800 text-xs sm:text-sm md:text-base text-center">
-                    Tempo Estimado
+                    {isPickup ? "Tempo de Preparo" : "Tempo Estimado"}
                   </p>
                   <p className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-orange-600 text-center">
                     {formatDeliveryTime()}
@@ -247,10 +297,12 @@ export default function SuccessPage({
                   <p className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-purple-600 text-center">
                     {getPaymentLabel()}
                   </p>
-                  <p className="text-xs sm:text-xs md:text-sm text-purple-700 text-center">Na entrega</p>
+                  <p className="text-xs sm:text-xs md:text-sm text-purple-700 text-center">
+                    {isPickup ? "Na retirada" : "Na entrega"}
+                  </p>
                 </div>
 
-                <div className="bg-gradient-to-r from-green-50 to-emerald-100 p-3 sm:p-4 md:p-6 rounded-xl shadow-sm">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-100 p-3 sm:p-4 md:p-6 rounded-xl shadow-sm sm:col-span-2 lg:col-span-1">
                   <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-green-600 mx-auto mb-2" />
                   <p className="font-semibold text-gray-800 text-xs sm:text-sm md:text-base text-center">Total</p>
                   <p className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-green-600 text-center">
@@ -259,39 +311,41 @@ export default function SuccessPage({
                 </div>
               </motion.div>
 
-              <motion.div
-                className="mb-6 sm:mb-8"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.75 }}
-              >
-                <div className="bg-gradient-to-r from-teal-50 to-cyan-100 p-4 sm:p-6 rounded-xl shadow-sm">
-                  <div className="flex items-center justify-center mb-3">
-                    <Truck className="h-6 w-6 md:h-8 md:w-8 text-teal-600" />
-                  </div>
-                  <h3 className="font-bold text-teal-800 text-center mb-2 text-sm sm:text-base">
-                    Informações de Entrega
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <p className="text-xs sm:text-sm text-teal-700 mb-1">Subtotal dos Produtos</p>
-                      <p className="font-bold text-teal-800 text-sm sm:text-base">{formatPrice(subtotal)}</p>
+              {!isPickup && (
+                <motion.div
+                  className="mb-6 sm:mb-8"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.75 }}
+                >
+                  <div className="bg-gradient-to-r from-teal-50 to-cyan-100 p-4 sm:p-6 rounded-xl shadow-sm">
+                    <div className="flex items-center justify-center mb-3">
+                      <Truck className="h-6 w-6 md:h-8 md:w-8 text-teal-600" />
                     </div>
-                    <div>
-                      <p className="text-xs sm:text-sm text-teal-700 mb-1">Taxa de Entrega</p>
-                      <p className="font-bold text-teal-800 text-sm sm:text-base">
-                        {userOrder.deliveryFee === 0 ? (
-                          <span className="text-green-600">GRÁTIS</span>
-                        ) : (
-                          formatPrice(userOrder.deliveryFee)
-                        )}
-                      </p>
+                    <h3 className="font-bold text-teal-800 text-center mb-2 text-sm sm:text-base">
+                      Informações de Entrega
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 text-center">
+                      <div>
+                        <p className="text-xs sm:text-sm text-teal-700 mb-1">Subtotal dos Produtos</p>
+                        <p className="font-bold text-teal-800 text-sm sm:text-base">{formatPrice(subtotal)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs sm:text-sm text-teal-700 mb-1">Taxa de Entrega</p>
+                        <p className="font-bold text-teal-800 text-sm sm:text-base">
+                          {userOrder.deliveryFee === 0 ? (
+                            <span className="text-green-600">GRÁTIS</span>
+                          ) : (
+                            formatPrice(userOrder.deliveryFee)
+                          )}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
 
-              {/* Order Items */}
+              {/* Order Items - Improved mobile layout */}
               {userOrder.items && userOrder.items.length > 0 && (
                 <motion.div
                   className="mb-6 sm:mb-8"
@@ -306,14 +360,16 @@ export default function SuccessPage({
                         key={index}
                         className="flex justify-between items-center py-2 sm:py-3 border-b border-gray-200 last:border-b-0"
                       >
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 pr-2">
                           <p className="font-medium text-gray-800 text-sm sm:text-base truncate">{item.name}</p>
-                          <p className="text-xs sm:text-sm text-gray-600 font-semibold">
-                            {formatWeightDisplay(Number(item.quantity))}
-                          </p>
-                          {item.category && <p className="text-xs text-gray-500 capitalize">{item.category}</p>}
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                            <p className="text-xs sm:text-sm text-gray-600 font-semibold">
+                              {formatWeightDisplay(Number(item.quantity))}
+                            </p>
+                            {item.category && <p className="text-xs text-gray-500 capitalize">{item.category}</p>}
+                          </div>
                         </div>
-                        <div className="text-right ml-2 sm:ml-4 flex-shrink-0">
+                        <div className="text-right flex-shrink-0">
                           <p className="font-bold text-green-600 text-sm sm:text-base">
                             {formatPrice(calculateItemTotal(item))}
                           </p>
@@ -329,7 +385,7 @@ export default function SuccessPage({
                 </motion.div>
               )}
 
-              {/* Success Message */}
+              {/* Success Message - Improved mobile layout */}
               <motion.div
                 className="text-center mb-6 sm:mb-8"
                 initial={{ y: 20, opacity: 0 }}
@@ -339,13 +395,14 @@ export default function SuccessPage({
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 sm:p-6">
                   <h4 className="font-bold text-green-800 mb-2 text-sm sm:text-base">🎉 Obrigado pela sua compra!</h4>
                   <p className="text-green-700 text-xs sm:text-sm md:text-base">
-                    Você receberá atualizações sobre o status do seu pedido. Nosso time está preparando tudo com muito
-                    carinho!
+                    {isPickup
+                      ? "Seu pedido está sendo preparado! Apresente o número do pedido no balcão para retirar."
+                      : "Você receberá atualizações sobre o status do seu pedido. Nosso time está preparando tudo com muito carinho!"}
                   </p>
                 </div>
               </motion.div>
 
-              {/* Action Buttons - Made more responsive */}
+              {/* Action Buttons - Improved mobile layout */}
               <motion.div
                 className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
                 initial={{ y: 20, opacity: 0 }}

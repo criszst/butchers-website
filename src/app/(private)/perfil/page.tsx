@@ -18,6 +18,12 @@ import { toast } from "sonner"
 import Header from "@/components/header"
 import FavoritesTab from "@/components/profile/tabs/FavoritesTab"
 import AchievementsTab from "@/components/profile/tabs/AchievementsTab"
+import { Card, CardContent } from "@/components/ui/card"
+
+import { motion } from "framer-motion"
+import { LogIn } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 interface ExtendedUser {
   name?: string | null
@@ -193,6 +199,39 @@ export default function ProfilePage() {
   const handleViewOrderDetails = (order: Order) => {
     setSelectedOrder(order)
     setShowOrderDetails(true)
+  }
+
+    if (!session?.user) {
+   return (
+    <>
+      <Header />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="max-w-md w-full"
+          >
+            <Card className="text-center shadow-lg">
+              <CardContent className="p-8">
+                <LogIn className="h-16 w-16 mx-auto text-red-500 mb-4" />
+                <h2 className="text-2xl font-bold mb-4">Login Necessário</h2>
+                <p className="text-gray-600 mb-6">Você precisa estar logado para acessar essa página.</p>
+                <div className="space-y-10 ">
+                  <Link href="/login">
+                    <Button className="w-full bg-red-500 hover:bg-red-600 mb-3 text-white">Fazer Login</Button>
+                  </Link>
+                  <Link href="/register" className="mt-10">
+                    <Button variant="outline" className="w-full bg-transparent">
+                      Criar Conta
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+        </>
+   )
   }
 
   return (

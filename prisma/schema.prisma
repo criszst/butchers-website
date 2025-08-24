@@ -98,6 +98,35 @@ model Product {
   CartItem CartItem[]
   ProductSupplier ProductSupplier[]
   Favorites Favorite[]
+  KitItem KitItem[]
+}
+
+model Kit {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  image       String?
+  category    String
+  discount    Float?   @default(0)
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       KitItem[]
+  CartItem    CartItem[]
+  Favorites   Favorite[]
+}
+
+model KitItem {
+  id        Int     @id @default(autoincrement())
+  kitId     Int
+  productId Int
+  quantity  Float   @default(1)
+
+  kit       Kit     @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([kitId, productId])
 }
 
 model VerificationToken {
@@ -156,12 +185,15 @@ model OrderItem {
 model CartItem {
   id         String @id @default(cuid())
   userId     String
+  kitId      Int?
   productId  Int
   quantity   Float
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  kit        Kit?      @relation(fields: [kitId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
 }
@@ -302,6 +334,9 @@ model Favorite {
 
   productId Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  kitId     Int?
+  kit       Kit?      @relation(fields: [kitId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

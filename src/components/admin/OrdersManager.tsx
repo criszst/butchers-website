@@ -11,6 +11,8 @@ import { getAllOrders, updateOrderStatusByOrderNumber } from "@/app/actions/orde
 import { toast } from "sonner"
 import { DeliveryData, getDeliveryConfigs, getStoreSettings, StoreSettingsData } from "@/app/actions/store-settings"
 
+import replaceOrderMethod from "@/app/utils/replacePayment"
+
 interface Order {
   id: string
   orderNumber: string
@@ -159,7 +161,6 @@ export default function OrdersManager() {
   }
 
 
-
   if (loading) {
     return (
       <Card>
@@ -228,7 +229,7 @@ export default function OrdersManager() {
                             {order.createdAt}
                           </p>
                           <p>
-                            <span className="font-medium">Pagamento:</span> {order.paymentMethod}
+                            <span className="font-medium">Pagamento:</span> {replaceOrderMethod(order.paymentMethod)}
                           </p>
                           <p>
                             <span className="font-medium">Itens:</span> {order.items.length}
@@ -412,19 +413,9 @@ export default function OrdersManager() {
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <span>Método de Pagamento:</span>
-                    <span className="font-medium">{selectedOrder.paymentMethod}</span>
+                    <span className="font-medium">{replaceOrderMethod(selectedOrder.paymentMethod)}</span>
                   </div>
                   <div className="flex justify-between items-center mb-2">
-                    {/* <div className="flex justify-between items-center">
-                      <span>Taxa de Frete:</span>
-                      <span className="font-medium">
-                        {selectedOrder.deliveryFee !== undefined
-                          ? selectedOrder.deliveryFee === 0
-                            ? "Grátis"
-                            : formatPrice(selectedOrder.deliveryFee)
-                          : "Não definido"}
-                      </span>
-                    </div> */}
 
                     <div className="border-t pt-2 mt-2">
                       <div className="flex justify-between items-center">

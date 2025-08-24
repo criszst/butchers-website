@@ -51,6 +51,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "produtos", label: "Produtos", icon: Package },
     { id: "pedidos", label: "Pedidos", icon: ShoppingCart },
+    { id: "kits", label: "Kits", icon: Sparkles },
     { id: "usuarios", label: "Usuários", icon: Users },
     // { id: "fornecedores", label: "Fornecedores", icon: Truck },
     { id: "analises", label: "Análises", icon: BarChart3 },
@@ -351,7 +352,7 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
         <div className="hidden md:block border-t border-gray-100">
           <div className="max-w-7xl mx-auto px-4">
             <Tabs value={activeTab} onValueChange={onTabChange}>
-              <TabsList className="h-12 bg-transparent border-none p-0 space-x-20">
+              <TabsList className="h-12 bg-transparent border-none p-0 space-x-13">
                 {tabs.map((tab, index) => {
                   const Icon = tab.icon
                   const isActive = activeTab === tab.id

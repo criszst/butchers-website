@@ -9,14 +9,10 @@ function calculateUnitPrice(product: any) {
   if (!product.priceWeightAmount || !product.priceWeightUnit) return product.price
 
   // converte para kg
-  const amountInKg =
-    product.priceWeightUnit === "g"
-      ? product.priceWeightAmount / 1000
-      : product.priceWeightAmount
+  const amountInKg = product.priceWeightUnit === "g" ? product.priceWeightAmount / 1000 : product.priceWeightAmount
 
   return product.price / amountInKg
 }
-
 
 export async function createProduct(data: ProductData) {
   if (!data.name || !data.description || !data.category) {
@@ -322,31 +318,31 @@ export async function getRelatedProducts(productId: number, category: string, li
   }
 }
 
-export async function getRecentProducts(limit: number = 4) {
+export async function getRecentProducts(limit = 4) {
   try {
     const products = await prisma.product.findMany({
       where: {
         available: true,
         stock: {
-          gt: 0
-        }
+          gt: 0,
+        },
       },
       orderBy: {
-        createdAt: 'desc'
+        createdAt: "desc",
       },
-      take: limit
+      take: limit,
     })
 
     return {
       success: true,
-      products
+      products,
     }
   } catch (error) {
     console.error("Erro ao buscar produtos recentes:", error)
     return {
       success: false,
       products: [],
-      message: "Erro ao carregar produtos recentes"
+      message: "Erro ao carregar produtos recentes",
     }
   }
 }

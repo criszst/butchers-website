@@ -1,5 +1,6 @@
 import { ProductGrid } from "@/components/product/grid/grid"
 import { getProductsAction } from "@/app/actions/product"
+import { getKitsAction } from "@/app/actions/kit"
 
 interface Props {
   search?: string
@@ -7,10 +8,14 @@ interface Props {
 }
 
 export default async function ProductGridWrapper({ search = "", category = "all" }: Props) {
-  const { products } = await getProductsAction({
-    search,
-    category,
-  })
+ 
+   const [productsResult, kitsResult] = await Promise.all([
+    getProductsAction({ search, category }),
+    getKitsAction({ search, category }),
+  ])
 
-  return <ProductGrid products={products} />
+   const products = productsResult.success ? productsResult.products : []
+  const kits = kitsResult.success ? kitsResult.kits : []
+
+  return <ProductGrid products={products} kits={kits} showKits={true} />
 }

@@ -4,65 +4,105 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
+import { getRecentProducts } from "@/app/actions/product"
+import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
+import Link from "next/link"
+
+interface Product {
+  id: number
+  name: string
+  description: string
+  price: number
+  image: string | null
+  category: string
+  discount?: number
+}
 
 export default function ShaderHero() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [dots, setDots] = useState<
-    { left: number; top: number; delay: number; duration: number }[]
-  >([])
+  const [dots, setDots] = useState<{ left: number; top: number; delay: number; duration: number }[]>([])
 
-  const promocoes = [
-    {
-      id: 1,
-      titulo: "Picanha Premium",
-      descricao: "Maturada por 28 dias para máxima maciez",
-      preco: "R$ 52,90/kg",
-      precoOriginal: "R$ 59,90/kg",
-      imagem: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&h=600&fit=crop",
-      cor: "from-red-600 to-orange-500",
-    },
-    {
-      id: 2,
-      titulo: "Kit Churrasco",
-      descricao: "Pacote misto para churrasco - perfeito para o fim de semana",
-      preco: "R$ 89,90",
-      precoOriginal: "R$ 109,90",
-      imagem: "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=800&h=600&fit=crop",
-      cor: "from-amber-600 to-red-500",
-    },
-    {
-      id: 3,
-      titulo: "Frango Caipira",
-      descricao: "Frango orgânico criado solto",
-      preco: "R$ 18,90/kg",
-      precoOriginal: "R$ 22,90/kg",
-      imagem: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=800&h=600&fit=crop",
-      cor: "from-yellow-500 to-orange-600",
-    },
-    {
-      id: 4,
-      titulo: "Costela Bovina",
-      descricao: "Costela maturada com tempero especial",
-      preco: "R$ 32,90/kg",
-      precoOriginal: "R$ 38,90/kg",
-      imagem: "https://images.unsplash.com/photo-1558030006-450675393462?w=800&h=600&fit=crop",
-      cor: "from-red-700 to-pink-600",
-    },
-  ]
+  useEffect(() => {
+    const loadRecentProducts = async () => {
+      try {
+        const result = await getRecentProducts(4)
+        if (result.success && result.products.length > 0) {
+          setProducts(result.products as Product[])
+        } else {
+          // Fallback to mock data if no products found
+          setProducts([
+            {
+              id: 1,
+              name: "Picanha Premium",
+              description: "Maturada por 28 dias para máxima maciez",
+              price: 52.9,
+              image: null,
+              category: "Bovinos",
+              discount: 10,
+            },
+          ])
+        }
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error)
+        // Fallback to mock data on error
+        setProducts([
+          {
+            id: 1,
+            name: "Picanha Premium",
+            description: "Maturada por 28 dias para máxima maciez",
+            price: 52.9,
+            image: null,
+            category: "Bovinos",
+            discount: 10,
+          },
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadRecentProducts()
+  }, [])
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price)
+  }
+
+  const calculateDiscountedPrice = (price: number, discount?: number) => {
+    if (!discount) return price
+    return price * (1 - discount / 100)
+  }
+
+  const getGradientColor = (category: string) => {
+    const gradients: { [key: string]: string } = {
+      Bovinos: "from-red-600 to-orange-500",
+      Suínos: "from-pink-600 to-red-500",
+      Aves: "from-yellow-500 to-orange-600",
+      Peixes: "from-blue-600 to-cyan-500",
+      Embutidos: "from-purple-600 to-pink-500",
+      Outros: "from-gray-600 to-gray-500",
+    }
+    return gradients[category] || "from-red-600 to-orange-500"
+  }
 
   const nextSlide = () => {
-    if (isTransitioning) return
+    if (isTransitioning || products.length === 0) return
     setIsTransitioning(true)
-    setCurrentSlide((prev) => (prev + 1) % promocoes.length)
+    setCurrentSlide((prev) => (prev + 1) % products.length)
     setTimeout(() => setIsTransitioning(false), 800)
   }
 
   const prevSlide = () => {
-    if (isTransitioning) return
+    if (isTransitioning || products.length === 0) return
     setIsTransitioning(true)
-    setCurrentSlide((prev) => (prev - 1 + promocoes.length) % promocoes.length)
+    setCurrentSlide((prev) => (prev - 1 + products.length) % products.length)
     setTimeout(() => setIsTransitioning(false), 800)
   }
 
@@ -71,19 +111,37 @@ export default function ShaderHero() {
       Array.from({ length: 5 }).map(() => ({
         left: Math.random() * 100,
         top: Math.random() * 100,
-        delay: Math.random() * 3 ,
-        duration: 5 + Math.random() * 3, 
-      }))
+        delay: Math.random() * 3,
+        duration: 5 + Math.random() * 3,
+      })),
     )
   }, [])
 
+  if (loading) {
+    return (
+      <section className="relative min-h-[400px] md:min-h-[400px] lg:min-h-[650px] overflow-hidden bg-black flex items-center justify-center">
+        <div className="text-white text-lg">Carregando produtos...</div>
+      </section>
+    )
+  }
+
+  if (products.length === 0) {
+    return (
+      <section className="relative min-h-[400px] md:min-h-[400px] lg:min-h-[650px] overflow-hidden bg-black flex items-center justify-center">
+        <div className="text-white text-lg">Nenhum produto disponível</div>
+      </section>
+    )
+  }
+
+  const currentProduct = products[currentSlide]
+  const discountedPrice = calculateDiscountedPrice(currentProduct.price, currentProduct.discount)
 
   return (
     <section className="relative min-h-[400px] md:min-h-[400px] lg:min-h-[650px] overflow-hidden bg-black">
       {/* Background Gradient Animation */}
       <div className="absolute inset-0 opacity-30">
         <div
-          className={`absolute inset-0 bg-gradient-to-br ${promocoes[currentSlide].cor} animate-pulse`}
+          className={`absolute inset-0 bg-gradient-to-br ${getGradientColor(currentProduct.category)} animate-pulse`}
           style={{
             animation: "gradientShift 3s ease-in-out infinite alternate",
           }}
@@ -113,62 +171,71 @@ export default function ShaderHero() {
             {/* Content Side */}
             <div className="text-white z-10 relative order-2 lg:order-1 text-center lg:text-left">
               <div
-                className={`transform transition-all duration-800 ${isTransitioning ? "translate-x-4 lg:translate-x-8 opacity-0" : "translate-x-0 opacity-100"
-                  }`}
+                className={`transform transition-all duration-800 ${
+                  isTransitioning ? "translate-x-4 lg:translate-x-8 opacity-0" : "translate-x-0 opacity-100"
+                }`}
               >
                 {/* Badge */}
                 <div className="mb-4 sm:mb-6 lg:mb-8">
                   <span className="inline-block px-3 py-1 sm:px-4 sm:py-2 bg-white/20 backdrop-blur-sm rounded-full text-xs sm:text-sm font-medium">
-                    Oferta Especial
+                    {currentProduct.discount ? `${currentProduct.discount}% OFF` : "Produto em Destaque"}
                   </span>
                 </div>
 
                 {/* Title */}
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold mb-3 sm:mb-4 lg:mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">
-                  {promocoes[currentSlide].titulo}
+                  {currentProduct.name}
                 </h1>
 
                 {/* Description */}
                 <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl mb-4 sm:mb-6 lg:mb-8 text-gray-200 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                  {promocoes[currentSlide].descricao}
+                  {currentProduct.description}
                 </p>
 
                 {/* Prices */}
                 <div className="flex items-center justify-center lg:justify-start space-x-2 sm:space-x-3 lg:space-x-4 mb-6 sm:mb-8 lg:mb-10">
                   <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-green-400">
-                    {promocoes[currentSlide].preco}
+                    {formatPrice(discountedPrice)}/kg
                   </span>
-                  <span className="text-sm sm:text-base md:text-lg lg:text-xl line-through text-gray-400">
-                    {promocoes[currentSlide].precoOriginal}
-                  </span>
+                  {currentProduct.discount && (
+                    <span className="text-sm sm:text-base md:text-lg lg:text-xl line-through text-gray-400">
+                      {formatPrice(currentProduct.price)}/kg
+                    </span>
+                  )}
                 </div>
 
                 {/* CTA Button */}
+                <Link
+                  href={`/product/${currentProduct.id}`}
+                  className="flex items-center justify-center lg:justify-start"
+                >
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base lg:text-lg font-semibold shadow-2xl hover:shadow-red-500/25 transition-all duration-300 transform hover:scale-105"
                 >
                   Comprar Agora
                 </Button>
+                </Link>
               </div>
             </div>
 
             {/* Image Side with Shader Effects */}
             <div className="relative order-1 lg:order-2">
               <div className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[400px] xl:h-[500px] mx-auto max-w-sm sm:max-w-md lg:max-w-none">
-                {promocoes.map((promo, index) => (
+                {products.map((product, index) => (
                   <div
-                    key={promo.id}
-                    className={`absolute inset-0 transition-all duration-800 ${index === currentSlide
+                    key={product.id}
+                    className={`absolute inset-0 transition-all duration-800 ${
+                      index === currentSlide
                         ? "opacity-100 scale-100 rotate-0"
-                        : index === (currentSlide - 1 + promocoes.length) % promocoes.length
+                        : index === (currentSlide - 1 + products.length) % products.length
                           ? "opacity-0 scale-95 -rotate-12"
                           : "opacity-0 scale-105 rotate-12"
-                      }`}
+                    }`}
                   >
                     {/* Glow Effect */}
                     <div
-                      className={`absolute inset-0 bg-gradient-to-r ${promo.cor} opacity-50 blur-2xl sm:blur-3xl scale-110`}
+                      className={`absolute inset-0 bg-gradient-to-r ${getGradientColor(product.category)} opacity-50 blur-2xl sm:blur-3xl scale-110`}
                     />
 
                     {/* Main Image with Clip Path Animation */}
@@ -181,14 +248,23 @@ export default function ShaderHero() {
                         transition: "clip-path 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
                       }}
                     >
-                      <Image
-                        src={promo.imagem || "/placeholder.svg"}
-                        alt={promo.titulo}
-                        fill
-                        className="object-cover"
-                        priority={index === 0}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
+                      {product.image ? (
+                        <Image
+                          src={product.image || "/placeholder.svg"}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          priority={index === 0}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <MeatImagePlaceholder
+                            size="lg"
+                            className="w-full h-full border-none bg-gradient-to-br from-red-100 to-red-200"
+                          />
+                        </div>
+                      )}
 
                       {/* Overlay Gradient */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
@@ -209,43 +285,50 @@ export default function ShaderHero() {
       </div>
 
       {/* Navigation Buttons */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 transition-all duration-300 w-8 h-8 sm:w-10 sm:h-10"
-        onClick={prevSlide}
-        disabled={isTransitioning}
-      >
-        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
-      </Button>
+      {products.length > 1 && (
+        <>
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 transition-all duration-300 w-8 h-8 sm:w-10 sm:h-10"
+            onClick={prevSlide}
+            disabled={isTransitioning}
+          >
+            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
+          </Button>
 
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 transition-all duration-300 w-8 h-8 sm:w-10 sm:h-10"
-        onClick={nextSlide}
-        disabled={isTransitioning}
-      >
-        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
-      </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 transition-all duration-300 w-8 h-8 sm:w-10 sm:h-10"
+            onClick={nextSlide}
+            disabled={isTransitioning}
+          >
+            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
+          </Button>
+        </>
+      )}
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2 sm:space-x-3">
-        {promocoes.map((_, index) => (
-          <button
-            key={index}
-            className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${index === currentSlide ? "bg-white scale-125 shadow-lg" : "bg-white/40 hover:bg-white/60"
+      {products.length > 1 && (
+        <div className="absolute bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2 sm:space-x-3">
+          {products.map((_, index) => (
+            <button
+              key={index}
+              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
+                index === currentSlide ? "bg-white scale-125 shadow-lg" : "bg-white/40 hover:bg-white/60"
               }`}
-            onClick={() => {
-              if (!isTransitioning) {
-                setIsTransitioning(true)
-                setCurrentSlide(index)
-                setTimeout(() => setIsTransitioning(false), 800)
-              }
-            }}
-          />
-        ))}
-      </div>
+              onClick={() => {
+                if (!isTransitioning) {
+                  setIsTransitioning(true)
+                  setCurrentSlide(index)
+                  setTimeout(() => setIsTransitioning(false), 800)
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Custom CSS for animations */}
       <style jsx>{`
@@ -260,7 +343,7 @@ export default function ShaderHero() {
   }
   
   .animate-float {
-    animation: float 7s ease-in-out infinite; /* era 4s, agora 7s */
+    animation: float 7s ease-in-out infinite;
   }
 `}</style>
     </section>

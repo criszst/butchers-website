@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 import generateOrderNumber from "@/app/utils/db/generateOrderNumber"
-import type { Order, PaymentStatus } from "@/generated/prisma"
+import type { PaymentStatus } from "@/generated/prisma"
 import { toast } from "sonner"
 
 interface OrderItem {
@@ -109,7 +109,6 @@ export async function createOrder(orderData: CreateOrderData): Promise<OrderResu
       const result = await orderPromise
       return result
     } finally {
- 
       orderQueue.delete(queueKey)
     }
   } catch (error: any) {
@@ -137,7 +136,6 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
   console.log("IDs dos produtos:", productIds)
 
   return await prisma.$transaction(async (tx) => {
-
     // evitando race conditions
     const products = await tx.product.findMany({
       where: { id: { in: productIds } },
@@ -175,7 +173,6 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
         continue
       }
 
-    
       const priceDifference = Math.abs(product.price - item.price) / item.price
       if (priceDifference > 0.05) {
         priceChanges.push({
@@ -200,7 +197,7 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
       console.log("❌ Mudanças de preço detectadas:", priceChanges)
       return {
         success: false,
-        message: "Os preços de alguns produtos foram atualizados. Por favor, revise seu carrinho.",
+        message: "Os preços de alguns produtos foram atualizados. Por favor, revise seu carrinho e tente novamente.",
         errorType: "price_change_error",
         errorDetails: { priceChanges },
       }
@@ -217,20 +214,27 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
       orderData.deliveryFee -
       (orderData.discount || 0)
 
-    if (Math.abs(recalculatedTotal - orderData.total) > 5) {
-      console.log("❌ Divergência no total do pedido")
+    const difference = Math.abs(recalculatedTotal - orderData.total)
+    const tolerance = recalculatedTotal * 0.05 // Exactly 5% tolerance
+
+    if (difference > tolerance) {
+      console.log("❌ Divergência no total do pedido superior a 5%")
       console.log("Total recalculado:", recalculatedTotal)
       console.log("Total recebido:", orderData.total)
-      console.log("Diferença:", Math.abs(recalculatedTotal - orderData.total))
+      console.log("Diferença:", difference)
+      console.log("Tolerância (5%):", tolerance)
 
       return {
         success: false,
-        message: "Houve uma divergência no valor total. Por favor, atualize seu carrinho.",
+        message:
+          "Houve uma divergência superior a 5% no valor total do pedido. Por favor, atualize seu carrinho e tente novamente.",
         errorType: "price_change_error",
         errorDetails: {
           expectedTotal: recalculatedTotal,
           receivedTotal: orderData.total,
-          difference: Math.abs(recalculatedTotal - orderData.total),
+          difference: difference,
+          tolerance: tolerance,
+          percentageDifference: (difference / recalculatedTotal) * 100,
         },
       }
     }
@@ -238,9 +242,12 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
     const readableOrderNumber = generateOrderNumber(user.name || "XX")
     console.log("Criando pedido...")
 
-    const deliveryAddress = `${orderData.customerData.street}, ${orderData.customerData.number}${
-      orderData.customerData.complement ? `, ${orderData.customerData.complement}` : ""
-    }, ${orderData.customerData.neighborhood}, ${orderData.customerData.city} - ${orderData.customerData.state}, ${orderData.customerData.cep}`
+    const deliveryAddress =
+      orderData.paymentMethod === "pickupOrder"
+        ? "Retirada no Açougue"
+        : `${orderData.customerData.street}, ${orderData.customerData.number}${
+            orderData.customerData.complement ? `, ${orderData.customerData.complement}` : ""
+          }, ${orderData.customerData.neighborhood}, ${orderData.customerData.city} - ${orderData.customerData.state}, ${orderData.customerData.cep}`
 
     const order = await tx.order.create({
       data: {
@@ -260,7 +267,7 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
               quantity: item.quantity,
               price: product.price,
               category: item.category,
-                 }
+            }
           }),
         },
       },
@@ -290,37 +297,39 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
       console.log(`✅ Estoque atualizado para produto ${item.productId}`)
     }
 
-    console.log("Verificando endereço...")
-    const existingAddress = await tx.address.findFirst({
-      where: {
-        userId: user.id,
-        street: orderData.customerData.street,
-        number: orderData.customerData.number,
-        neighborhood: orderData.customerData.neighborhood,
-        city: orderData.customerData.city,
-        state: orderData.customerData.state,
-        cep: orderData.customerData.cep,
-      },
-    })
-
-    if (!existingAddress) {
-      console.log("Criando novo endereço...")
-      await tx.address.create({
-        data: {
+    if (orderData.paymentMethod !== "pickupOrder") {
+      console.log("Verificando endereço...")
+      const existingAddress = await tx.address.findFirst({
+        where: {
           userId: user.id,
-          name: orderData.customerData.nome || "Endereço de entrega",
           street: orderData.customerData.street,
           number: orderData.customerData.number,
-          complement: orderData.customerData.complement,
           neighborhood: orderData.customerData.neighborhood,
           city: orderData.customerData.city,
           state: orderData.customerData.state,
-          country: orderData.customerData.country,
           cep: orderData.customerData.cep,
-          isDefault: false,
         },
       })
-      console.log("✅ Novo endereço criado")
+
+      if (!existingAddress) {
+        console.log("Criando novo endereço...")
+        await tx.address.create({
+          data: {
+            userId: user.id,
+            name: orderData.customerData.nome || "Endereço de entrega",
+            street: orderData.customerData.street,
+            number: orderData.customerData.number,
+            complement: orderData.customerData.complement,
+            neighborhood: orderData.customerData.neighborhood,
+            city: orderData.customerData.city,
+            state: orderData.customerData.state,
+            country: orderData.customerData.country,
+            cep: orderData.customerData.cep,
+            isDefault: false,
+          },
+        })
+        console.log("✅ Novo endereço criado")
+      }
     }
 
     console.log("Limpando carrinho...")
@@ -482,7 +491,6 @@ export async function getUserOrders() {
             phone: true,
           },
         },
-        
       },
       orderBy: { date: "desc" },
     })

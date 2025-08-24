@@ -28,8 +28,6 @@ import {
   LogIn,
   Check,
   Home,
-  Tag,
-  X,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -63,9 +61,15 @@ export default function PaymentPage() {
   const [couponCode, setCouponCode] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null)
 
+  const [deliveryMethod, setDeliveryMethod] = useState<"DELIVERY" | "PICKUP">("DELIVERY")
+
   const subtotal = cartTotal
   const deliveryFee =
-    storeSettings && subtotal >= storeSettings.freeDeliveryMinimum ? 0 : storeSettings?.deliveryFee || 8.9
+    deliveryMethod === "PICKUP"
+      ? 0
+      : storeSettings && subtotal >= storeSettings.freeDeliveryMinimum
+        ? 0
+        : storeSettings?.deliveryFee || 8.9
   const couponDiscount = appliedCoupon ? appliedCoupon.discount : 0
   const total = subtotal + deliveryFee - couponDiscount
 
@@ -194,7 +198,7 @@ export default function PaymentPage() {
       return
     }
 
-    if (!selectedAddress) {
+    if (deliveryMethod === "DELIVERY" && !selectedAddress) {
       toast.error("Selecione um endereço de entrega")
       return
     }
@@ -207,6 +211,33 @@ export default function PaymentPage() {
     setIsProcessing(true)
 
     try {
+      const customerData =
+        deliveryMethod === "PICKUP"
+          ? {
+              nome: session.user?.name || "",
+              email: session.user?.email || "",
+              street: "Retirada no Açougue",
+              number: "S/N",
+              complement: "",
+              neighborhood: "Centro",
+              city: "Loja",
+              state: "SP",
+              country: "Brasil",
+              cep: "00000-000",
+            }
+          : {
+              nome: session.user?.name || "",
+              email: session.user?.email || "",
+              street: selectedAddress!.street,
+              number: selectedAddress!.number,
+              complement: selectedAddress!.complement ?? "",
+              neighborhood: selectedAddress!.neighborhood,
+              city: selectedAddress!.city,
+              state: selectedAddress!.state,
+              country: selectedAddress!.country,
+              cep: selectedAddress!.cep,
+            }
+
       const orderData = {
         items: items.map((item) => ({
           productId: item.product.id,
@@ -216,21 +247,10 @@ export default function PaymentPage() {
           category: item.product.category,
         })),
         total,
-        paymentMethod: paymentType,
-        paymentType,
+        paymentMethod: deliveryMethod === "PICKUP" ? "pickupOrder" : paymentType,
+        paymentType: deliveryMethod === "PICKUP" ? "pickupOrder" : paymentType,
         PaymentStatus: PaymentStatus.Pendente,
-        customerData: {
-          nome: session.user?.name || "",
-          email: session.user?.email || "",
-          street: selectedAddress.street,
-          number: selectedAddress.number,
-          complement: selectedAddress.complement ?? "",
-          neighborhood: selectedAddress.neighborhood,
-          city: selectedAddress.city,
-          state: selectedAddress.state,
-          country: selectedAddress.country,
-          cep: selectedAddress.cep,
-        },
+        customerData,
         deliveryFee: deliveryFee,
         couponDiscount,
       }
@@ -241,9 +261,13 @@ export default function PaymentPage() {
         setOrderNumber(result.orderNumber || "")
         setOrderSuccess(true)
         await clearCart()
-        toast.success("Pedido realizado com sucesso!")
+        toast.success(result.message || "Pedido realizado com sucesso")
       } else {
-        toast.error(result.message || "Erro ao processar pedido")
+        if (result.errorType === "price_change_error") {
+          toast.error("Houve uma divergência no valor do pedido. Por favor, atualize seu carrinho e tente novamente.")
+        } else {
+          toast.error(result.message || "Erro ao processar pedido")
+        }
       }
     } catch (error) {
       console.error("Erro no handleSubmitOrder:", error)
@@ -339,9 +363,10 @@ export default function PaymentPage() {
   if (orderSuccess) {
     return (
       <SuccessPage
-        formaPagamento={paymentType}
-        tipoEntrega={paymentType}
+        formaPagamento={deliveryMethod === "PICKUP" ? "pickupOrder" : paymentType}
+        tipoEntrega={deliveryMethod === "PICKUP" ? "PICKUP" : "DELIVERY"}
         total={total}
+        deliveryFee={deliveryFee}
         onNewOrder={() => {
           setOrderSuccess(false)
           router.push("/")
@@ -372,128 +397,198 @@ export default function PaymentPage() {
         <div className="container py-6 lg:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
             <div className="lg:col-span-2 space-y-6">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                <Card className="shadow-sm border-gray-200">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
-                      <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mr-3">
-                        <MapPin className="h-4 w-4 text-white" />
-                      </div>
-                      Endereço de Entrega
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedAddress ? (
-                      <div className="space-y-3">
-                        <div className="p-4 border rounded-lg bg-green-50 border-green-200">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3">
-                              <MapPin className="h-5 w-5 text-green-600 mt-0.5" />
-                              <div>
-                                <div className="flex items-center space-x-2">
-                                  <h3 className="font-medium">{selectedAddress.name}</h3>
-                                  {selectedAddress.isDefault && (
-                                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                      Padrão
-                                    </span>
-                                  )}
+              {deliveryMethod === "DELIVERY" && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                  <Card className="shadow-sm border-gray-200">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
+                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                          <MapPin className="h-4 w-4 text-white" />
+                        </div>
+                        Endereço de Entrega
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {selectedAddress ? (
+                        <div className="space-y-3">
+                          <div className="p-4 border rounded-lg bg-green-50 border-green-200">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start space-x-3">
+                                <MapPin className="h-5 w-5 text-green-600 mt-0.5" />
+                                <div>
+                                  <div className="flex items-center space-x-2">
+                                    <h3 className="font-medium">{selectedAddress.name}</h3>
+                                    {selectedAddress.isDefault && (
+                                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                        Padrão
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {selectedAddress.street}, {selectedAddress.number}
+                                    {selectedAddress.complement && `, ${selectedAddress.complement}`}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {selectedAddress.neighborhood}, {selectedAddress.city} - {selectedAddress.state}
+                                  </p>
+                                  <p className="text-sm text-gray-600">CEP: {selectedAddress.cep}</p>
                                 </div>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  {selectedAddress.street}, {selectedAddress.number}
-                                  {selectedAddress.complement && `, ${selectedAddress.complement}`}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  {selectedAddress.neighborhood}, {selectedAddress.city} - {selectedAddress.state}
-                                </p>
-                                <p className="text-sm text-gray-600">CEP: {selectedAddress.cep}</p>
                               </div>
                             </div>
                           </div>
+                          <Button variant="outline" onClick={() => setShowAddressModal(true)} className="w-full">
+                            Alterar Endereço
+                          </Button>
                         </div>
-                        <Button variant="outline" onClick={() => setShowAddressModal(true)} className="w-full">
-                          Alterar Endereço
+                      ) : (
+                        <Button
+                          onClick={() => setShowAddressModal(true)}
+                          className="w-full bg-red-500 hover:bg-red-600 text-white"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Selecionar Endereço
                         </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={() => setShowAddressModal(true)}
-                        className="w-full bg-red-500 hover:bg-red-600 text-white"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Selecionar Endereço
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <Card className="shadow-sm border-gray-200">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
-                      <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3">
-                        <CreditCard className="h-4 w-4 text-white" />
-                      </div>
-                      Forma de Pagamento
-                      <Badge className="ml-auto bg-blue-100 text-blue-800 text-xs">Na Entrega</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-blue-50 p-3 rounded-lg mb-4 border border-blue-200">
-                      <p className="text-sm text-blue-800 font-medium">💳 Pagamento na Entrega</p>
-                      <p className="text-xs text-blue-600">
-                        Você pagará diretamente ao entregador quando receber seu pedido.
-                      </p>
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
+                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3">
+                      <Truck className="h-4 w-4 text-white" />
+                    </div>
+                    Forma de Entrega
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RadioGroup
+                    value={deliveryMethod}
+                    onValueChange={(value) => setDeliveryMethod(value as "DELIVERY" | "PICKUP")}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                      <RadioGroupItem value="DELIVERY" id="entrega" />
+                      <Truck className="h-4 w-4 text-blue-500" />
+                      <Label htmlFor="entrega" className="font-medium cursor-pointer text-sm">
+                        Entrega em Casa
+                      </Label>
                     </div>
 
-                    <RadioGroup value={paymentType} onValueChange={setPaymentType} className="space-y-3">
-                      <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                        <RadioGroupItem value="dinheiro" id="dinheiro" />
-                        <DollarSign className="h-4 w-4 text-green-500" />
-                        <div className="flex-1">
-                          <Label htmlFor="dinheiro" className="font-medium cursor-pointer text-sm">
-                            Dinheiro
-                          </Label>
-                          <p className="text-xs text-gray-600">Pagamento em espécie</p>
-                        </div>
-                      </div>
+                    <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                      <RadioGroupItem value="PICKUP" id="retirada" />
+                      <Package className="h-4 w-4 text-green-500" />
+                      <Label htmlFor="retirada" className="font-medium cursor-pointer text-sm">
+                        Retirar no Açougue
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </CardContent>
+              </Card>
 
-                      <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                        <RadioGroupItem value="credito" id="credito" />
-                        <CreditCard className="h-4 w-4 text-blue-500" />
-                        <div className="flex-1">
-                          <Label htmlFor="credito" className="font-medium cursor-pointer text-sm">
-                            Cartão de Crédito
-                          </Label>
-                          <p className="text-xs text-gray-600">Visa, Mastercard, Elo</p>
+              {deliveryMethod === "PICKUP" ? (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                  <Card className="shadow-sm border-gray-200">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                          <Package className="h-4 w-4 text-white" />
+                        </div>
+                        Informações da Retirada
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div className="flex items-start space-x-3">
+                          <Package className="h-5 w-5 text-green-600 mt-0.5" />
+                          <div>
+                            <h3 className="font-medium text-green-800">Retirar no Açougue</h3>
+                            <p className="text-sm text-green-700 mt-1">
+                              Seu pedido ficará pronto em aproximadamente {storeSettings?.averageDeliveryTime || 45}{" "}
+                              minutos.
+                            </p>
+                            <p className="text-sm text-green-700 mt-2">
+                              <strong>Importante:</strong> Apresente o número do pedido na retirada.
+                            </p>
+                            <p className="text-sm text-green-700">Pagamento será realizado no momento da retirada.</p>
+                          </div>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ) : (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                  <Card className="shadow-sm border-gray-200">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
+                        <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mr-3">
+                          <CreditCard className="h-4 w-4 text-white" />
+                        </div>
+                        Forma de Pagamento
+                        <Badge className="ml-auto bg-blue-100 text-blue-800 text-xs">Na Entrega</Badge>
+                      </CardTitle>
+                    </CardHeader>
 
-                      <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                        <RadioGroupItem value="debito" id="debito" />
-                        <Banknote className="h-4 w-4 text-purple-500" />
-                        <div className="flex-1">
-                          <Label htmlFor="debito" className="font-medium cursor-pointer text-sm">
-                            Cartão de Débito
-                          </Label>
-                          <p className="text-xs text-gray-600">Débito direto da conta</p>
+                    <CardContent>
+                      <RadioGroup value={paymentType} onValueChange={setPaymentType} className="space-y-3">
+                        <div className="bg-blue-50 p-3 rounded-lg mb-4 border border-blue-200">
+                          <p className="text-sm text-blue-800 font-medium">💳 Pagar na Entrega</p>
+                          <p className="text-xs text-blue-600">
+                            Você pagará diretamente ao entregador quando receber seu pedido.
+                          </p>
                         </div>
-                      </div>
 
-                      <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                        <RadioGroupItem value="vr" id="vr" />
-                        <Smartphone className="h-4 w-4 text-orange-500" />
-                        <div className="flex-1">
-                          <Label htmlFor="vr" className="font-medium cursor-pointer text-sm">
-                            Vale Refeição/Alimentação
-                          </Label>
-                          <p className="text-xs text-gray-600">VR, VA, Sodexo, Ticket</p>
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                          <RadioGroupItem value="dinheiro" id="dinheiro" />
+                          <DollarSign className="h-4 w-4 text-green-500" />
+                          <div className="flex-1">
+                            <Label htmlFor="dinheiro" className="font-medium cursor-pointer text-sm">
+                              Dinheiro
+                            </Label>
+                            <p className="text-xs text-gray-600">Pagamento em espécie</p>
+                          </div>
                         </div>
-                      </div>
-                    </RadioGroup>
-                  </CardContent>
-                </Card>
-              </motion.div>
+
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                          <RadioGroupItem value="credito" id="credito" />
+                          <CreditCard className="h-4 w-4 text-blue-500" />
+                          <div className="flex-1">
+                            <Label htmlFor="credito" className="font-medium cursor-pointer text-sm">
+                              Cartão de Crédito
+                            </Label>
+                            <p className="text-xs text-gray-600">Visa, Mastercard, Elo</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                          <RadioGroupItem value="debito" id="debito" />
+                          <Banknote className="h-4 w-4 text-purple-500" />
+                          <div className="flex-1">
+                            <Label htmlFor="debito" className="font-medium cursor-pointer text-sm">
+                              Cartão de Débito
+                            </Label>
+                            <p className="text-xs text-gray-600">Débito direto da conta</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                          <RadioGroupItem value="vr" id="vr" />
+                          <Smartphone className="h-4 w-4 text-orange-500" />
+                          <div className="flex-1">
+                            <Label htmlFor="vr" className="font-medium cursor-pointer text-sm">
+                              Vale Refeição/Alimentação
+                            </Label>
+                            <p className="text-xs text-gray-600">VR, VA, Sodexo, Ticket</p>
+                          </div>
+                        </div>
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
               {/* <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <Card className="shadow-sm border-gray-200">
@@ -656,26 +751,30 @@ export default function PaymentPage() {
                         <span>Subtotal</span>
                         <span>{formatPrice(subtotal)}</span>
                       </div>
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span className="flex items-center">
-                          <Truck className="h-3 w-3 mr-1" />
-                          Entrega
-                        </span>
-                        <span className={deliveryFee === 0 ? "text-green-600 font-medium" : ""}>
-                          {deliveryFee === 0 ? "Grátis" : formatPrice(deliveryFee)}
-                        </span>
-                      </div>
+                      {deliveryMethod === "DELIVERY" && (
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span className="flex items-center">
+                            <Truck className="h-3 w-3 mr-1" />
+                            Entrega
+                          </span>
+                          <span className={deliveryFee === 0 ? "text-green-600 font-medium" : ""}>
+                            {deliveryFee === 0 ? "Grátis" : formatPrice(deliveryFee)}
+                          </span>
+                        </div>
+                      )}
                       {appliedCoupon && (
                         <div className="flex justify-between text-sm text-green-600">
                           <span>Desconto ({appliedCoupon.code})</span>
                           <span>-{formatPrice(appliedCoupon.discount)}</span>
                         </div>
                       )}
-                      {storeSettings && subtotal < storeSettings.freeDeliveryMinimum && (
-                        <div className="text-xs text-gray-600 bg-orange-50 p-2 rounded border border-orange-200">
-                          Faltam {formatPrice(storeSettings.freeDeliveryMinimum - subtotal)} para frete grátis
-                        </div>
-                      )}
+                      {deliveryMethod === "DELIVERY" &&
+                        storeSettings &&
+                        subtotal < storeSettings.freeDeliveryMinimum && (
+                          <div className="text-xs text-gray-600 bg-orange-50 p-2 rounded border border-orange-200">
+                            Faltam {formatPrice(storeSettings.freeDeliveryMinimum - subtotal)} para frete grátis
+                          </div>
+                        )}
                       <Separator />
                       <div className="flex justify-between text-lg font-bold text-gray-800">
                         <span>Total</span>
@@ -686,7 +785,9 @@ export default function PaymentPage() {
                     <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <Clock className="h-4 w-4 text-blue-600" />
                       <div>
-                        <p className="font-medium text-blue-800 text-sm">Tempo de entrega</p>
+                        <p className="font-medium text-blue-800 text-sm">
+                          {deliveryMethod === "PICKUP" ? "Tempo de preparo" : "Tempo de entrega"}
+                        </p>
                         <p className="text-blue-600 text-xs">
                           {storeSettings?.averageDeliveryTime || 45}-{(storeSettings?.averageDeliveryTime || 45) + 15}{" "}
                           minutos
@@ -696,9 +797,11 @@ export default function PaymentPage() {
 
                     <Button
                       onClick={handleSubmitOrder}
-                      disabled={!selectedAddress || isProcessing || items.length === 0}
+                      disabled={
+                        (deliveryMethod === "DELIVERY" && !selectedAddress) || isProcessing || items.length === 0
+                      }
                       className={`w-full py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                        selectedAddress && !isProcessing && items.length > 0
+                        (deliveryMethod === "PICKUP" || selectedAddress) && !isProcessing && items.length > 0
                           ? "bg-red-500 hover:bg-red-600 text-white shadow-md hover:shadow-lg"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
                       }`}
@@ -711,7 +814,7 @@ export default function PaymentPage() {
                       ) : (
                         <>
                           <Check className="h-4 w-4 mr-2" />
-                          Finalizar Pedido
+                          {deliveryMethod === "PICKUP" ? "Confirmar Pedido" : "Finalizar Pedido"}
                         </>
                       )}
                     </Button>

@@ -8,21 +8,25 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Search, Zap, Grid3X3, List, SlidersHorizontal, X } from "lucide-react"
+import { Search, Zap, Grid3X3, List, SlidersHorizontal, X, Package, Layers } from "lucide-react"
 import { useCart } from "@/components/cart/context"
 import type { Product } from "@/generated/prisma"
+import type { Kit } from "@/interfaces/kit"
 import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
 import { MobileFilters } from "@/components/product/mobile/MobileFilters"
 import { ProductCard } from "@/components/product/section/ProductCard"
+import { KitCard } from "@/components/kit/section/KitCard"
 import { NoProductsMessage } from "@/components/product/section/NoProducts"
 import { useRouter } from "next/navigation"
 
 interface ProductGridProps {
   products: Product[]
+  kits?: Kit[]
+  showKits?: boolean
 }
 
-export function ProductGrid({ products }: ProductGridProps) {
+export function ProductGrid({ products, kits = [], showKits = false }: ProductGridProps) {
   const [termoBusca, setTermoBusca] = useState("")
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("todas")
   const [faixaPreco, setFaixaPreco] = useState<[number, number]>([0, 500])
@@ -32,6 +36,7 @@ export function ProductGrid({ products }: ProductGridProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [filtrosAtivos, setFiltrosAtivos] = useState<string[]>([])
+  const [tipoItem, setTipoItem] = useState<"todos" | "produtos" | "kits">("todos")
 
   const [apenasEmEstoque, setApenasEmEstoque] = useState(false)
   const [avaliacaoMinima, setAvaliacaoMinima] = useState(0)
@@ -42,69 +47,101 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   const { addItem, isLoading } = useCart()
 
-  const productsFiltrados = products.filter((product) => {
-    const correspondeNome = product.name.toLowerCase().includes(termoBusca.toLowerCase())
-    const correspondeCategoria = categoriaSelecionada === "todas" || product.category === categoriaSelecionada
-    const correspondePreco = product.price >= faixaPreco[0] && product.price <= faixaPreco[1]
-    const correspondeEstoque = !apenasEmEstoque || product.available
+  const itemsFiltrados = () => {
+    let allItems: ((Product & { type: "product" }) | (Kit & { type: "kit" }))[] = []
 
-    // Simular avaliação (em um app real viria do banco)
-    const avaliacaoSimulada = Math.floor(Math.random() * 5) + 1
-    const correspondeAvaliacao = avaliacaoSimulada >= avaliacaoMinima
+    if (tipoItem === "todos" || tipoItem === "produtos") {
+      allItems = [...allItems, ...products.map((p) => ({ ...p, type: "product" as const }))]
+    }
 
-    // Simular marca baseada no nome do produto
-    const marcaSimulada = product.name.includes("Premium")
-      ? "Premium"
-      : product.name.includes("Especial")
-        ? "Especial"
-        : "Casa Duarte"
-    const correspondeMarca = marcasSelecionadas.length === 0 || marcasSelecionadas.includes(marcaSimulada)
+    if (showKits && (tipoItem === "todos" || tipoItem === "kits")) {
+      allItems = [...allItems, ...kits.map((k) => ({ ...k, type: "kit" as const }))]
+    }
 
-    // Filtro por tipo de corte
-    const correspondeCorte =
-      tipoCorte === "todos" ||
-      (tipoCorte === "bovino" && product.category.toLowerCase().includes("bov")) ||
-      (tipoCorte === "suino" && product.category.toLowerCase().includes("suí")) ||
-      (tipoCorte === "ave" && product.category.toLowerCase().includes("ave")) ||
-      (tipoCorte === "linguica" && product.category.toLowerCase().includes("linguiça"))
+    return allItems.filter((item) => {
+      const correspondeNome = item.name.toLowerCase().includes(termoBusca.toLowerCase())
+      const correspondeCategoria = categoriaSelecionada === "todas" || item.category === categoriaSelecionada
 
-    // Filtro por origem (simulado)
-    const origemSimulada = Math.random() > 0.5 ? "nacional" : "importado"
-    const correspondeOrigem = origem === "todas" || origem === origemSimulada
+      let itemPrice = 0
+      if (item.type === "product") {
+        itemPrice = item.price
+      } else {
+        itemPrice = item.items.reduce((sum, kitItem) => sum + kitItem.product.price * kitItem.quantity, 0)
+        if (item.discount) {
+          itemPrice = itemPrice - (itemPrice * item.discount) / 100
+        }
+      }
 
-    // Filtro por promoção (simulado - produtos com preço terminado em 0 ou 5)
-    const estaEmPromocao = product.price % 10 === 0 || product.price % 10 === 5
-    const correspondePromocao = !promocao || estaEmPromocao
+      const correspondePreco = itemPrice >= faixaPreco[0] && itemPrice <= faixaPreco[1]
+      const correspondeEstoque = !apenasEmEstoque || item.available
 
-    return (
-      correspondeNome &&
-      correspondeCategoria &&
-      correspondePreco &&
-      correspondeEstoque &&
-      correspondeAvaliacao &&
-      correspondeMarca &&
-      correspondeCorte &&
-      correspondeOrigem &&
-      correspondePromocao
-    )
-  })
+      const avaliacaoSimulada = Math.floor(Math.random() * 5) + 1
+      const correspondeAvaliacao = avaliacaoSimulada >= avaliacaoMinima
 
-  // Ordenar produtos
-  const produtosOrdenados = [...productsFiltrados].sort((a, b) => {
+      const marcaSimulada = item.name.includes("Premium")
+        ? "Premium"
+        : item.name.includes("Especial")
+          ? "Especial"
+          : "Casa Duarte"
+      const correspondeMarca = marcasSelecionadas.length === 0 || marcasSelecionadas.includes(marcaSimulada)
+
+      const correspondeCorte =
+        tipoCorte === "todos" ||
+        (tipoCorte === "bovino" && item.category.toLowerCase().includes("bov")) ||
+        (tipoCorte === "suino" && item.category.toLowerCase().includes("suí")) ||
+        (tipoCorte === "ave" && item.category.toLowerCase().includes("ave")) ||
+        (tipoCorte === "linguica" && item.category.toLowerCase().includes("linguiça"))
+
+      const origemSimulada = Math.random() > 0.5 ? "nacional" : "importado"
+      const correspondeOrigem = origem === "todas" || origem === origemSimulada
+
+      let estaEmPromocao = false
+      if (item.type === "product") {
+        estaEmPromocao = item.price % 10 === 0 || item.price % 10 === 5
+      } else {
+        estaEmPromocao = (item.discount && item.discount > 0) || false
+      }
+      const correspondePromocao = !promocao || estaEmPromocao
+
+      return (
+        correspondeNome &&
+        correspondeCategoria &&
+        correspondePreco &&
+        correspondeEstoque &&
+        correspondeAvaliacao &&
+        correspondeMarca &&
+        correspondeCorte &&
+        correspondeOrigem &&
+        correspondePromocao
+      )
+    })
+  }
+
+  const itensOrdenados = [...itemsFiltrados()].sort((a, b) => {
+    const getPrice = (item: typeof a) => {
+      if (item.type === "product") {
+        return item.price
+      } else {
+        let price = item.items.reduce((sum, kitItem) => sum + kitItem.product.price * kitItem.quantity, 0)
+        if (item.discount) {
+          price = price - (price * item.discount) / 100
+        }
+        return price
+      }
+    }
+
     switch (ordenacao) {
       case "preco-menor":
-        return a.price - b.price
+        return getPrice(a) - getPrice(b)
       case "preco-maior":
-        return b.price - a.price
+        return getPrice(b) - getPrice(a)
       case "nome":
         return a.name.localeCompare(b.name)
       case "mais-novo":
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       case "avaliacao":
-        // Simular ordenação por avaliação
         return Math.random() - 0.5
       case "popularidade":
-        // Simular ordenação por popularidade
         return Math.random() - 0.5
       default:
         return 0
@@ -118,6 +155,7 @@ export function ProductGrid({ products }: ProductGridProps) {
     if (faixaPreco[0] > 0 || faixaPreco[1] < 500) {
       filtros.push(`Preço: R$ ${faixaPreco[0]} - R$ ${faixaPreco[1]}`)
     }
+    if (tipoItem !== "todos") filtros.push(`Tipo: ${tipoItem === "produtos" ? "Produtos" : "Kits"}`)
     if (apenasEmEstoque) filtros.push("Apenas em estoque")
     if (avaliacaoMinima > 0) filtros.push(`Avaliação: ${avaliacaoMinima}+ estrelas`)
     if (marcasSelecionadas.length > 0) filtros.push(`Marcas: ${marcasSelecionadas.join(", ")}`)
@@ -130,6 +168,7 @@ export function ProductGrid({ products }: ProductGridProps) {
     termoBusca,
     categoriaSelecionada,
     faixaPreco,
+    tipoItem,
     apenasEmEstoque,
     avaliacaoMinima,
     marcasSelecionadas,
@@ -159,11 +198,31 @@ export function ProductGrid({ products }: ProductGridProps) {
     }
   }
 
+  const handleAddKitToCart = async (kit: Kit) => {
+    if (!kit.available) {
+      toast.error("Kit não disponível")
+      return
+    }
+
+    try {
+      for (const kitItem of kit.items) {
+        await addItem(
+          { ...kitItem.product, stock: kitItem.product.stock ?? 0, available: kitItem.product.available ?? true },
+          kitItem.quantity
+        )
+      }
+      toast.success(`Kit "${kit.name}" adicionado ao carrinho!`)
+    } catch (error) {
+      toast.error("Erro ao adicionar kit ao carrinho")
+    }
+  }
+
   const limparFiltros = () => {
     setTermoBusca("")
     setCategoriaSelecionada("todas")
     setFaixaPreco([0, 500])
     setOrdenacao("relevancia")
+    setTipoItem("todos")
     setApenasEmEstoque(false)
     setAvaliacaoMinima(0)
     setMarcasSelecionadas([])
@@ -179,6 +238,8 @@ export function ProductGrid({ products }: ProductGridProps) {
       setCategoriaSelecionada("todas")
     } else if (filtro.startsWith("Preço:")) {
       setFaixaPreco([0, 500])
+    } else if (filtro.startsWith("Tipo:") && (filtro.includes("Produtos") || filtro.includes("Kits"))) {
+      setTipoItem("todos")
     } else if (filtro === "Apenas em estoque") {
       setApenasEmEstoque(false)
     } else if (filtro.startsWith("Avaliação:")) {
@@ -194,7 +255,7 @@ export function ProductGrid({ products }: ProductGridProps) {
     }
   }
 
-  const categorias = Array.from(new Set(products.map((p) => p.category)))
+  const categorias = Array.from(new Set([...products.map((p) => p.category), ...kits.map((k) => k.category)]))
   const marcas = ["Casa Duarte", "Premium", "Especial"]
 
   const handleFaixaPrecoChange = (value: [number, number]) => {
@@ -204,7 +265,6 @@ export function ProductGrid({ products }: ProductGridProps) {
   return (
     <section id="produtos" className="py-8 lg:py-16 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4">
-        {/* Header Section */}
         <motion.div
           className="text-center mb-8 lg:mb-12"
           initial={{ opacity: 0, y: 20 }}
@@ -213,13 +273,15 @@ export function ProductGrid({ products }: ProductGridProps) {
         >
           <div className="inline-flex items-center space-x-2 bg-red-100 text-red-800 px-4 py-2 rounded-full text-sm font-medium mb-4">
             <Zap className="h-4 w-4" />
-            <span>Produtos Premium</span>
+            <span>{showKits ? "Produtos & Kits Premium" : "Produtos Premium"}</span>
           </div>
           <h2 className="text-3xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
-            Cortes Selecionados
+            {showKits ? "Cortes & Kits Selecionados" : "Cortes Selecionados"}
           </h2>
           <p className="text-gray-600 max-w-3xl mx-auto text-lg leading-relaxed">
-            Carnes de qualidade premium, selecionadas especialmente para você. Frescor garantido e sabor incomparável.
+            {showKits
+              ? "Carnes de qualidade premium e kits especiais, selecionados especialmente para você. Frescor garantido e sabor incomparável."
+              : "Carnes de qualidade premium, selecionadas especialmente para você. Frescor garantido e sabor incomparável."}
           </p>
         </motion.div>
 
@@ -231,9 +293,7 @@ export function ProductGrid({ products }: ProductGridProps) {
         >
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardContent className="p-6">
-              {/* Primeira linha de filtros */}
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-end mb-6">
-                {/* Search */}
+              <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 items-end mb-6">
                 <div className="lg:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Buscar produtos</label>
                   <div className="relative">
@@ -247,7 +307,32 @@ export function ProductGrid({ products }: ProductGridProps) {
                   </div>
                 </div>
 
-                {/* Category */}
+                {showKits && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Item</label>
+                    <Select value={tipoItem} onValueChange={(value) => setTipoItem(value as "todos" | "produtos" | "kits")}>
+                      <SelectTrigger className="h-12 text-base border-2 border-gray-200 focus:border-red-500 rounded-lg">
+                        <SelectValue placeholder="Tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="produtos">
+                          <div className="flex items-center">
+                            <Package className="h-4 w-4 mr-2" />
+                            Produtos
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="kits">
+                          <div className="flex items-center">
+                            <Layers className="h-4 w-4 mr-2" />
+                            Kits
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
                   <Select value={categoriaSelecionada} onValueChange={setCategoriaSelecionada}>
@@ -265,7 +350,6 @@ export function ProductGrid({ products }: ProductGridProps) {
                   </Select>
                 </div>
 
-                {/* Tipo de Corte */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Corte</label>
                   <Select value={tipoCorte} onValueChange={setTipoCorte}>
@@ -282,7 +366,6 @@ export function ProductGrid({ products }: ProductGridProps) {
                   </Select>
                 </div>
 
-                {/* Sort */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Ordenar por</label>
                   <Select value={ordenacao} onValueChange={setOrdenacao}>
@@ -302,9 +385,7 @@ export function ProductGrid({ products }: ProductGridProps) {
                 </div>
               </div>
 
-              {/* Segunda linha de filtros avançados */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 pt-6 border-t border-gray-200">
-                {/* Faixa de Preço */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Faixa de Preço: R$ {faixaPreco[0]} - R$ {faixaPreco[1]}
@@ -319,25 +400,6 @@ export function ProductGrid({ products }: ProductGridProps) {
                   />
                 </div>
 
-                {/* Avaliação Mínima */}
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Avaliação Mínima</label>
-                  <div className="flex items-center space-x-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        onClick={() => setAvaliacaoMinima(star === avaliacaoMinima ? 0 : star)}
-                        className={`p-1 rounded transition-colors ${
-                          star <= avaliacaoMinima ? "text-yellow-500" : "text-gray-300 hover:text-yellow-400"
-                        }`}
-                      >
-                        <Star className="h-5 w-5 fill-current" />
-                      </button>
-                    ))}
-                  </div>
-                </div> */}
-
-                {/* Origem */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Origem</label>
                   <Select value={origem} onValueChange={setOrigem}>
@@ -352,7 +414,6 @@ export function ProductGrid({ products }: ProductGridProps) {
                   </Select>
                 </div>
 
-                {/* Filtros de Checkbox */}
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Filtros Especiais</label>
                   <div className="space-y-2">
@@ -380,7 +441,6 @@ export function ProductGrid({ products }: ProductGridProps) {
                 </div>
               </div>
 
-              {/* Marcas */}
               <div className="pt-6 border-t border-gray-200 mt-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">Marcas</label>
                 <div className="flex flex-wrap gap-2">
@@ -407,7 +467,6 @@ export function ProductGrid({ products }: ProductGridProps) {
           </Card>
         </motion.div>
 
-        {/* Mobile Search & Filter Button */}
         <div className="lg:hidden mb-6 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -453,7 +512,6 @@ export function ProductGrid({ products }: ProductGridProps) {
           </div>
         </div>
 
-        {/* Active Filters */}
         <AnimatePresence>
           {filtrosAtivos.length > 0 && (
             <motion.div
@@ -488,10 +546,10 @@ export function ProductGrid({ products }: ProductGridProps) {
           )}
         </AnimatePresence>
 
-        {/* Results Count */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-gray-600">
-            <span className="font-semibold text-gray-800">{produtosOrdenados.length}</span> produtos encontrados
+            <span className="font-semibold text-gray-800">{itensOrdenados.length}</span>{" "}
+            {showKits ? "itens" : "produtos"} encontrados
           </p>
           <div className="hidden lg:flex items-center space-x-2">
             <span className="text-sm text-gray-600">Visualização:</span>
@@ -514,9 +572,8 @@ export function ProductGrid({ products }: ProductGridProps) {
           </div>
         </div>
 
-        {/* Products Grid */}
         <AnimatePresence mode="wait">
-          {produtosOrdenados.length === 0 ? (
+          {itensOrdenados.length === 0 ? (
             <motion.div
               key="no-products"
               initial={{ opacity: 0, y: 20 }}
@@ -537,28 +594,38 @@ export function ProductGrid({ products }: ProductGridProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              {produtosOrdenados.map((product, index) => (
+              {itensOrdenados.map((item, index) => (
                 <motion.div
-                  key={product.id}
+                  key={`${item.type}-${item.id}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.4 }}
                 >
-                  <ProductCard
-                    product={product}
-                    viewMode={viewMode}
-                    isFavorite={favoritos.includes(product.id)}
-                    isLoading={loadingProducts.includes(product.id) || isLoading}
-                    onToggleFavorite={() => toggleFavorito(product.id)}
-                    onAddToCart={() => handleAddToCart(product)}
-                  />
+                  {item.type === "product" ? (
+                    <ProductCard
+                      product={item}
+                      viewMode={viewMode}
+                      isFavorite={favoritos.includes(item.id)}
+                      isLoading={loadingProducts.includes(item.id) || isLoading}
+                      onToggleFavorite={() => toggleFavorito(item.id)}
+                      onAddToCart={() => handleAddToCart(item)}
+                    />
+                  ) : (
+                    <KitCard
+                      kit={item}
+                      viewMode={viewMode}
+                      isFavorite={favoritos.includes(item.id)}
+                      isLoading={isLoading}
+                      onToggleFavorite={() => toggleFavorito(item.id)}
+                      onAddToCart={() => handleAddKitToCart(item)}
+                    />
+                  )}
                 </motion.div>
               ))}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Call to Action */}
         {String(useRouter()).replace("/", "").includes("products") ? (
           <motion.div
             className="text-center mt-16"
@@ -615,7 +682,6 @@ export function ProductGrid({ products }: ProductGridProps) {
         )}
       </div>
 
-      {/* Mobile Filters Modal */}
       <MobileFilters
         isOpen={showMobileFilters}
         onClose={() => setShowMobileFilters(false)}
