@@ -225,7 +225,7 @@ export default function CartPage() {
                   }`}
                 >
                   <CardContent className="p-4 lg:p-6">
-                    <div className="grid grid-cols-3 sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
                       {/* Product Image */}
                       <div className="relative flex-shrink-0 mx-auto sm:mx-0">
                         <div className="relative w-20 h-20 lg:w-24 lg:h-24 rounded-lg overflow-hidden bg-gray-100">
@@ -259,7 +259,7 @@ export default function CartPage() {
                       </div>
 
                       {/* Quantity Controls */}
-                      <div className="flex items-center justify-between sm:justify-end sm:flex-col sm:space-y-3">
+                      <div className="items-center grid-cols-1 sm:grid-col-0 justify-between sm:justify-end sm:flex-col sm:space-y-3">
                         <div className="flex items-center space-x-3 bg-gray-50 rounded-lg p-1">
                           <Button
                             variant="outline"
@@ -321,7 +321,7 @@ export default function CartPage() {
                           </Button>
                         </div>
 
-                        <p className="text-sm text-gray-600 sm:align-text-bottom">
+                        <p className="text-sm text-gray-600 sm:text-center text-center">
                           <span className="font-bold text-red-600">{formatQuantityDisplay(item)}</span>
                         </p>
 
@@ -331,15 +331,15 @@ export default function CartPage() {
                           size="sm"
                           onClick={() => handleRemoveItem(item.product.id)}
                           disabled={removingItems.has(item.product.id)}
-                          className="hidden sm:flex text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
+                          className="hidden sm:flex items-center text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-center text-center ml-20"
                         >
-                          <Trash2 className="h-3 w-3 mr-1" />
+                          <Trash2 className="h-3 w-3 mr-1 items-center justify-center " />
                           {removingItems.has(item.product.id) ? "Removendo..." : "Remover"}
                         </Button>
 
                         {/* Subtotal */}
-                        <div className="font-bold text-green-600 text-sm lg:text-base sm:text-right">
-                          {formatPrice(calculateItemPrice(item))}
+                        <div className="font-bold text-sm lg:text-base sm:text-center text-center">
+                          <span className="">Subtotal:</span> <span className="text-green-600 ">{formatPrice(calculateItemPrice(item))} </span>
                         </div>
                       </div>
                     </div>
@@ -356,7 +356,7 @@ export default function CartPage() {
                 </CardHeader>
                 <CardContent className="space-y-4 lg:space-y-6">
                   {/* Promo Code */}
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Código promocional</label>
                     <div className="flex space-x-2">
                       <Input
@@ -373,7 +373,7 @@ export default function CartPage() {
                         Aplicar
                       </Button>
                     </div>
-                  </div>
+                  </div> */}
 
                   <Separator />
 

@@ -495,7 +495,7 @@ export default function PaymentPage() {
                 </Card>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              {/* <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <Card className="shadow-sm border-gray-200">
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center text-lg font-semibold text-gray-800">
@@ -558,7 +558,7 @@ export default function PaymentPage() {
                     )}
                   </CardContent>
                 </Card>
-              </motion.div>
+              </motion.div> */}
             </div>
 
             <div className="lg:sticky lg:top-6 lg:self-start">
