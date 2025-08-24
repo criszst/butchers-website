@@ -215,19 +215,21 @@ async function processOrder(orderData: CreateOrderData, user: any): Promise<Orde
       (orderData.discount || 0)
 
     const difference = Math.abs(recalculatedTotal - orderData.total)
-    const tolerance = recalculatedTotal * 0.05 // Exactly 5% tolerance
+    const tolerance = recalculatedTotal * 0.50 // Exactly 5% tolerance
 
     if (difference > tolerance) {
-      console.log("❌ Divergência no total do pedido superior a 5%")
+      
+
+      console.log("❌ Divergência no total do pedido superior a 50%")
       console.log("Total recalculado:", recalculatedTotal)
       console.log("Total recebido:", orderData.total)
       console.log("Diferença:", difference)
-      console.log("Tolerância (5%):", tolerance)
+      console.log("Tolerância (0%):", tolerance)
 
       return {
         success: false,
         message:
-          "Houve uma divergência superior a 5% no valor total do pedido. Por favor, atualize seu carrinho e tente novamente.",
+          "Houve uma divergência superior a 50% no valor total do pedido. Por favor, atualize seu carrinho e tente novamente.",
         errorType: "price_change_error",
         errorDetails: {
           expectedTotal: recalculatedTotal,

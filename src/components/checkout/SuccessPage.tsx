@@ -21,6 +21,7 @@ import { useEffect, useState } from "react"
 import { getUserOrders } from "@/app/actions/order/orders"
 import { getStoreSettings } from "@/app/actions/store-settings"
 import { toast } from "sonner"
+import { useDeliveryFee } from "@/app/hooks/useDeliveryFee"
 
 interface SuccessPageProps {
   formaPagamento: string
@@ -125,8 +126,24 @@ export default function SuccessPage({
   const calculateItemTotal = (item: UserOrder["items"][0]) => {
     const price = Number(item.price)
     const quantity = Number(item.quantity)
+
+    // Para kits, o preço já vem calculado corretamente do backend
+    // Para produtos individuais, multiplicamos preço por quantidade
+    if (item.category === "kit" || item.name.toLowerCase().includes("kit")) {
+      // Para kits, o preço já é o total do kit
+      return price
+    }
+
     return price * quantity
   }
+
+  const calculateSubtotal = () => {
+    return userOrder.items.reduce((sum, item) => {
+      return sum + calculateItemTotal(item)
+    }, 0)
+  }
+
+  const subtotal = calculateSubtotal()
 
   const getPaymentIcon = () => {
     switch (formaPagamento) {
@@ -175,8 +192,18 @@ export default function SuccessPage({
     toast.success("Número do pedido copiado!")
   }
 
-  const subtotal = userOrder.total - userOrder.deliveryFee
   const isPickup = tipoEntrega === "PICKUP" || formaPagamento === "pickupOrder"
+
+  const deliveryCalculation = useDeliveryFee({
+    orderTotal: subtotal,
+    deliveryMethod: tipoEntrega,
+    storeSettings: storeSettings
+      ? {
+          deliveryFee: storeSettings.deliveryFee || 10.0,
+          freeDeliveryMinimum: storeSettings.freeDeliveryMinimum || 150.0,
+        }
+      : undefined,
+  })
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-3 sm:p-4 z-[9999] overflow-y-auto">
@@ -306,7 +333,7 @@ export default function SuccessPage({
                   <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-green-600 mx-auto mb-2" />
                   <p className="font-semibold text-gray-800 text-xs sm:text-sm md:text-base text-center">Total</p>
                   <p className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-green-600 text-center">
-                    {formatPrice(userOrder.total)}
+                    {formatPrice(subtotal + deliveryCalculation.fee)}
                   </p>
                 </div>
               </motion.div>
@@ -333,12 +360,15 @@ export default function SuccessPage({
                       <div>
                         <p className="text-xs sm:text-sm text-teal-700 mb-1">Taxa de Entrega</p>
                         <p className="font-bold text-teal-800 text-sm sm:text-base">
-                          {userOrder.deliveryFee === 0 ? (
-                            <span className="text-green-600">GRÁTIS</span>
+                          {deliveryCalculation.isFree ? (
+                            <span className="text-green-600">Grátis</span>
                           ) : (
-                            formatPrice(userOrder.deliveryFee)
+                            formatPrice(deliveryCalculation.fee)
                           )}
                         </p>
+                        {deliveryCalculation.reason && (
+                          <p className="text-xs text-teal-600 mt-1">{deliveryCalculation.reason}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -379,7 +409,9 @@ export default function SuccessPage({
                     {/* Total dos itens */}
                     <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-300">
                       <p className="font-bold text-gray-900 text-sm sm:text-base">Total dos Itens:</p>
-                      <p className="font-bold text-green-600 text-base sm:text-lg">{formatPrice(userOrder.total)}</p>
+                      <p className="font-bold text-green-600 text-base sm:text-lg">
+                        {formatPrice(subtotal + deliveryCalculation.fee)}
+                      </p>
                     </div>
                   </div>
                 </motion.div>

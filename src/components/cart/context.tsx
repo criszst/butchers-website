@@ -120,7 +120,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
             ? { ...item, quantity: Math.min(Math.max(0, quantity), item.product.stock) }
             : item,
         )
-        .filter((item) => item.quantity > 0)
+        .filter((item) => item.quantity > 0) // Only remove if quantity is actually 0 or less
 
       const total = newItems.reduce((sum, item) => sum + calculateItemPrice(item), 0)
       const itemCount = newItems.length
@@ -309,6 +309,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true)
       const item = state.items.find((item) => item.product.id === productId)
       if (!item) return
+
+      // Allow zero quantity to be set without removing the item immediately
+      if (quantity < 0) {
+        toast.warning("⚠️ Quantidade não pode ser negativa")
+        return
+      }
 
       if (quantity > item.product.stock) {
         const displayStock = formatWeightDisplay(item.product.stock)

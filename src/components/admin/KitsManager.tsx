@@ -11,18 +11,31 @@ import {
   Trash2,
   Search,
   Filter,
-  Eye,
   Package,
   AlertCircle,
   Loader2,
   TrendingUp,
   DollarSign,
   Layers,
+  Edit,
 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 import { getKitsAction, getKitCategoriesAction, deleteKit } from "@/app/actions/kit"
 import { AddKitDialog } from "@/components/kit/dialog/AddKitDialog"
+import { EditKitDialog } from "@/components/kit/dialog/EditKitDialog"
+import { ViewKitDialog } from "@/components/kit/dialog/ViewKitDialog"
 import type { Kit } from "@/interfaces/kit"
 
 export default function KitsManager() {
@@ -162,24 +175,44 @@ export default function KitsManager() {
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t">
-              <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50">
-                <Eye className="h-4 w-4 mr-1" />
-                Ver
-              </Button>
+              <ViewKitDialog kitId={kit.id} />
 
               <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                  Editar
-                </Button>
+                <EditKitDialog
+                  kitId={kit.id}
+                  onSuccess={fetchKitsAndCategories}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                  }
+                />
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={() => handleDeleteKit(kit.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir o kit "{kit.name}"? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteKit(kit.id)}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Excluir Kit
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           </div>
@@ -405,22 +438,44 @@ export default function KitsManager() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
-                              <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
-                                <Eye className="h-4 w-4" />
-                              </Button>
+                              <ViewKitDialog kitId={kit.id} />
 
-                              <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                                Editar
-                              </Button>
+                              <EditKitDialog
+                                kitId={kit.id}
+                                onSuccess={fetchKitsAndCategories}
+                                trigger={
+                                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Editar
+                                  </Button>
+                                }
+                              />
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => handleDeleteKit(kit.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja excluir o kit "{kit.name}"? Esta ação não pode ser
+                                      desfeita.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteKit(kit.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Excluir Kit
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>

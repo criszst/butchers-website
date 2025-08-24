@@ -264,7 +264,7 @@ export default function PaymentPage() {
         toast.success(result.message || "Pedido realizado com sucesso")
       } else {
         if (result.errorType === "price_change_error") {
-          toast.error("Houve uma divergência no valor do pedido. Por favor, atualize seu carrinho e tente novamente.")
+          alert("Houve uma divergência no valor do pedido. Por favor, atualize seu carrinho e tente novamente.")
         } else {
           toast.error(result.message || "Erro ao processar pedido")
         }
