@@ -47,7 +47,7 @@ export default function Footer(): React.JSX.Element {
               <div>
                 <h4 className="text-lg font-semibold mb-4 text-orange-400">Contato</h4>
                 <div className="space-y-2 text-gray-300">
-                  <p>📍 Rua das Carnes, 123 - Centro</p>
+                  <p>📍 {store?.storeAddress}</p>
                   <p>📞 {store?.storePhone}</p>
                   <p>✉️ {store?.storeEmail}</p>
                   <p>🕒 {store?.businessHours}</p>

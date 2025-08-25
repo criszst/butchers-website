@@ -200,9 +200,9 @@ export default function KitsManager() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar Exclusao</AlertDialogTitle>
+                      <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Tem certeza que deseja excluir o kit "{kit.name}"? Esta acao não pode ser desfeita.
+                        Tem certeza que deseja excluir o kit &quot{kit.name}?&quot Esta ação não pode ser desfeita.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -464,9 +464,9 @@ export default function KitsManager() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirmar Exclusao</AlertDialogTitle>
+                                    <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Tem certeza que deseja excluir o kit "{kit.name}"? Esta acao não pode ser
+                                      Tem certeza que deseja excluir o kit &quot{kit.name}&quot? Esta ação não pode ser
                                       desfeita.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
