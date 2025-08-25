@@ -6,7 +6,8 @@ import React, { useEffect, useState } from "react";
 export default function Footer(): React.JSX.Element {
  const [store, setStore] = useState<StoreSettingsData | null>(null)
  const [isLoading, setIsLoading] = useState(true)
- 
+
+
    useEffect(() => {
      const getSettings = async () => {
        if (isLoading) 
