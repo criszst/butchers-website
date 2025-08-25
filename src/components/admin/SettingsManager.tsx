@@ -97,7 +97,7 @@ export default function SettingsManager() {
   }
 
   return (
-    <div className="space-y-4 lg:space-y-6">
+    <div className="space-y-2 lg:space-y-6">
       {/* Header */}
       <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
@@ -323,7 +323,7 @@ export default function SettingsManager() {
           </CardContent>
         </Card>
 
-        {/* Security Settings */}
+        {/* Security Settings
         <Card className="bg-white border border-gray-200">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
@@ -357,10 +357,10 @@ export default function SettingsManager() {
               <p className="text-xs text-gray-500 mt-1">Entre 5 e 480 minutos (8 horas)</p>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Appearance Settings */}
-        <Card className="bg-white border border-gray-200 lg:col-span-2">
+        {/* <Card className="bg-white border border-gray-200 lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <Palette className="h-5 w-5 mr-2 text-orange-600" />
@@ -418,7 +418,7 @@ export default function SettingsManager() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   )
