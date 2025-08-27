@@ -492,7 +492,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                     </motion.div>
                   </Link>
 
-                  <Link href="/pagamento" onClick={onClose}>
+                  <Link href="/payment" onClick={onClose}>
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
                         variant="outline"
