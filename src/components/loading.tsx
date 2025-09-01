@@ -92,7 +92,7 @@ export default function LoadingScreen({ isLoading }: LoadingScreenProps) {
         {/* Brand Name */}
         <div className="space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
-            {store?.storeName}
+            {store?.storeName === "" ? "Casa de Carnes Duarte" : store?.storeName}
           </h1>
           <div className="flex items-center justify-center space-x-2 text-red-600">
             <div className="w-8 h-0.5 bg-red-600 rounded-full" />
@@ -104,7 +104,7 @@ export default function LoadingScreen({ isLoading }: LoadingScreenProps) {
         {/* Loading Message */}
         <div className="space-y-4">
           <p className="text-xl text-gray-700 font-medium">
-            {store?.storeDescription}
+            {store?.storeDescription=== "" ? "A arte de fazer qualidade" : store?.storeDescription}
             {dots}
           </p>
 

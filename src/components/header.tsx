@@ -212,7 +212,7 @@ export default function Header() {
 
   const userMenuItems = [
     { href: "/perfil#perfil", label: "Meu Perfil", icon: User },
-    { href: "/perfil#pedidos", label: "Meus Pedidos", icon: Package, badge: "3" },
+    { href: "/perfil#pedidos", label: "Meus Pedidos", icon: Package, badge: "" },
     { href: "/perfil#enderecos", label: "Meus Endereços", icon: MapPin },
     { href: "/perfil#favoritos", label: "Favoritos", icon: Heart },
     // { href: "/favoritos", label: "Favoritos", icon: Heart },

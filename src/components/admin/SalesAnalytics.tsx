@@ -25,6 +25,10 @@ import PDFReportGenerator from "./reports/PDFReportGenerator"
 import AdvancedFilters from "./filters/AdvancedFilters"
 import { toast } from "react-hot-toast"
 
+import { mkConfig, generateCsv, download, asString } from "export-to-csv";
+import { writeFile } from "node:fs"
+
+
 export default function SalesAnalytics() {
   const [selectedPeriod, setSelectedPeriod] = useState("30days")
   const [analytics, setAnalytics] = useState<SalesAnalyticsType>({
@@ -93,28 +97,54 @@ export default function SalesAnalytics() {
   }
 
   const exportData = () => {
-    const csvContent = [
-      ["Métrica", "Valor", "Crescimento"],
-      ["Receita Total", formatCurrency(analytics.totalRevenue), `${analytics.revenueGrowth}%`],
-      ["Total de Pedidos", analytics.totalOrders.toString(), `${analytics.ordersGrowth}%`],
-      ["Ticket Médio", formatCurrency(analytics.averageOrderValue), `${analytics.avgOrderGrowth}%`],
-      ["Novos Clientes", analytics.newCustomers.toString(), `${analytics.customersGrowth}%`],
-    ]
-      .map((row) => row.join(","))
-      .join("\n")
+    const csvData = [
+      {
+        Métrica: "Receita Total",
+        Valor: formatCurrency(analytics.totalRevenue),
+        Crescimento: `${analytics.revenueGrowth >= 0 ? "+" : ""}${analytics.revenueGrowth}%`,
+      },
+      {
+        Métrica: "Total de Pedidos",
+        Valor: analytics.totalOrders,
+        Crescimento: `${analytics.ordersGrowth >= 0 ? "+" : ""}${analytics.ordersGrowth}%`,
+      },
+      {
+        Métrica: "Ticket Médio",
+        Valor: formatCurrency(analytics.averageOrderValue),
+        Crescimento: `${analytics.avgOrderGrowth >= 0 ? "+" : ""}${analytics.avgOrderGrowth}%`,
+      },
+      {
+        Métrica: "Novos Clientes",
+        Valor: analytics.newCustomers,
+        Crescimento: `${analytics.customersGrowth >= 0 ? "+" : ""}${analytics.customersGrowth}%`,
+      },
 
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `vendas-${selectedPeriod}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
-    toast.success("Dados exportados com sucesso!")
-  }
+      {
+        Métrica: "Produtos Mais Vendidos",
+        Valor: "",
+        Crescimento: "",
+      },
+    ]
+
+    const csvConfig = mkConfig({ 
+      useKeysAsHeaders: true,
+      fieldSeparator: ";",
+      decimalSeparator: ","
+     });
+     
+    const csv = generateCsv(csvConfig)(csvData);
+
+    const csvBuffer = new Uint8Array(Buffer.from(asString(csv)));
+    const blob = new Blob([csvBuffer], { type: "text/csv" });
+
+
+      download(csvConfig)(csv);
+
+    toast.success("Dados exportados com sucesso!");
+  };
 
   const handleFiltersChange = (filters: any) => {
-    // Implementar filtros avançados
+  
     console.log("Filtros aplicados:", filters)
     toast.success("Filtros aplicados!")
   }
