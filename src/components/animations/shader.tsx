@@ -7,6 +7,7 @@ import Image from "next/image"
 import { getRecentProducts } from "@/app/actions/product"
 import { MeatImagePlaceholder } from "@/components/ui/MeatImagePlaceholder"
 import Link from "next/link"
+import { ProductsSkeleton } from "../product/section/ProductSkeleton"
 
 interface Product {
   id: number
@@ -120,7 +121,7 @@ export default function ShaderHero() {
   if (loading) {
     return (
       <section className="relative min-h-[400px] md:min-h-[400px] lg:min-h-[650px] overflow-hidden bg-black flex items-center justify-center">
-        <div className="text-white text-lg">Carregando produtos...</div>
+        <ProductsSkeleton />
       </section>
     )
   }
@@ -256,6 +257,7 @@ export default function ShaderHero() {
                           className="object-cover"
                           priority={index === 0}
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">

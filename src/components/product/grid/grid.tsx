@@ -231,32 +231,42 @@ export function ProductGrid({ products, kits = [], showKits = false }: ProductGr
     setPromocao(false)
   }
 
-  const removerFiltro = (filtro: string) => {
-    if (filtro.startsWith("Busca:")) {
-      setTermoBusca("")
-    } else if (filtro.startsWith("Categoria:")) {
-      setCategoriaSelecionada("todas")
-    } else if (filtro.startsWith("Preço:")) {
-      setFaixaPreco([0, 500])
-    } else if (filtro.startsWith("Tipo:") && (filtro.includes("Produtos") || filtro.includes("Kits"))) {
-      setTipoItem("todos")
-    } else if (filtro === "Apenas em estoque") {
-      setApenasEmEstoque(false)
-    } else if (filtro.startsWith("Avaliação:")) {
-      setAvaliacaoMinima(0)
-    } else if (filtro.startsWith("Marcas:")) {
-      setMarcasSelecionadas([])
-    } else if (filtro.startsWith("Tipo:")) {
-      setTipoCorte("todos")
-    } else if (filtro.startsWith("Origem:")) {
-      setOrigem("todas")
-    } else if (filtro === "Em promoção") {
-      setPromocao(false)
+  const removeFilter = (filter: string) => {
+    const key = filter.split(":")[0].toLowerCase()
+    const value = filter.split(":")[1].trim()
+
+    switch (key) {
+      case "busca":
+        setTermoBusca("")
+        break
+      case "categoria":
+        setCategoriaSelecionada("todas")
+        break
+      case "pre o":
+        setFaixaPreco([0, 500])
+        break
+      case "tipo":
+        setTipoItem(value.includes("Produtos") ? "produtos" : value.includes("Kits") ? "kits" : "todos")
+        break
+      case "estoque":
+        setApenasEmEstoque(false)
+        break
+      case "avalia o":
+        setAvaliacaoMinima(0)
+        break
+      case "tipo de corte":
+        setTipoCorte("todos")
+        break
+      case "origem":
+        setOrigem("todas")
+        break
+      case "promo o":
+        setPromocao(false)
+        break
     }
   }
 
   const categorias = Array.from(new Set([...products.map((p) => p.category), ...kits.map((k) => k.category)]))
-  const marcas = ["Casa Duarte", "Premium", "Especial"]
 
   const handleFaixaPrecoChange = (value: [number, number]) => {
     setFaixaPreco(value)
@@ -441,28 +451,7 @@ export function ProductGrid({ products, kits = [], showKits = false }: ProductGr
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-gray-200 mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Marcas</label>
-                <div className="flex flex-wrap gap-2">
-                  {marcas.map((marca) => (
-                    <button
-                      key={marca}
-                      onClick={() => {
-                        setMarcasSelecionadas((prev) =>
-                          prev.includes(marca) ? prev.filter((m) => m !== marca) : [...prev, marca],
-                        )
-                      }}
-                      className={`px-3 py-1 rounded-full text-sm border-2 transition-all duration-200 ${
-                        marcasSelecionadas.includes(marca)
-                          ? "bg-red-600 text-white border-red-600"
-                          : "bg-white text-gray-700 border-gray-200 hover:border-red-300"
-                      }`}
-                    >
-                      {marca}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          
             </CardContent>
           </Card>
         </motion.div>
@@ -532,7 +521,7 @@ export function ProductGrid({ products, kits = [], showKits = false }: ProductGr
                   <Badge
                     variant="secondary"
                     className="cursor-pointer hover:bg-red-100 transition-colors flex items-center space-x-1"
-                    onClick={() => removerFiltro(filtro)}
+                    onClick={() => removeFilter(filtro)}
                   >
                     <span>{filtro}</span>
                     <X className="h-3 w-3" />

@@ -231,8 +231,7 @@ export function KitCard({
             <Image
               src={kit.image ?? "/placeholder.svg?height=400&width=400&text=Kit"}
               alt={kit.name}
-              width={300}
-              height={300}
+            
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-110"
             />
@@ -316,7 +315,7 @@ export function KitCard({
         <CardFooter className="p-6 pt-0">
           <div className="w-full space-y-2">
             <Button
-              className="w-full font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+              className="w-full sm:w-[250px] font-semibold py-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
               onClick={onAddToCart}
               disabled={!kit.available || isLoading}
             >
@@ -330,7 +329,7 @@ export function KitCard({
               ) : (
                 <>
                   <ShoppingCart className="h-4 w-4 mr-2" />
-                  Adicionar Kit ao Carrinho
+                  Adicionar Kit
                 </>
               )}
             </Button>
