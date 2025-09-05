@@ -332,7 +332,7 @@ export function KitCard({
                   Adicionar Kit
                 </>
               )}
-            </Button>
+            </Button> 
 
             <Button
               variant="outline"

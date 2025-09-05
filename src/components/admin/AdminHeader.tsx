@@ -22,6 +22,7 @@ import {
   Users,
   Truck,
   Home,
+  HomeIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -125,6 +126,17 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
             {/* Ações Desktop */}
             <div className="hidden md:flex items-center space-x-4">
               {/* Desktop Search com animação */}
+
+              <Link href="/">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="transition-all duration-300 hover:bg-orange-50 hover:scale-105 active:scale-95"
+                >
+                  <HomeIcon className="h-5 w-5 transition-all duration-300 hover:text-orange-600" />
+                    Início
+                </Button>
+              </Link>
   
 
               {/* Notificações com animação */}
@@ -251,6 +263,17 @@ export default function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps
             {/* Ações Mobile */}
             <div className="flex md:hidden items-center space-x-2">
               {/* Mobile Search Toggle com animação */}
+              <Link href="/">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="transition-all duration-300 hover:bg-orange-50 hover:scale-105 active:scale-95"
+                >
+                  <HomeIcon className="h-5 w-5 transition-all duration-300 hover:text-orange-600" />
+                    Início
+                </Button>
+              </Link>
+
               <Button
                 variant="ghost"
                 size="icon"
